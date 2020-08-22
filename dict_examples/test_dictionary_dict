@@ -1,0 +1,20 @@
+# Comment line - should be ignored, same as empty line
+
+ATTRIBUTE User-Name       1 string
+ATTRIBUTE NAS-IP-Address  4 ipaddr
+ATTRIBUTE NAS-Port-Id     5 integer
+ATTRIBUTE Framed-Protocol 7 integer
+
+VALUE Framed-Protocol PPP 1
+
+VENDOR Somevendor 10
+
+BEGIN-VENDOR Somevendor
+ATTRIBUTE Somevendor-Name   1 string
+ATTRIBUTE Somevendor-Number 2 integer
+
+VALUE Somevendor-Number Two 2
+
+END-VENDOR Somevendor
+
+ATTRIBUTE Test-IP 25 ipaddr
