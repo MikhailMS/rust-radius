@@ -199,8 +199,6 @@ impl RadiusPacket {
             packet_attr.extend(&attr.to_bytes());
         }
 
-        println!("Creating bytes");
-
         packet_bytes.push(self.code.to_u8());
         packet_bytes.push(self.id);
         packet_bytes.append(&mut Self::packet_length_to_bytes(((20 + packet_attr.len()) as u16).to_be()).to_vec());

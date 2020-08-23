@@ -1,6 +1,7 @@
 use super::protocol::host::Host;
 use super::protocol::radius_packet::{ RadiusPacket, RadiusAttribute, TypeCode };
 use super::protocol::dictionary::Dictionary;
+use super::tools::ipv6_string_to_bytes;
 
 use crypto::digest::Digest;
 use crypto::md5::Md5;
@@ -10,9 +11,9 @@ use std::io::{Error, ErrorKind};
 use std::time::Duration;
 
 
-const AUTH_SOCKET: Token = Token(0);
-const ACCT_SOCKET: Token = Token(1);
-const COA_SOCKET:  Token = Token(2);
+const AUTH_SOCKET: Token = Token(1);
+const ACCT_SOCKET: Token = Token(2);
+const COA_SOCKET:  Token = Token(3);
 
 
 #[derive(Debug)]
@@ -58,7 +59,6 @@ impl<'server> Server<'server> {
         self.socket_poll.registry().register(&mut acct_server, ACCT_SOCKET, Interest::READABLE)?;
         self.socket_poll.registry().register(&mut coa_server,  COA_SOCKET,  Interest::READABLE)?;
 
-        let timeout    = Duration::from_secs(self.timeout as u64);
         let mut events = Events::with_capacity(1024);
         
         loop {
@@ -72,11 +72,9 @@ impl<'server> Server<'server> {
                         
                         match auth_server.recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
-                                // TODO: handle auth request
                                 if self.host_allowed(&source_address) {
                                     let response = self.handle_auth_request(&mut request[..packet_size])?;
-                                    println!("{:?}", &response);
-
+                                    println!("Server sends AUTH response: {:?}", &response);
                                     auth_server.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
@@ -99,9 +97,8 @@ impl<'server> Server<'server> {
                         match acct_server.recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
                                 if self.host_allowed(&source_address) {
-                                    // TODO: handle acct request
-                                    let response = self.handle_acct_request(&request[..packet_size]);
-
+                                    let response = self.handle_acct_request(&mut request[..packet_size])?;
+                                    println!("Server sends ACCT response: {:?}", &response);
                                     acct_server.send_to(&request[..packet_size], source_address)?;
                                     break;
                                 } else {
@@ -124,9 +121,8 @@ impl<'server> Server<'server> {
                         match coa_server.recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
                                 if self.host_allowed(&source_address) {
-                                    // TODO: handle coa request
-                                    let response = self.handle_coa_request(&request[..packet_size]);
-                                    
+                                    let response = self.handle_coa_request(&mut request[..packet_size])?;
+                                    println!("Server sends CoA response: {:?}", &response);
                                     coa_server.send_to(&request[..packet_size], source_address)?;
                                     break;
                                 } else {
@@ -154,34 +150,56 @@ impl<'server> Server<'server> {
         // Step 1. Read in incoming request
         println!("{:?}", &request);
 
+        let ipv6_bytes = ipv6_string_to_bytes("fc66::1/64").unwrap();
+
         let attributes = vec![
             RadiusAttribute::create_by_name(&self.host.dictionary, "Service-Type",       vec![2]).unwrap(),
             RadiusAttribute::create_by_name(&self.host.dictionary, "Framed-IP-Address",  vec![192, 168,0,1]).unwrap(),
-            RadiusAttribute::create_by_name(&self.host.dictionary, "Framed-IPv6-Prefix", vec![0, 64, 252, 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]).unwrap()
+            RadiusAttribute::create_by_name(&self.host.dictionary, "Framed-IPv6-Prefix", ipv6_bytes).unwrap()
         ];
-        
+
         let mut reply_packet = RadiusPacket::initialise_packet(TypeCode::AccessAccept, attributes);
         // We can create new authenticator only after we set correct reply packet ID
         reply_packet.override_id(request[1]);
-        
+
         let authenticator = self.create_reply_authenticator(&mut reply_packet.to_bytes(), request[4..20].to_vec());
         reply_packet.override_authenticator(authenticator);
 
         Ok(reply_packet.to_bytes())
     }
 
-    fn handle_acct_request(&self, request: &[u8]) -> Result<&[u8], Error> {
+    fn handle_acct_request(&self, request: &[u8]) -> Result<Vec<u8>, Error> {
         // Step 1. Read in incoming request
-        // Step 2. Build a reply packet
-        // Step 3. Return it as &[u8]
-        todo!();
+        println!("{:?}", &request);
+
+        let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
+
+        let mut reply_packet = RadiusPacket::initialise_packet(TypeCode::AccountingResponse, attributes);
+        // We can create new authenticator only after we set correct reply packet ID
+        reply_packet.override_id(request[1]);
+
+        let authenticator = self.create_reply_authenticator(&mut reply_packet.to_bytes(), request[4..20].to_vec());
+        reply_packet.override_authenticator(authenticator);
+
+        Ok(reply_packet.to_bytes())
     }
 
-    fn handle_coa_request(&self, request: &[u8]) -> Result<&[u8], Error> {
+    fn handle_coa_request(&self, request: &[u8]) -> Result<Vec<u8>, Error> {
         // Step 1. Read in incoming request
-        // Step 2. Build a reply packet
-        // Step 3. Return it as &[u8]
-        todo!();
+        println!("{:?}", &request);
+
+        let ipv6_bytes = ipv6_string_to_bytes("fc66::1/64").unwrap();
+
+        let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
+
+        let mut reply_packet = RadiusPacket::initialise_packet(TypeCode::CoAACK, attributes);
+        // We can create new authenticator only after we set correct reply packet ID
+        reply_packet.override_id(request[1]);
+
+        let authenticator = self.create_reply_authenticator(&mut reply_packet.to_bytes(), request[4..20].to_vec());
+        reply_packet.override_authenticator(authenticator);
+
+        Ok(reply_packet.to_bytes())
     }
 
     fn create_reply_authenticator(&self, raw_reply_packet: &mut Vec<u8>, mut request_authenticator: Vec<u8>) -> Vec<u8> {

@@ -49,7 +49,6 @@ impl<'client> Client<'client> {
     pub fn send_packet(&mut self, packet: &mut RadiusPacket) -> Result<(), Error> {
         let local_bind = "0.0.0.0:0".parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
         let remote     = format!("{}:{}", &self.server, self.host.get_port(packet.get_code())).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
-        println!("{:?}, {:?}", &packet.get_code(), &remote);
 
         let mut socket = UdpSocket::bind(local_bind)?;
         self.socket_poll.registry().register(&mut socket, Token(0), Interest::READABLE)?;
@@ -62,6 +61,7 @@ impl<'client> Client<'client> {
             if retry >= self.retries {
                 break;
             }
+            println!("Sending: {:?}", &packet.to_bytes());
             socket.send_to(&packet.to_bytes(), remote)?;
 
             self.socket_poll.poll(&mut events, Some(timeout));
@@ -73,6 +73,7 @@ impl<'client> Client<'client> {
                         let amount = socket.recv(&mut response)?;
 
                         if amount > 0 {
+                            println!("Received reply: {:?}", &response[0..amount]);
                             return self.verify_reply(&packet, &mut response[0..amount]);
                         }
                     },
@@ -87,8 +88,6 @@ impl<'client> Client<'client> {
     }
 
     fn verify_reply(&self, request: &RadiusPacket, reply: &mut [u8]) -> Result<(), Error> {
-        println!("{:?}", &reply);
-        
         if request.get_id() != reply[1] {
             return Err(Error::new(ErrorKind::InvalidData, String::from("Packet identifier mismatch")));
         };
