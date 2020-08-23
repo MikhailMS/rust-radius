@@ -48,7 +48,7 @@ impl<'client> Client<'client> {
     
     pub fn send_packet(&self, packet: &mut RadiusPacket) -> Result<(), Error> {
         let local_bind = "0.0.0.0:0".parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
-        let remote     = &format!("{}:{}", &self.server, self.host.get_port(&packet.code)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
+        let remote     = &format!("{}:{}", &self.server, self.host.get_port(packet.get_code())).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
 
         let socket = UdpSocket::bind(&local_bind)?;
         self.socket_poll.register(&socket, Token(0), Ready::readable(), PollOpt::edge())?;
@@ -86,7 +86,9 @@ impl<'client> Client<'client> {
     }
 
     fn verify_reply(&self, request: &RadiusPacket, reply: &mut [u8]) -> Result<(), Error> {
-        if request.id != reply[1] {
+        println!("{:?}", &reply);
+        
+        if request.get_id() != reply[1] {
             return Err(Error::new(ErrorKind::InvalidData, String::from("Packet identifier mismatch")));
         };
 

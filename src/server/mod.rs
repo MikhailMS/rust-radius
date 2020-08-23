@@ -12,50 +12,7 @@ use std::time::Duration;
 
 const AUTH_SOCKET: Token = Token(1);
 const ACCT_SOCKET: Token = Token(2);
-const COA_SOCKET: Token  = Token(3);
-
-pub trait AuthHandler {
-
-    fn validate_auth_request(&self, request: &[u8]) -> Result<&[u8], Error> {
-        // Step 1. Check that it doesn't contain unsupported attibutes
-        todo!();
-    }
-
-    fn handle_auth_request(&self, request: &[u8]) -> Result<&[u8], Error> {
-        // Step 1. Read in incoming request
-        // Step 2. Build a reply packet
-        // Step 3. Return it as &[u8]
-        todo!();
-    }
-}
-
-pub trait AcctHandler {
-    fn validate_acct_request(&self, request: &[u8]) -> Result<&[u8], Error> {
-        // Step 1. Check that it doesn't contain unsupported attibutes
-        todo!();
-    }
-    
-    fn handle_acct_request(&self, request: &[u8]) -> Result<&[u8], Error> {
-        // Step 1. Read in incoming request
-        // Step 2. Build a reply packet
-        // Step 3. Return it as &[u8]
-        todo!();
-    }
-}
-
-pub trait CoaHandler {
-    fn validate_coa_request(&self, request: &[u8]) -> Result<&[u8], Error> {
-        // Step 1. Check that it doesn't contain unsupported attibutes
-        todo!();
-    }
-    
-    fn handle_coa_request(&self, request: &[u8]) -> Result<&[u8], Error> {
-        // Step 1. Read in incoming request
-        // Step 2. Build a reply packet
-        // Step 3. Return it as &[u8]
-        todo!();
-    }
-}
+const COA_SOCKET:  Token = Token(3);
 
 
 #[derive(Debug)]
@@ -122,8 +79,10 @@ impl<'server> Server<'server> {
                             Ok((packet_size, source_address)) => {
                                 // TODO: handle auth request
                                 if self.host_allowed(&source_address) {
-                                    println!("{:?}", &request[..packet_size]);
-                                    auth_server.send_to(&request[..packet_size], &source_address)?;
+                                    let response = self.handle_auth_request(&mut request[..packet_size])?;
+                                    println!("{:?}", &response);
+
+                                    auth_server.send_to(&response.as_slice(), &source_address)?;
                                     break;
                                 } else {
                                     println!("{:?} is not listed as allowed", &source_address);
@@ -146,6 +105,8 @@ impl<'server> Server<'server> {
                             Ok((packet_size, source_address)) => {
                                 if self.host_allowed(&source_address) {
                                     // TODO: handle acct request
+                                    let response = self.handle_acct_request(&request[..packet_size]);
+
                                     acct_server.send_to(&request[..packet_size], &source_address)?;
                                     break;
                                 } else {
@@ -169,6 +130,8 @@ impl<'server> Server<'server> {
                             Ok((packet_size, source_address)) => {
                                 if self.host_allowed(&source_address) {
                                     // TODO: handle coa request
+                                    let response = self.handle_coa_request(&request[..packet_size]);
+                                    
                                     coa_server.send_to(&request[..packet_size], &source_address)?;
                                     break;
                                 } else {
@@ -189,6 +152,63 @@ impl<'server> Server<'server> {
             }
         }
         Err(Error::new(ErrorKind::Other, "Server failed unexpectedly"))
+    }
+
+    fn handle_auth_request(&self, request: &mut [u8]) -> Result<Vec<u8>, Error> {
+        // Step 1. Read in incoming request
+        println!("{:?}", &request);
+
+        let attributes = vec![
+            RadiusAttribute::create_by_name(&self.host.dictionary, "Service-Type",       vec![2]).unwrap(),
+            RadiusAttribute::create_by_name(&self.host.dictionary, "Framed-IP-Address",  vec![192, 168,0,1]).unwrap(),
+            RadiusAttribute::create_by_name(&self.host.dictionary, "Framed-IPv6-Prefix", vec![0, 64, 252, 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]).unwrap()
+        ];
+        
+        let mut reply_packet = RadiusPacket::initialise_packet(TypeCode::AccessAccept, attributes);
+        // We can create new authenticator only after we set correct reply packet ID
+        reply_packet.override_id(request[1]);
+        
+        let authenticator = self.create_reply_authenticator(&mut reply_packet.to_bytes(), request[4..20].to_vec());
+        reply_packet.override_authenticator(authenticator);
+
+        Ok(reply_packet.to_bytes())
+    }
+
+    fn handle_acct_request(&self, request: &[u8]) -> Result<&[u8], Error> {
+        // Step 1. Read in incoming request
+        // Step 2. Build a reply packet
+        // Step 3. Return it as &[u8]
+        todo!();
+    }
+
+    fn handle_coa_request(&self, request: &[u8]) -> Result<&[u8], Error> {
+        // Step 1. Read in incoming request
+        // Step 2. Build a reply packet
+        // Step 3. Return it as &[u8]
+        todo!();
+    }
+
+    fn create_reply_authenticator(&self, raw_reply_packet: &mut Vec<u8>, mut request_authenticator: Vec<u8>) -> Vec<u8> {
+        // We need to create authenticator as MD5 hash (similar to how client verifies server reply)
+        let mut temp: Vec<u8> = Vec::new();
+
+        temp.append(&mut raw_reply_packet[0..4].to_vec());  // Append reply's   type code, reply ID and reply length
+        temp.append(&mut request_authenticator);            // Append request's authenticator 
+        temp.append(&mut raw_reply_packet[20..].to_vec());  // Append reply's   attributes
+        temp.append(&mut self.secret.as_bytes().to_vec());  // Append server's  secret. Possibly it should be client's secret, which sould be stored together with allowed hostnames ?
+
+        let mut md5_hasher    = Md5::new();
+        let mut authenticator = [0; 16];
+        
+        md5_hasher.input(&temp);
+        md5_hasher.result(&mut authenticator);
+        // ----------------
+        authenticator.to_vec()
+    }
+
+    fn validate_request(&self, request: &[u8]) -> Result<&[u8], Error> {
+        // Step 1. Check that it doesn't contain unsupported attibutes
+        todo!();
     }
 
     fn host_allowed(&self, remote_host: &std::net::SocketAddr) -> bool {

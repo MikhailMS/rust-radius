@@ -1,8 +1,6 @@
 use super::dictionary::Dictionary;
-use super::radius_packet::{RadiusPacket, TypeCode};
+use super::radius_packet::TypeCode;
 
-use mio::net::UdpSocket;
-use std::error::Error;
 
 #[derive(Debug)]
 pub struct Host<'host> {

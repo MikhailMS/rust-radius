@@ -133,10 +133,10 @@ impl RadiusAttribute {
 
 #[derive(Debug)]
 pub struct RadiusPacket {
-    pub id:         u8,
-    pub code:       TypeCode,
-    authenticator:  Vec<u8>,
-    attributes: Vec<RadiusAttribute>
+    id:            u8,
+    code:          TypeCode,
+    authenticator: Vec<u8>,
+    attributes:    Vec<RadiusAttribute>
 }
 
 impl RadiusPacket {
@@ -147,6 +147,22 @@ impl RadiusPacket {
             authenticator: RadiusPacket::create_authenticator(),
             attributes:    attributes
         }
+    }
+
+    pub fn override_id(&mut self, new_id: u8) {
+        self.id = new_id
+    }
+
+    pub fn override_authenticator(&mut self, new_authenticator: Vec<u8>) {
+        self.authenticator = new_authenticator
+    }
+
+    pub fn get_id(&self) -> u8 {
+        self.id
+    }
+
+    pub fn get_code(&self) -> &TypeCode {
+        &self.code
     }
 
     pub fn get_authenticator(&self) -> &[u8] {

@@ -23,11 +23,11 @@
   - [ ] hash password
   - [ ] hash message-authenticator
 - [ ] Server
-  - [ ] handle auth packet (could be custom, so looks like interface)
-  - [ ] handle acct packet (could be custom, so looks like interface)
-  - [ ] handle coa  packet (could be custom, so looks like interface)
-  - [ ] create reply packet
-  - [ ] run
+  - [ ] handle auth packet (could be custom, so looks like interface with default impl)
+  - [ ] handle acct packet (could be custom, so looks like interface with default impl)
+  - [ ] handle coa  packet (could be custom, so looks like interface with default impl)
+  - [x] create reply packet
+  - [x] run
 - [ ] Protocol
   - [ ] dictionary
     - [x] dictionary attribute struct
@@ -40,9 +40,11 @@
   - [x] radius packet
     - [x] accepts  radius attributtes
     - [x] converts itself into bytes
+- [ ] add IPv6 to **Vec<u8>** conversion
+- [ ] add IPv4 to **Vec<u8>** conversion
 - [ ] tests
   - [x] client
-  - [ ] server
+  - [x] server
   - [ ] protocol
     - [x] dictionary
     - [ ] radius packet
