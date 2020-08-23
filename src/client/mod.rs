@@ -4,7 +4,7 @@ use super::protocol::dictionary::Dictionary;
 
 use crypto::digest::Digest;
 use crypto::md5::Md5;
-use mio::{ Events, Ready, Poll, PollOpt, Token };
+use mio::{ Events, Interest, Poll, Token };
 use mio::net::UdpSocket;
 use std::io::{Error, ErrorKind};
 use std::time::Duration;
@@ -46,12 +46,13 @@ impl<'client> Client<'client> {
         RadiusPacket::initialise_packet(TypeCode::CoARequest, attributes)
     }
     
-    pub fn send_packet(&self, packet: &mut RadiusPacket) -> Result<(), Error> {
+    pub fn send_packet(&mut self, packet: &mut RadiusPacket) -> Result<(), Error> {
         let local_bind = "0.0.0.0:0".parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
-        let remote     = &format!("{}:{}", &self.server, self.host.get_port(packet.get_code())).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
+        let remote     = format!("{}:{}", &self.server, self.host.get_port(packet.get_code())).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
+        println!("{:?}, {:?}", &packet.get_code(), &remote);
 
-        let socket = UdpSocket::bind(&local_bind)?;
-        self.socket_poll.register(&socket, Token(0), Ready::readable(), PollOpt::edge())?;
+        let mut socket = UdpSocket::bind(local_bind)?;
+        self.socket_poll.registry().register(&mut socket, Token(0), Interest::READABLE)?;
 
         let timeout    = Duration::from_secs(self.timeout as u64);
         let mut events = Events::with_capacity(1024);

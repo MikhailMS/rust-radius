@@ -4,15 +4,15 @@ use super::protocol::dictionary::Dictionary;
 
 use crypto::digest::Digest;
 use crypto::md5::Md5;
-use mio::{ Events, Ready, Poll, PollOpt, Token };
+use mio::{ Events, Interest, Poll, Token };
 use mio::net::UdpSocket;
 use std::io::{Error, ErrorKind};
 use std::time::Duration;
 
 
-const AUTH_SOCKET: Token = Token(1);
-const ACCT_SOCKET: Token = Token(2);
-const COA_SOCKET:  Token = Token(3);
+const AUTH_SOCKET: Token = Token(0);
+const ACCT_SOCKET: Token = Token(1);
+const COA_SOCKET:  Token = Token(2);
 
 
 #[derive(Debug)]
@@ -45,33 +45,28 @@ impl<'server> Server<'server> {
         self.allowed_hosts.push(host_addr);
     }
 
-    pub fn run_server(&self) -> Result<(), Error> {
-        let auth_bind_addr = &format!("{}:{}", &self.server, self.host.get_port(&TypeCode::AccessRequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
-        let acct_bind_addr = &format!("{}:{}", &self.server, self.host.get_port(&TypeCode::AccountingRequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
-        let coa_bind_addr  = &format!("{}:{}", &self.server, self.host.get_port(&TypeCode::CoARequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
+    pub fn run_server(&mut self) -> Result<(), Error> {
+        let auth_bind_addr = format!("{}:{}", &self.server, self.host.get_port(&TypeCode::AccessRequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
+        let acct_bind_addr = format!("{}:{}", &self.server, self.host.get_port(&TypeCode::AccountingRequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
+        let coa_bind_addr  = format!("{}:{}", &self.server, self.host.get_port(&TypeCode::CoARequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
         
-        let auth_server = UdpSocket::bind(&auth_bind_addr).unwrap();
-        let acct_server = UdpSocket::bind(&acct_bind_addr).unwrap();
-        let coa_server  = UdpSocket::bind(&coa_bind_addr).unwrap();
+        let mut auth_server = UdpSocket::bind(auth_bind_addr)?;
+        let mut acct_server = UdpSocket::bind(acct_bind_addr)?;
+        let mut coa_server  = UdpSocket::bind(coa_bind_addr)?;
         
-        self.socket_poll.register(&auth_server, AUTH_SOCKET, Ready::readable(), PollOpt::edge())?;
-        self.socket_poll.register(&acct_server, ACCT_SOCKET, Ready::readable(), PollOpt::edge())?;
-        self.socket_poll.register(&coa_server,  COA_SOCKET,  Ready::readable(), PollOpt::edge())?;
+        self.socket_poll.registry().register(&mut auth_server, AUTH_SOCKET, Interest::READABLE)?;
+        self.socket_poll.registry().register(&mut acct_server, ACCT_SOCKET, Interest::READABLE)?;
+        self.socket_poll.registry().register(&mut coa_server,  COA_SOCKET,  Interest::READABLE)?;
 
         let timeout    = Duration::from_secs(self.timeout as u64);
         let mut events = Events::with_capacity(1024);
-        let mut retry  = 0;
         
         loop {
-            if retry >= self.retries {
-                break;
-            }
-            
             self.socket_poll.poll(&mut events, None)?;
 
             for event in events.iter() {
                 match event.token() {
-                    AUTH_TOKEN => loop {
+                    AUTH_SOCKET => loop {
                         println!("Received AUTH request");
                         let mut request = [0; 4096];
                         
@@ -82,7 +77,7 @@ impl<'server> Server<'server> {
                                     let response = self.handle_auth_request(&mut request[..packet_size])?;
                                     println!("{:?}", &response);
 
-                                    auth_server.send_to(&response.as_slice(), &source_address)?;
+                                    auth_server.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
                                     println!("{:?} is not listed as allowed", &source_address);
@@ -97,7 +92,7 @@ impl<'server> Server<'server> {
                             }
                         }
                     },
-                    ACCT_TOKEN => loop {
+                    ACCT_SOCKET => loop {
                         println!("Received ACCT request");
                         let mut request = [0; 4096];
                         
@@ -107,7 +102,7 @@ impl<'server> Server<'server> {
                                     // TODO: handle acct request
                                     let response = self.handle_acct_request(&request[..packet_size]);
 
-                                    acct_server.send_to(&request[..packet_size], &source_address)?;
+                                    acct_server.send_to(&request[..packet_size], source_address)?;
                                     break;
                                 } else {
                                     println!("{:?} is not listed as allowed", &source_address);
@@ -122,7 +117,7 @@ impl<'server> Server<'server> {
                             }
                         }
                     },
-                    COA_TOKEN  => loop {
+                    COA_SOCKET  => loop {
                         println!("Received CoA  request");
                         let mut request = [0; 4096];
                         
@@ -132,7 +127,7 @@ impl<'server> Server<'server> {
                                     // TODO: handle coa request
                                     let response = self.handle_coa_request(&request[..packet_size]);
                                     
-                                    coa_server.send_to(&request[..packet_size], &source_address)?;
+                                    coa_server.send_to(&request[..packet_size], source_address)?;
                                     break;
                                 } else {
                                     println!("{:?} is not listed as allowed", &source_address);
@@ -147,11 +142,12 @@ impl<'server> Server<'server> {
                             }
                         }
                     },
-                    _ => println!("Non-supported UDP request: {:?}", event)
+                    _ => {
+                        return Err(Error::new(ErrorKind::Other, format!("Non-supported UDP request: {:?}", event)))
+                    }
                 }
             }
         }
-        Err(Error::new(ErrorKind::Other, "Server failed unexpectedly"))
     }
 
     fn handle_auth_request(&self, request: &mut [u8]) -> Result<Vec<u8>, Error> {
