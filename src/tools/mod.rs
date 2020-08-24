@@ -12,7 +12,7 @@ use std::str::FromStr;
  */
 
 #[derive(Debug)]
-struct MalformedAddress(String);
+pub struct MalformedAddress(String);
 
 impl fmt::Display for MalformedAddress {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -276,9 +276,9 @@ fn read_hextet(bytes: &[u8]) -> (usize, u16) {
 
 // The only thing which needs to be available to users
 pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, Box<dyn Error>> {
-    let parsed_ipv6: Vec<&str>   = ipv6.split("/").collect();
-    let mut bytes:       Vec<u8> = Vec::with_capacity(18);
-    let mut ipv6_address         = Ipv6Address::from_str(parsed_ipv6[0]).unwrap().to_bytes();
+    let parsed_ipv6: Vec<&str> = ipv6.split("/").collect();
+    let mut bytes: Vec<u8>     = Vec::with_capacity(18);
+    let mut ipv6_address       = Ipv6Address::from_str(parsed_ipv6[0]).unwrap().to_bytes();
 
     if parsed_ipv6.len() == 2 {
         bytes.append( &mut decode_subnet(parsed_ipv6[1].parse::<u16>().unwrap()).to_vec() )
@@ -287,9 +287,32 @@ pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, Box<dyn Error>> {
     Ok(bytes)
 }
 
-pub fn bytes_to_ipv6_string(ipv6: Vec<u8>) -> Result<Vec<u8>, Box<dyn Error>> {
+pub fn bytes_to_ipv6_string(ipv6: Vec<u8>) -> Result<String, Box<dyn Error>> {
     todo!();
 }
+
+pub fn ipv4_string_to_bytes(ipv4: &str) -> Result<Vec<u8>, MalformedAddress> {
+    if ipv4.contains("/") {
+        return Err(MalformedAddress(format!("Subnets are not supported for IPv4: {}", ipv4)))
+    }
+
+    let mut bytes: Vec<u8> = Vec::with_capacity(4);
+    for group in ipv4.trim().split(".").map(|group| group.parse::<u8>().unwrap()) {
+        bytes.push(group);
+    }
+
+    Ok(bytes)
+}
+
+pub fn bytes_to_ipv4_string(ipv4: Vec<u8>) -> Result<String, MalformedAddress> {
+    if ipv4.len() != 4 {
+        return Err(MalformedAddress(format!("Malformed IPv4: {:?}", ipv4)))
+    }
+
+    let ipv4_string: Vec<String> = ipv4.iter().map(|group| group.to_string()).collect();
+    Ok(ipv4_string.join("."))
+}
+
 // -----------------------------------------
 fn decode_subnet(u16_data: u16) -> [u8;2] {
     [ (u16_data >> 8) as u8, u16_data as u8 ]
@@ -310,5 +333,19 @@ mod tests {
     fn test_ipv6_to_bytes_w_subnet() {
         let ipv6_bytes = ipv6_string_to_bytes("fc66::1/64").unwrap();
         assert_eq!(ipv6_bytes, [0, 64, 252, 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+    }
+
+    #[test]
+    fn test_ipv4_string_to_bytes() {
+        let ipv4_bytes = ipv4_string_to_bytes("192.1.10.1").unwrap();
+
+        assert_eq!(ipv4_bytes, [192, 1, 10, 1]);
+    }
+
+    #[test]
+    fn test_ipv4_bytes_to_string() {
+        let ipv4_string = bytes_to_ipv4_string(vec![192, 1, 10, 1]).unwrap();
+
+        assert_eq!(ipv4_string, "192.1.10.1".to_string());
     }
 }

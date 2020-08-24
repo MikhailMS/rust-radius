@@ -100,7 +100,19 @@ impl<'server> Server<'server> {
         RadiusAttribute::create_by_name(&self.host.dictionary, attribute_name, value).ok_or(Error::new(ErrorKind::Other, format!("Failed to create: {:?} attribute", attribute_name)))
     }
 
-    pub fn create_reply_authenticator(&self, raw_reply_packet: &mut Vec<u8>, mut request_authenticator: Vec<u8>) -> Vec<u8> {
+    pub fn create_reply_packet(&self, reply_code: TypeCode, attributes: Vec<RadiusAttribute>, request: &mut [u8]) -> RadiusPacket {
+        let mut reply_packet = RadiusPacket::initialise_packet(reply_code, attributes);
+
+        // We can create new authenticator only after we set correct reply packet ID
+        reply_packet.override_id(request[1]);
+
+        let authenticator = self.create_reply_authenticator(&mut reply_packet.to_bytes(), request[4..20].to_vec());
+        reply_packet.override_authenticator(authenticator);
+
+        reply_packet
+    }
+
+    fn create_reply_authenticator(&self, raw_reply_packet: &mut Vec<u8>, mut request_authenticator: Vec<u8>) -> Vec<u8> {
         // We need to create authenticator as MD5 hash (similar to how client verifies server reply)
         let mut temp: Vec<u8> = Vec::new();
 
