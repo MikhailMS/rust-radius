@@ -2,6 +2,7 @@ use std::fmt;
 use std::error::Error;
 use std::str::FromStr;
 
+
 /* Convertion of IPv6 from string into bytes
  * 
  * Conversion from string to IPv6 u128 is taken from
@@ -9,9 +10,6 @@ use std::str::FromStr;
  * and updated to fit the need of this crate
  *
  */
-
-struct Ipv4Network(u32, u32);
-struct Ipv6Network(u128, u128);
 
 #[derive(Debug)]
 struct MalformedAddress(String);
@@ -147,8 +145,9 @@ impl FromStr for Ipv6Address {
             match bytes[offset] {
                 // We saw the column, we can continue
                 b':' => offset += 1,
-                // Handle the special IPv4 case, ie address like. Note that the hextet we just read
-                // is part of that IPv4 address:
+                // Handle the special IPv4 case, ie address like below
+                // Note that the hextet we just read is part of that IPv4 address:
+                //
                 //
                 // aaaa:bbbb:cccc:dddd:eeee:ffff:a.b.c.d.
                 //                               ^^

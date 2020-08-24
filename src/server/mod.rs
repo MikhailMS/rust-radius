@@ -8,7 +8,6 @@ use crypto::md5::Md5;
 use mio::{ Events, Interest, Poll, Token };
 use mio::net::UdpSocket;
 use std::io::{Error, ErrorKind};
-use std::time::Duration;
 
 
 const AUTH_SOCKET: Token = Token(1);
@@ -74,7 +73,6 @@ impl<'server> Server<'server> {
                             Ok((packet_size, source_address)) => {
                                 if self.host_allowed(&source_address) {
                                     let response = self.handle_auth_request(&mut request[..packet_size])?;
-                                    println!("Server sends AUTH response: {:?}", &response);
                                     auth_server.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
@@ -98,8 +96,7 @@ impl<'server> Server<'server> {
                             Ok((packet_size, source_address)) => {
                                 if self.host_allowed(&source_address) {
                                     let response = self.handle_acct_request(&mut request[..packet_size])?;
-                                    println!("Server sends ACCT response: {:?}", &response);
-                                    acct_server.send_to(&request[..packet_size], source_address)?;
+                                    acct_server.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
                                     println!("{:?} is not listed as allowed", &source_address);
@@ -122,8 +119,7 @@ impl<'server> Server<'server> {
                             Ok((packet_size, source_address)) => {
                                 if self.host_allowed(&source_address) {
                                     let response = self.handle_coa_request(&mut request[..packet_size])?;
-                                    println!("Server sends CoA response: {:?}", &response);
-                                    coa_server.send_to(&request[..packet_size], source_address)?;
+                                    coa_server.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
                                     println!("{:?} is not listed as allowed", &source_address);
@@ -151,7 +147,6 @@ impl<'server> Server<'server> {
         println!("{:?}", &request);
 
         let ipv6_bytes = ipv6_string_to_bytes("fc66::1/64").unwrap();
-
         let attributes = vec![
             RadiusAttribute::create_by_name(&self.host.dictionary, "Service-Type",       vec![2]).unwrap(),
             RadiusAttribute::create_by_name(&self.host.dictionary, "Framed-IP-Address",  vec![192, 168,0,1]).unwrap(),
@@ -173,8 +168,7 @@ impl<'server> Server<'server> {
         println!("{:?}", &request);
 
         let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
-
-        let mut reply_packet = RadiusPacket::initialise_packet(TypeCode::AccountingResponse, attributes);
+        let mut reply_packet                 = RadiusPacket::initialise_packet(TypeCode::AccountingResponse, attributes);
         // We can create new authenticator only after we set correct reply packet ID
         reply_packet.override_id(request[1]);
 
@@ -188,11 +182,8 @@ impl<'server> Server<'server> {
         // Step 1. Read in incoming request
         println!("{:?}", &request);
 
-        let ipv6_bytes = ipv6_string_to_bytes("fc66::1/64").unwrap();
-
         let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
-
-        let mut reply_packet = RadiusPacket::initialise_packet(TypeCode::CoAACK, attributes);
+        let mut reply_packet                 = RadiusPacket::initialise_packet(TypeCode::CoAACK, attributes);
         // We can create new authenticator only after we set correct reply packet ID
         reply_packet.override_id(request[1]);
 

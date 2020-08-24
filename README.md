@@ -23,11 +23,12 @@
   - [ ] hash password
   - [ ] hash message-authenticator
 - [ ] Server
-  - [ ] handle auth packet (could be custom, so looks like interface with default impl)
-  - [ ] handle acct packet (could be custom, so looks like interface with default impl)
-  - [ ] handle coa  packet (could be custom, so looks like interface with default impl)
+  - [x] handle auth packet
+  - [x] handle acct packet
+  - [x] handle coa  packet
   - [x] create reply packet
   - [x] run
+  - [ ] find a way to keep **initialise_server, add_allowed_hosts, run_server, create_reply_authenticator** functions as is, BUT allow users to implement custom **handle_auth_request, handle_acct_request, handle_coa_request** functions
 - [ ] Protocol
   - [ ] dictionary
     - [x] dictionary attribute struct
@@ -40,11 +41,13 @@
   - [x] radius packet
     - [x] accepts  radius attributtes
     - [x] converts itself into bytes
-- [ ] add IPv6 to **Vec<u8>** conversion
-- [ ] add IPv4 to **Vec<u8>** conversion
+- [x] add IPv6         to **Vec<u8>** conversion
+- [ ] add  **Vec<u8>** to IPv6        conversion
+- [ ] add  IPv4        to **Vec<u8>** conversion
+- [ ] add  **Vec<u8>** to IPv4        conversion
 - [ ] tests
   - [x] client
-  - [x] server
+  - [ ] server
   - [ ] protocol
     - [x] dictionary
     - [ ] radius packet
