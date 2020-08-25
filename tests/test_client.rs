@@ -1,9 +1,21 @@
 use radius_rust::protocol::dictionary::Dictionary;
-use radius_rust::protocol::radius_packet::RadiusAttribute;
+use radius_rust::protocol::radius_packet::{ RadiusAttribute, TypeCode };
 use radius_rust::client::Client;
+
+use radius_rust::server::{ RadiusMsgType, Server };
+use radius_rust::tools::{ ipv6_string_to_bytes, ipv4_string_to_bytes};
+
+use std::process::Command;
+use std::io::Error;
+
 
 #[test]
 fn test_client_auth_request() {
+    // Prepare server
+    let mut command = Command::new("cargo");
+    command.args(&["run", "--example", "simple_radius_server"]);
+    // --------------
+
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let mut client = Client::initialise_client(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
@@ -20,17 +32,30 @@ fn test_client_auth_request() {
     
     let mut auth_packet = client.create_auth_packet(attributes);
 
-    match client.send_packet(&mut auth_packet) {
-        Err(error) => {
-            println!("{:?}", error);
-            assert!(false)
-        },
-        _ => assert!(true)
+    if let Ok(mut child) = command.spawn() {
+        match client.send_packet(&mut auth_packet) {
+            Err(error) => {
+                println!("{:?}", error);
+                assert!(false)
+            },
+            _ => {
+                assert!(true)
+            }
+        }
+        child.kill().expect("command wasn't running");
+        assert!(true)
+    } else {
+        assert!(false)
     }
 }
 
 #[test]
 fn test_client_acct_request() {
+    // Prepare server
+    let mut command = Command::new("cargo");
+    command.args(&["run", "--example", "simple_radius_server"]);
+    // --------------
+
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let mut client = Client::initialise_client(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
@@ -45,17 +70,30 @@ fn test_client_acct_request() {
     ];
     let mut acct_packet = client.create_acct_packet(attributes);
 
-    match client.send_packet(&mut acct_packet) {
-        Err(error) => {
-            println!("{:?}", error);
-            assert!(false)
-        },
-        _ => assert!(true)
+    if let Ok(mut child) = command.spawn() {
+        match client.send_packet(&mut acct_packet) {
+            Err(error) => {
+                println!("{:?}", error);
+                assert!(false)
+            },
+            _ => {
+                assert!(true)
+            }
+        }
+        child.kill().expect("command wasn't running");
+        assert!(true)
+    } else {
+        assert!(false)
     }
 }
 
 #[test]
 fn test_client_coa_request() {
+    // Prepare server
+    let mut command = Command::new("cargo");
+    command.args(&["run", "--example", "simple_radius_server"]);
+    // --------------
+
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let mut client = Client::initialise_client(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
@@ -66,12 +104,20 @@ fn test_client_coa_request() {
     
     let mut coa_packet = client.create_coa_packet(attributes);
 
-    match client.send_packet(&mut coa_packet) {
-        Err(error) => {
-            println!("{:?}", error);
-            assert!(false)
-        },
-        _ => assert!(true)
+    if let Ok(mut child) = command.spawn() {
+        match client.send_packet(&mut coa_packet) {
+            Err(error) => {
+                println!("{:?}", error);
+                assert!(false)
+            },
+            _ => {
+                assert!(true)
+            }
+        }
+        child.kill().expect("command wasn't running");
+        assert!(true)
+    } else {
+        assert!(false)
     }
 }
 

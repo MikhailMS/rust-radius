@@ -263,7 +263,7 @@ fn read_hextet(bytes: &[u8]) -> (usize, u16) {
     }
 
     let mut shift = (count - 1) * 4;
-    let mut res = 0;
+    let mut res   = 0;
     for digit in &digits[0..count] {
         res += (*digit as u16) << shift;
         if shift >= 4 {
@@ -278,7 +278,7 @@ fn read_hextet(bytes: &[u8]) -> (usize, u16) {
 // -----------------------------------------
 
 // The only thing which needs to be available to users
-pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, Box<dyn Error>> {
+pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, MalformedAddress> {
     let parsed_ipv6: Vec<&str> = ipv6.split("/").collect();
     let mut bytes: Vec<u8>     = Vec::with_capacity(18);
     let mut ipv6_address       = Ipv6Address::from_str(parsed_ipv6[0]).unwrap().to_bytes();
@@ -290,7 +290,7 @@ pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, Box<dyn Error>> {
     Ok(bytes)
 }
 
-pub fn bytes_to_ipv6_string(ipv6: Vec<u8>) -> Result<String, Box<dyn Error>> {
+pub fn bytes_to_ipv6_string(ipv6: Vec<u8>) -> Result<String, MalformedAddress> {
     todo!();
 }
 

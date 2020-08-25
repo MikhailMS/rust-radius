@@ -140,7 +140,7 @@ pub struct RadiusPacket {
 }
 
 impl RadiusPacket {
-    pub fn initialise_packet(code: TypeCode, attributes: Vec<RadiusAttribute>) -> RadiusPacket{
+    pub fn initialise_packet(code: TypeCode, attributes: Vec<RadiusAttribute>) -> RadiusPacket {
         RadiusPacket {
             id:            RadiusPacket::create_id(),
             code:          code,

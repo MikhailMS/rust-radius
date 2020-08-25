@@ -1,3 +1,12 @@
+[![MIT licensed][mit-badge]][mit-url]
+[![Actions Status][action-badge]][action-url]
+
+[action-badge]: https://github.com/MikhailMS/rust-radius/workflows/RustRadius/badge.svg
+[action-url]:   https://github.com/MikhailMS/rust-radius/actions
+[mit-badge]:    https://img.shields.io/badge/license-MIT-blue.svg
+[mit-url]:      LICENSE
+
+
 # Rust RADIUS 
 Pure (as far as this code goes) Rust implementation of RADIUS.
 Not all functionality supported yet, but it would be. Eventually
@@ -17,9 +26,7 @@ Rationale behind this project:
 
 
 ## Tests
-1. Client tests relies on the fact, that you do have RADIUS server instance running on **127.0.0.1**, so
-   - `cargo run --example simple_radius_server` or use any other implementation of RADIUS server
-   - `cargo test`
+1. `cargo test -- --test-threads=1`
 
 
 ## TODO
@@ -63,7 +70,7 @@ Rationale behind this project:
   - [ ] verify that incoming attributes of the correct data type,          otherwise reject/ignore the packet, but server also
     - [ ] should be using VALUE from Dictionary, if attribute name is a match and there are corresponding VALUEs, for example **Acct-Status-Type**
 - [ ] tests
-  - [x] client (but you need to have RADIUS server instance running to pass)
+  - [x] client - **Notes 2**
   - [ ] server
   - [x] protocol
     - [x] dictionary
@@ -73,3 +80,4 @@ Rationale behind this project:
 
 ## Notes
 1. Big thanks to [pyrad](https://github.com/pyradius/pyrad) and [radius-rust-client](https://github.com/athonet-open/rust-radius-client) projects, which helped me to start this project
+2. At the moment the way to test client - disable parallel test run and spawn system command which starts **simple_radius_server.rs**

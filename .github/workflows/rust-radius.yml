@@ -1,0 +1,69 @@
+name: RustRadius
+
+on:
+  push:
+    branches: [ master, development ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CARGO_TERM_COLOR: always
+  CLICOLOR_FORCE: 1
+
+jobs:
+  ci:
+    name:     CI testing
+    runs-on:  ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [stable, nightly]
+        os:   [ubuntu-latest macos-latest]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    
+    - name: Install rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ matrix.rust }}
+        profile:   minimal
+        override:  true
+
+    - name: Install cargo-make
+      uses: actions-rs/cargo@v1
+      with:
+        command: install
+        args:    --debug cargo-make
+        
+    - name: Install tarpaulin
+      uses: actions-rs/cargo@v1
+      with:
+        command: install
+        args:    --debug cargo-tarpaulin
+    
+    - name: Build
+      run: cargo build --verbose
+    
+    - name: Run tests
+      run: cargo test --verbose -- --test-threads=1
+    
+    - name: Run CI
+      if:   matrix.rust != 'nightly'
+      uses: actions-rs/cargo@v1
+      with:
+        command: make
+        args:    ci-flow
+    
+    - name: Run CI (Allow Failures)
+      if:                matrix.rust == 'nightly'
+      continue-on-error: true
+      uses:              actions-rs/cargo@v1
+      with:
+        command: make
+        args:    ci-flow
+      
+    - name: Generate code coverage
+      if:  matrix.rust == 'nightly'
+      run: |
+        cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out Json
