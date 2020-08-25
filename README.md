@@ -29,9 +29,8 @@ Rationale behind this project:
   - [x] create coa   packet
   - [x] send         packet
   - [x] verify reply packet
-  - [ ] hash password
-  - [ ] hash message-authenticator
-- [ ] Server
+  - [x] generate hash for message-authenticator
+- [x] Server
   - [x] handle auth packet
   - [x] handle acct packet
   - [x] handle coa  packet
@@ -48,18 +47,28 @@ Rationale behind this project:
     - [x] contains attribute ID and attribute value
     - [x] converts itself into bytes
   - [x] radius packet
-    - [x] accepts  radius attributtes
+    - [x] accepts  radius attributes
     - [x] converts itself into bytes
-- [x] add IPv6         to **Vec<u8>** conversion
-- [ ] add  **Vec<u8>** to IPv6        conversion
-- [ ] add  IPv4        to **Vec<u8>** conversion
-- [ ] add  **Vec<u8>** to IPv4        conversion
+- [ ] Tools
+  - [x] add IPv6        to **Vec<u8>** conversion
+  - [ ] add **Vec<u8>** to IPv6        conversion
+  - [x] add IPv4        to **Vec<u8>** conversion
+  - [x] add **Vec<u8>** to IPv4        conversion
+  - [x] encrypt password
+  - [x] decrypt password
+- [ ] better error handling - at the moment there is no standard to errors from different modules, so need to have a look into it
+- [ ] review the code to ensure there are no unnecessary allocations
+- [ ] packets verification
+  - [ ] verify that incoming attributes exist in server/client dictionary, otherwise reject/ignore the packet
+  - [ ] verify that incoming attributes of the correct data type,          otherwise reject/ignore the packet, but server also
+    - [ ] should be using VALUE from Dictionary, if attribute name is a match and there are corresponding VALUEs, for example **Acct-Status-Type**
 - [ ] tests
-  - [x] client
+  - [x] client (but you need to have RADIUS server instance running to pass)
   - [ ] server
-  - [ ] protocol
+  - [x] protocol
     - [x] dictionary
-    - [ ] radius packet
+    - [x] radius attribute
+    - [x] radius packet
 
 
 ## Notes

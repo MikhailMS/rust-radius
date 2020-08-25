@@ -161,12 +161,12 @@ impl RadiusPacket {
         self.id
     }
 
-    pub fn get_code(&self) -> &TypeCode {
-        &self.code
-    }
-
     pub fn get_authenticator(&self) -> &[u8] {
         &self.authenticator
+    }
+
+    pub fn get_code(&self) -> &TypeCode {
+        &self.code
     }
 
     pub fn to_bytes(&mut self) -> Vec<u8> {
@@ -227,5 +227,62 @@ impl RadiusPacket {
 
     fn u16_to_u8(u16_data: u16) -> [u8;2] {
         [u16_data as u8, (u16_data >> 8) as u8]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_radius_attribute_create_by_name() {
+        let dictionary_path = "./dict_examples/test_dictionary_dict";
+        let dict            = Dictionary::from_file(dictionary_path).unwrap();
+
+        let expected = RadiusAttribute { id: 1, value: vec![1,2,3] };
+
+        assert_eq!(Some(expected), RadiusAttribute::create_by_name(&dict, "User-Name", vec![1,2,3]));
+    }
+    #[test]
+    fn test_radius_attribute_create_by_id() {
+        let expected = RadiusAttribute { id: 50, value: vec![1,2,3] };
+
+        assert_eq!(Some(expected), RadiusAttribute::create_by_id(50, vec![1,2,3]));
+    }
+    
+
+    #[test]
+    fn test_radius_packet_override_id() {
+        let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
+        let new_id: u8                       = 50;
+
+        let mut packet = RadiusPacket::initialise_packet(TypeCode::AccessRequest, attributes);
+        packet.override_id(new_id);
+
+        assert_eq!(new_id, packet.get_id());
+    }
+    #[test]
+    fn test_radius_packet_override_authenticator() {
+        let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
+        let new_authenticator: Vec<u8>       = vec![0, 25, 100, 56, 13];
+
+        let mut packet = RadiusPacket::initialise_packet(TypeCode::AccessRequest, attributes);
+        packet.override_authenticator(new_authenticator.to_vec());
+
+        assert_eq!(new_authenticator, packet.get_authenticator());
+    }
+    #[test]
+    fn test_radius_packet_to_bytes() {
+        let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
+        let new_id: u8                       = 50;
+        let new_authenticator: Vec<u8>       = vec![0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153, 0, 1, 2, 3];
+        
+        let exepcted_bytes = vec![1, 50, 0, 20, 0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153, 0, 1, 2, 3];
+        let mut packet = RadiusPacket::initialise_packet(TypeCode::AccessRequest, attributes);
+
+        packet.override_id(new_id);
+        packet.override_authenticator(new_authenticator);
+        
+        assert_eq!(exepcted_bytes, packet.to_bytes());
     }
 }

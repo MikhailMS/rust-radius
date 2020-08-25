@@ -4,6 +4,8 @@ use super::protocol::dictionary::Dictionary;
 
 use crypto::digest::Digest;
 use crypto::md5::Md5;
+use crypto::mac::Mac;
+use crypto::hmac::Hmac;
 use mio::{ Events, Interest, Poll, Token };
 use mio::net::UdpSocket;
 use std::io::{Error, ErrorKind};
@@ -44,6 +46,14 @@ impl<'client> Client<'client> {
 
     pub fn create_coa_packet(&self, attributes: Vec<RadiusAttribute>) -> RadiusPacket {
         RadiusPacket::initialise_packet(TypeCode::CoARequest, attributes)
+    }
+
+    pub fn generate_message_hash(&self, packet: &mut RadiusPacket) -> Vec<u8> {
+        let mut hash = Hmac::new(Md5::new(), self.secret.as_bytes());
+
+        hash.input(&packet.to_bytes());
+
+        hash.result().code().to_vec()
     }
     
     pub fn send_packet(&mut self, packet: &mut RadiusPacket) -> Result<(), Error> {

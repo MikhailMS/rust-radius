@@ -1,3 +1,6 @@
+use crypto::digest::Digest;
+use crypto::md5::Md5;
+
 use std::fmt;
 use std::error::Error;
 use std::str::FromStr;
@@ -281,7 +284,7 @@ pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut ipv6_address       = Ipv6Address::from_str(parsed_ipv6[0]).unwrap().to_bytes();
 
     if parsed_ipv6.len() == 2 {
-        bytes.append( &mut decode_subnet(parsed_ipv6[1].parse::<u16>().unwrap()).to_vec() )
+        bytes.append( &mut encode_subnet(parsed_ipv6[1].parse::<u16>().unwrap()).to_vec() )
     }
     bytes.append(&mut ipv6_address);
     Ok(bytes)
@@ -313,8 +316,85 @@ pub fn bytes_to_ipv4_string(ipv4: Vec<u8>) -> Result<String, MalformedAddress> {
     Ok(ipv4_string.join("."))
 }
 
+pub fn encrypt_data(data: &str, authenticator: &[u8], secret: &[u8]) -> Vec<u8> {
+    /* Step 1. Ensure that data buffer's length is multiple of 16
+    *  Step 2. Construct hash:
+    *
+    *  On each iteration:
+    *   1. consume 16 elements from data buffer
+    *   2. calculate MD5 hash for: provided secret + (authenticator(on 1st iteration) or 16 elements of result from previous iteration (2nd+ iteration))
+    *   3. execute bitwise XOR between each of 16 elements of MD5 hash and data buffer and record it in results vector
+    *
+    * Step 3. Return result vector
+    */
+    let mut prev_result = authenticator.to_vec();
+    let mut data_buffer = data.as_bytes().to_vec();
+
+    let missing_length = data_buffer.len() % 16;
+    if missing_length != 0 {
+        data_buffer.append(&mut vec![0u8; 16 - missing_length]);
+    }
+    
+    let mut result = Vec::with_capacity(data_buffer.len());
+    
+    while !data_buffer.is_empty() {
+        let mut temp = secret.to_vec();
+        temp.append(&mut prev_result.to_vec());
+
+        let mut md5  = Md5::new();
+        let mut hash = [0; 16];
+        md5.input(&temp);
+        md5.result(&mut hash);
+
+        for i in 0..16 {
+            result.push(hash[i] ^ data_buffer[i]);
+        }
+
+        prev_result = result[(result.len() - 16)..].to_vec();
+        data_buffer = data_buffer[16..].to_vec();
+    }
+    result   
+}
+
+pub fn decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8> {
+    /* 
+     * To decrypt the data, we need to apply the same algorithm as in encrypt_data()
+     * but with small change
+     *
+     *  On each iteration:
+     *   1. consume 16 elements from data buffer
+     *   2. calculate MD5 hash for: provided secret + (authenticator(on 1st iteration) or 16 elements of data buffer from previous iteration (2nd+ iteration))
+     *   3. execute bitwise XOR between each of 16 elements of MD5 hash and data buffer and record it in results vector
+     *
+     */
+    let mut data_buffer = data.to_vec();
+    let mut result      = Vec::with_capacity(data_buffer.len());
+    let mut prev_result = authenticator.to_vec();
+
+    while !data_buffer.is_empty() {
+        let mut temp = secret.to_vec();
+        temp.append(&mut prev_result.to_vec());
+
+        let mut md5  = Md5::new();
+        let mut hash = [0; 16];
+        md5.input(&temp);
+        md5.result(&mut hash);
+        
+        for i in 0..16 {
+            result.push(hash[i] ^ data_buffer[i]);
+        }
+
+        prev_result = data_buffer[..16].to_vec();
+        data_buffer = data_buffer[16..].to_vec();
+    }
+    while result[result.len()-1] == 0 {
+        result.pop();
+    }
+    result
+}
+
 // -----------------------------------------
-fn decode_subnet(u16_data: u16) -> [u8;2] {
+fn encode_subnet(u16_data: u16) -> [u8;2] {
     [ (u16_data >> 8) as u8, u16_data as u8 ]
 }
 
@@ -347,5 +427,28 @@ mod tests {
         let ipv4_string = bytes_to_ipv4_string(vec![192, 1, 10, 1]).unwrap();
 
         assert_eq!(ipv4_string, "192.1.10.1".to_string());
+    }
+
+    #[test]
+    fn test_encrypt_data() {
+        let secret        = String::from("secret");
+        let authenticator = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+
+        let encrypted_bytes = encrypt_data("password", &authenticator, &secret.as_bytes());
+
+        assert_eq!(encrypted_bytes, vec![135, 116, 155, 239, 226, 89, 90, 221, 62, 29, 218, 130, 102, 174, 191, 250]);
+    }
+
+    #[test]
+    fn test_decrypt_data() {
+        let secret         = String::from("secret");
+        let authenticator  = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+
+        let expected_data  = String::from("password");
+        let encrypted_data = vec![135, 116, 155, 239, 226, 89, 90, 221, 62, 29, 218, 130, 102, 174, 191, 250];
+
+        let decrypted_data = decrypt_data(&encrypted_data, &authenticator, &secret.as_bytes());
+
+        assert_eq!(expected_data.as_bytes().to_vec(), decrypted_data);
     }
 }
