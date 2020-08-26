@@ -47,9 +47,9 @@ impl DictionaryVendor {
 
 #[derive(Debug, Default, PartialEq)]
 pub struct Dictionary {
-    pub attributes: Vec<DictionaryAttribute>,
-    values:         Vec<DictionaryValue>,
-    vendors:        Vec<DictionaryVendor>
+    attributes: Vec<DictionaryAttribute>,
+    values:     Vec<DictionaryValue>,
+    vendors:    Vec<DictionaryVendor>
 }
 
 #[allow(unused)]
@@ -83,6 +83,10 @@ impl Dictionary {
             }
         };
         Ok(Dictionary { attributes, values, vendors })
+    }
+
+    pub fn get_attributes(&self) -> &[DictionaryAttribute] {
+        &self.attributes
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {

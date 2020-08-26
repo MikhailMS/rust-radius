@@ -35,7 +35,7 @@ impl fmt::Display for RadiusMsgType {
 
 
 pub struct Server<'server> {
-    host:      Host<'server>,
+    host:          Host<'server>,
     allowed_hosts: Vec<String>,
     server:        String,
     secret:        String,
@@ -79,6 +79,10 @@ impl<'server> Server<'server> {
         self.allowed_hosts.push(host_addr);
     }
 
+    pub fn get_allowed_hosts(&self) -> &[String] {
+        &self.allowed_hosts
+    }
+
     pub fn add_request_handler(&mut self, handler_type: RadiusMsgType, handler_function: fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, Error>) -> Result<(), Error> {
         match handler_type {
             RadiusMsgType::AUTH => {
@@ -96,8 +100,12 @@ impl<'server> Server<'server> {
         }
     }
 
+    pub fn get_request_handlers(&self) -> &HashMap<RadiusMsgType, fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, Error>> {
+        &self.handlers
+    }
+
     pub fn create_attribute_by_name(&self, attribute_name: &str, value: Vec<u8>) -> Result<RadiusAttribute, Error> {
-        RadiusAttribute::create_by_name(&self.host.dictionary, attribute_name, value).ok_or(Error::new(ErrorKind::Other, format!("Failed to create: {:?} attribute", attribute_name)))
+        RadiusAttribute::create_by_name(&self.host.dictionary, attribute_name, value).ok_or(Error::new(ErrorKind::Other, format!("Failed to create: {:?} attribute. Check if attribute exists in provided dictionary file", attribute_name)))
     }
 
     pub fn create_reply_packet(&self, reply_code: TypeCode, attributes: Vec<RadiusAttribute>, request: &mut [u8]) -> RadiusPacket {
@@ -243,5 +251,40 @@ impl<'server> Server<'server> {
         let remote_host_name: Vec<&str> = remote_host_name.split(":").collect();
 
         self.allowed_hosts.iter().any(|host| host==remote_host_name[0]) 
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn handle_coa_request(server: &Server, request: &mut [u8]) -> Result<Vec<u8>, Error> {
+        let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
+
+        let mut reply_packet = server.create_reply_packet(TypeCode::CoAACK, attributes, request);
+        Ok(reply_packet.to_bytes())
+    }
+
+    #[test]
+    fn test_add_allowed_hosts() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let mut server = Server::initialise_server(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+
+        assert_eq!(server.get_allowed_hosts().len(), 0);
+
+        server.add_allowed_hosts(String::from("127.0.0.1"));
+        assert_eq!(server.get_allowed_hosts().len(), 1);
+    }
+
+    #[test]
+    fn test_add_request_handler() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let mut server = Server::initialise_server(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+
+        assert_eq!(server.get_request_handlers().len(), 0);
+
+        server.add_request_handler(RadiusMsgType::COA, handle_coa_request).unwrap();
+        assert_eq!(server.get_request_handlers().len(), 1);
     }
 }
