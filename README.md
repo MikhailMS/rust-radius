@@ -66,7 +66,7 @@ Rationale behind this project:
 - [ ] better error handling - at the moment there is no standard to errors from different modules, so need to have a look into it
 - [ ] review the code to ensure there are no unnecessary allocations, redundant code and etc:
   - [ ] redesign **Host** (atm it only serves to map TypeCode to port value) 
-  - [ ] **Client** should have a method(s) **create_attribute_by...** so it is inline with **Server**
+  - [x] **Client** should have a method(s) **create_attribute_by...** so it is inline with **Server**
 - [ ] packets verification
   - [ ] verify that incoming attributes exist in server/client dictionary, otherwise reject/ignore the packet
   - [ ] verify that incoming attributes of the correct data type,          otherwise reject/ignore the packet, but server also

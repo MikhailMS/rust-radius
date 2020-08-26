@@ -108,6 +108,10 @@ impl<'server> Server<'server> {
         RadiusAttribute::create_by_name(&self.host.dictionary, attribute_name, value).ok_or(Error::new(ErrorKind::Other, format!("Failed to create: {:?} attribute. Check if attribute exists in provided dictionary file", attribute_name)))
     }
 
+    pub fn create_attribute_by_id(&self, attribute_id: u8, value: Vec<u8>) -> Result<RadiusAttribute, Error> {
+        RadiusAttribute::create_by_id(&self.host.dictionary, attribute_id, value).ok_or(Error::new(ErrorKind::Other, format!("Failed to create: attribute with ID {}. Check if attribute exists in provided dictionary file", attribute_id)))
+    }
+
     pub fn create_reply_packet(&self, reply_code: TypeCode, attributes: Vec<RadiusAttribute>, request: &mut [u8]) -> RadiusPacket {
         let mut reply_packet = RadiusPacket::initialise_packet(reply_code, attributes);
 

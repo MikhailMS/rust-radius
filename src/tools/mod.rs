@@ -316,6 +316,14 @@ pub fn bytes_to_ipv4_string(ipv4: Vec<u8>) -> Result<String, MalformedAddress> {
     Ok(ipv4_string.join("."))
 }
 
+pub fn integer_to_bytes(integer: u32) -> Vec<u8> {
+    integer.to_be_bytes().to_vec()
+}
+
+pub fn bytes_to_integer(integer: [u8; 4]) -> u32 {
+    u32::from_be_bytes(integer)
+}
+
 pub fn encrypt_data(data: &str, authenticator: &[u8], secret: &[u8]) -> Vec<u8> {
     /* Step 1. Ensure that data buffer's length is multiple of 16
     *  Step 2. Construct hash:
@@ -450,5 +458,19 @@ mod tests {
         let decrypted_data = decrypt_data(&encrypted_data, &authenticator, &secret.as_bytes());
 
         assert_eq!(expected_data.as_bytes().to_vec(), decrypted_data);
+    }
+
+    #[test]
+    fn test_integer_to_bytes() {
+        let integer: u32 = 10000;
+
+        assert_eq!(vec![0, 0, 39, 16], integer_to_bytes(integer));
+    }
+
+    #[test]
+    fn test_bytes_to_integer() {
+        let integer_bytes = [0, 0, 39, 16];
+
+        assert_eq!(10000, bytes_to_integer(integer_bytes));
     }
 }

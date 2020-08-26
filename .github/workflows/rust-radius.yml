@@ -44,9 +44,12 @@ jobs:
     
     - name: Build
       run: cargo build --verbose
+
+    - name: Start simple RADIUS server
+      run: cargo run --example simple_radius_server &
     
     - name: Run tests
-      run: cargo test --verbose -- --test-threads=1
+      run: cargo test --verbose
     
     - name: Run CI
       if:   matrix.rust != 'nightly'

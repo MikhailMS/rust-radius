@@ -4,13 +4,21 @@ use std::error::Error;
 
 #[derive(Debug, PartialEq)]
 pub struct DictionaryAttribute {
-    pub name:    String,
+    name:        String,
     vendor_name: String,
-    pub code:    String,
+    code:        String,
     code_type:   String
 }
 
 impl DictionaryAttribute {
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn get_code(&self) -> &str {
+        &self.code
+    }
+
     pub fn to_bytes(&self) -> Vec<u8> {
         [self.name.as_bytes(), self.vendor_name.as_bytes(), self.code.as_bytes(), self.code_type.as_bytes()].concat()
     }

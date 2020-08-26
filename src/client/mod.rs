@@ -48,11 +48,18 @@ impl<'client> Client<'client> {
         RadiusPacket::initialise_packet(TypeCode::CoARequest, attributes)
     }
 
+    pub fn create_attribute_by_name(&self, attribute_name: &str, value: Vec<u8>) -> Result<RadiusAttribute, Error> {
+        RadiusAttribute::create_by_name(&self.host.dictionary, attribute_name, value).ok_or(Error::new(ErrorKind::Other, format!("Failed to create: {} attribute. Check if attribute exists in provided dictionary file", attribute_name)))
+    }
+
+    pub fn create_attribute_by_id(&self, attribute_id: u8, value: Vec<u8>) -> Result<RadiusAttribute, Error> {
+        RadiusAttribute::create_by_id(&self.host.dictionary, attribute_id, value).ok_or(Error::new(ErrorKind::Other, format!("Failed to create: attribute with ID {}. Check if attribute exists in provided dictionary file", attribute_id)))
+    }
+
     pub fn generate_message_hash(&self, packet: &mut RadiusPacket) -> Vec<u8> {
         let mut hash = Hmac::new(Md5::new(), self.secret.as_bytes());
 
         hash.input(&packet.to_bytes());
-
         hash.result().code().to_vec()
     }
     

@@ -85,17 +85,17 @@ pub struct RadiusAttribute {
 
 impl RadiusAttribute {
     pub fn create_by_name(dictionary: &Dictionary, attribute_name: &str, value: Vec<u8>) -> Option<RadiusAttribute> {
-        match dictionary.get_attributes().iter().find(|&attr| attr.name == attribute_name) {
-            Some(attr) => Some(RadiusAttribute { id: attr.code.parse::<u8>().unwrap(), value: value }),
+        match dictionary.get_attributes().iter().find(|&attr| attr.get_name() == attribute_name) {
+            Some(attr) => Some(RadiusAttribute { id: attr.get_code().parse::<u8>().unwrap(), value: value }),
             _          => None
         }
     }
 
-    pub fn create_by_id(attribute_code: u8, value: Vec<u8>) -> Option<RadiusAttribute> {
-        Some(RadiusAttribute{
-            id:    attribute_code,
-            value: value
-        })
+    pub fn create_by_id(dictionary: &Dictionary, attribute_code: u8, value: Vec<u8>) -> Option<RadiusAttribute> {
+        match dictionary.get_attributes().iter().find(|&attr| attr.get_code() == attribute_code.to_string()) {
+            Some(attr) => Some(RadiusAttribute { id: attribute_code, value: value }),
+            _          => None
+        }
     }
     
     fn to_bytes(&self) -> Vec<u8> {
@@ -108,25 +108,7 @@ impl RadiusAttribute {
            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
         *  Taken from https://tools.ietf.org/html/rfc2865#page-23 
         */
-
-        // This is an ugly hack to ensure, that single integer is encoded
-        // as 4 bytes, not 1, ie: b'\x00\x00\x00\x00', not b'\x00'
-        // Should be a better way to do so, but cannot think of it rn
-        if self.value.len() == 1 {
-            let mut data: Vec<u8> = Vec::new();
-            let attr_length       = 6u8;
-
-            data.push(self.id);
-            data.push(attr_length);
-            data.push(0u8);
-            data.push(0u8);
-            data.push(0u8);
-            data.push(self.value[0]);
-
-            data
-        } else {
-            [ &[self.id], &[(2 + self.value.len()) as u8], self.value.as_slice() ].concat()
-        }
+        [ &[self.id], &[(2 + self.value.len()) as u8], self.value.as_slice() ].concat()
     }
 }
 
@@ -245,9 +227,12 @@ mod tests {
     }
     #[test]
     fn test_radius_attribute_create_by_id() {
-        let expected = RadiusAttribute { id: 50, value: vec![1,2,3] };
+        let dictionary_path = "./dict_examples/test_dictionary_dict";
+        let dict            = Dictionary::from_file(dictionary_path).unwrap();
+        
+        let expected = RadiusAttribute { id: 5, value: vec![1,2,3] };
 
-        assert_eq!(Some(expected), RadiusAttribute::create_by_id(50, vec![1,2,3]));
+        assert_eq!(Some(expected), RadiusAttribute::create_by_id(&dict, 5, vec![1,2,3]));
     }
     
 

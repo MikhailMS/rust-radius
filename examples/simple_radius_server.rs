@@ -7,7 +7,7 @@
 use radius_rust::protocol::dictionary::Dictionary;
 use radius_rust::protocol::radius_packet::{ RadiusAttribute, TypeCode };
 use radius_rust::server::{ RadiusMsgType, Server };
-use radius_rust::tools::{ ipv6_string_to_bytes, ipv4_string_to_bytes};
+use radius_rust::tools::{ ipv6_string_to_bytes, ipv4_string_to_bytes, integer_to_bytes };
 
 use std::io::Error;
 
@@ -17,7 +17,7 @@ fn handle_auth_request(server: &Server, request: &mut [u8]) -> Result<Vec<u8>, E
     let ipv6_bytes = ipv6_string_to_bytes("fc66::1/64").unwrap();
     let ipv4_bytes = ipv4_string_to_bytes("192.168.0.1").unwrap();
     let attributes = vec![
-        server.create_attribute_by_name("Service-Type",       vec![2]).unwrap(),
+        server.create_attribute_by_name("Service-Type",       integer_to_bytes(2)).unwrap(),
         server.create_attribute_by_name("Framed-IP-Address",  ipv4_bytes).unwrap(),
         server.create_attribute_by_name("Framed-IPv6-Prefix", ipv6_bytes).unwrap()
     ];
