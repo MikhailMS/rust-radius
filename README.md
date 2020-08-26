@@ -26,7 +26,8 @@ Rationale behind this project:
 
 
 ## Tests
-1. `cargo test -- --test-threads=1`
+1. `cargo run --example simple_radius_server &` or you can spin up any other RADIUS server of your choice
+2. `cargo test --verbose`
 
 
 ## TODO
@@ -57,10 +58,14 @@ Rationale behind this project:
     - [x] accepts  radius attributes
     - [x] converts itself into bytes
 - [ ] Tools
-  - [x] add IPv6        to **Vec<u8>** conversion
-  - [ ] add **Vec<u8>** to IPv6        conversion
-  - [x] add IPv4        to **Vec<u8>** conversion
-  - [x] add **Vec<u8>** to IPv4        conversion
+  - [x] add **IPv6**    to **Vec<u8>** conversion
+  - [ ] add **Vec<u8>** to **IPv6**    conversion
+  - [x] add **IPv4**    to **Vec<u8>** conversion
+  - [x] add **Vec<u8>** to **IPv4**    conversion
+  - [x] add **Integer** to **Vec<u8>** conversion
+  - [x] add **Vec<u8>** to **Integer** conversion
+  - [ ] add **Date**    to **Vec<u8>** conversion
+  - [ ] add **Vec<u8>** to **Date**    conversion
   - [x] encrypt password
   - [x] decrypt password
 - [ ] better error handling - at the moment there is no standard to errors from different modules, so need to have a look into it
@@ -72,7 +77,7 @@ Rationale behind this project:
   - [ ] verify that incoming attributes of the correct data type,          otherwise reject/ignore the packet, but server also
     - [ ] should be using VALUE from Dictionary, if attribute name is a match and there are corresponding VALUEs, for example **Acct-Status-Type**
 - [ ] tests
-  - [x] client - **Notes 2**
+  - [x] client
   - [ ] server
   - [x] protocol
     - [x] dictionary
@@ -82,4 +87,3 @@ Rationale behind this project:
 
 ## Notes
 1. Big thanks to [pyrad](https://github.com/pyradius/pyrad) and [radius-rust-client](https://github.com/athonet-open/rust-radius-client) projects, which helped me to start this project
-2. At the moment the way to test client - disable parallel test run and spawn system command which starts **simple_radius_server.rs**
