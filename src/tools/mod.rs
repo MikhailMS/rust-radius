@@ -324,6 +324,14 @@ pub fn bytes_to_integer(integer: [u8; 4]) -> u32 {
     u32::from_be_bytes(integer)
 }
 
+pub fn timestamp_to_bytes(timestamp: u64) -> Vec<u8> {
+    timestamp.to_be_bytes().to_vec()
+}
+
+pub fn bytes_to_timestamp(timestamp: [u8; 8]) -> u64 {
+    u64::from_be_bytes(timestamp)
+}
+
 pub fn encrypt_data(data: &str, authenticator: &[u8], secret: &[u8]) -> Vec<u8> {
     /* Step 1. Ensure that data buffer's length is multiple of 16
     *  Step 2. Construct hash:
@@ -472,5 +480,19 @@ mod tests {
         let integer_bytes = [0, 0, 39, 16];
 
         assert_eq!(10000, bytes_to_integer(integer_bytes));
+    }
+
+    #[test]
+    fn test_timestamp_to_bytes() {
+        let timestamp: u64 = 1598523933;
+
+        assert_eq!(vec![0, 0, 0, 0, 95, 71, 138, 29], timestamp_to_bytes(timestamp));
+    }
+
+    #[test]
+    fn test_bytes_to_timestamp() {
+        let timestamp_bytes = [0, 0, 0, 0, 95, 71, 138, 29];
+
+        assert_eq!(1598523933, bytes_to_timestamp(timestamp_bytes));
     }
 }

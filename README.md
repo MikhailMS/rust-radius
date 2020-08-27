@@ -64,8 +64,8 @@ Rationale behind this project:
   - [x] add **Vec<u8>** to **IPv4**    conversion
   - [x] add **Integer** to **Vec<u8>** conversion
   - [x] add **Vec<u8>** to **Integer** conversion
-  - [ ] add **Date**    to **Vec<u8>** conversion
-  - [ ] add **Vec<u8>** to **Date**    conversion
+  - [x] add **Date**    to **Vec<u8>** conversion
+  - [x] add **Vec<u8>** to **Date**    conversion
   - [x] encrypt password
   - [x] decrypt password
 - [ ] better error handling - at the moment there is no standard to errors from different modules, so need to have a look into it
