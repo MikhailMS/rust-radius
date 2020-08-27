@@ -9,21 +9,21 @@
 #  composed of Attribute/Value Pairs.  The value of each attribute
 #  is specified as one of 4 data types.  Valid data types are:
 #
-#  string - 0-253 octets
-#  ipaddr - 4 octets in network byte order
+#  string  - 0-253 octets
+#  ipaddr  - 4 octets in network byte order
 #  integer - 32 bit value in big endian order (high byte first)
-#  date - 32 bit value in big endian order - seconds since
-#          00:00:00 GMT,  Jan.  1,  1970
+#  date    - 32 bit value in big endian order - seconds since
+#               00:00:00 GMT,  Jan.  1,  1970
 #
 #  Enumerated values are stored in the user file with dictionary
 #  VALUE translations for easy administration.
 #
 #  Example:
 #
-#  ATTRIBUTE    VALUE
+#     ATTRIBUTE      VALUE
 #  ---------------   -----
 #  Framed-Protocol = PPP
-#  7    = 1  (integer encoding)
+#        7         =  1   (integer encoding)
 #
 
 ATTRIBUTE User-Name                1   string

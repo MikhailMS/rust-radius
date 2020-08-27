@@ -2,6 +2,9 @@ use super::dictionary::Dictionary;
 
 use rand::Rng;
 
+use std::fmt;
+use std::error::Error;
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeCode {
@@ -77,6 +80,26 @@ impl TypeCode {
 }
 
 
+#[derive(Debug)]
+pub struct MalformedPacket(String);
+
+impl fmt::Display for MalformedPacket {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "malformed RADIUS packet: \"{}\"", self.0)
+    }
+}
+
+impl Error for MalformedPacket {
+    fn description(&self) -> &str {
+        "RADIUS packet contains unsupported attributes"
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        None
+    }
+}
+
+
 #[derive(Debug, PartialEq)]
 pub struct RadiusAttribute {
     id:    u8,
@@ -97,7 +120,7 @@ impl RadiusAttribute {
             _          => None
         }
     }
-    
+
     fn to_bytes(&self) -> Vec<u8> {
         /*
          *    
@@ -113,7 +136,7 @@ impl RadiusAttribute {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct RadiusPacket {
     id:            u8,
     code:          TypeCode,
@@ -129,6 +152,41 @@ impl RadiusPacket {
             authenticator: RadiusPacket::create_authenticator(),
             attributes:    attributes
         }
+    }
+
+    pub fn initialise_packet_from_bytes(dictionary: &Dictionary, bytes: &[u8]) -> Result<RadiusPacket, MalformedPacket> {
+        let code           = match TypeCode::from_u8(bytes[0]) {
+            Err(error) => return Err(MalformedPacket(error)),
+            Ok(code)   => code
+        };
+        let id             = bytes[1];
+        let authenticator  = bytes[4..20].to_vec();
+        let mut attributes = Vec::new();
+
+        let mut last_index = 20;
+
+        while last_index != bytes.len() {
+            let attr_id     = bytes[last_index];
+            let attr_length = bytes[last_index + 1] as usize;
+            let attr_value  = &bytes[(last_index + 2)..=(last_index + attr_length - 1)];
+
+            match RadiusAttribute::create_by_id(dictionary, attr_id, attr_value.to_vec()) {
+                Some(attr) => {
+                    attributes.push(attr);
+                    last_index += attr_length;
+                },
+                _ => {
+                    return Err(MalformedPacket(format!("attribute with ID: {} is not found in dictionary", attr_id)))
+                }
+            }
+        }
+
+        Ok(RadiusPacket{
+            id:            id,
+            code:          code,
+            authenticator: authenticator,
+            attributes:    attributes
+        })
     }
 
     pub fn override_id(&mut self, new_id: u8) {
@@ -214,6 +272,7 @@ impl RadiusPacket {
 
 #[cfg(test)]
 mod tests {
+    use crate::tools::{ integer_to_bytes, ipv4_string_to_bytes};
     use super::*;
 
     #[test]
@@ -235,6 +294,32 @@ mod tests {
         assert_eq!(Some(expected), RadiusAttribute::create_by_id(&dict, 5, vec![1,2,3]));
     }
     
+
+    #[test]
+    fn test_initialise_packet_from_bytes() {
+        let dictionary_path     = "./dict_examples/integration_dict";
+        let dict                = Dictionary::from_file(dictionary_path).unwrap();
+
+        let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10").unwrap();
+        let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100").unwrap();
+        let attributes          = vec![
+            RadiusAttribute::create_by_name(&dict, "NAS-IP-Address",     nas_ip_addr_bytes).unwrap(),
+            RadiusAttribute::create_by_name(&dict, "NAS-Port-Id",        integer_to_bytes(0)).unwrap(),
+            RadiusAttribute::create_by_name(&dict, "NAS-Identifier",     String::from("trillian").into_bytes()).unwrap(),
+            RadiusAttribute::create_by_name(&dict, "Called-Station-Id",  String::from("00-04-5F-00-0F-D1").into_bytes()).unwrap(),
+            RadiusAttribute::create_by_name(&dict, "Calling-Station-Id", String::from("00-01-24-80-B3-9C").into_bytes()).unwrap(),
+            RadiusAttribute::create_by_name(&dict, "Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
+        ];
+        let authenticator       = vec![215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
+        let mut expected_packet = RadiusPacket::initialise_packet(TypeCode::AccountingRequest, attributes);
+        expected_packet.override_id(43);
+        expected_packet.override_authenticator(authenticator);
+
+        let bytes             = [4, 43, 0, 83, 215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73, 4, 6, 192, 168, 1, 10, 5, 6, 0, 0, 0, 0, 32, 10, 116, 114, 105, 108, 108, 105, 97, 110, 30, 19, 48, 48, 45, 48, 52, 45, 53, 70, 45, 48, 48, 45, 48, 70, 45, 68, 49, 31, 19, 48, 48, 45, 48, 49, 45, 50, 52, 45, 56, 48, 45, 66, 51, 45, 57, 67, 8, 6, 10, 0, 0, 100];
+        let packet_from_bytes = RadiusPacket::initialise_packet_from_bytes(&dict, &bytes).unwrap();
+
+        assert_eq!(expected_packet, packet_from_bytes);
+    }
 
     #[test]
     fn test_radius_packet_override_id() {
