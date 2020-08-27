@@ -1,6 +1,6 @@
 use super::protocol::host::Host;
 use super::protocol::radius_packet::{ RadiusPacket, RadiusAttribute, TypeCode };
-use super::protocol::dictionary::Dictionary;
+use super::protocol::dictionary::{ Dictionary, DictionaryValue };
 
 use crypto::digest::Digest;
 use crypto::md5::Md5;
@@ -244,10 +244,28 @@ impl<'server> Server<'server> {
         }
     }
 
+    pub fn validate_request(&self, request: &[u8]) -> Result<(), Error> {
+        // Check that incoming packet has all correct attributes
+        // In case it has unknown or malformed attributes an error would be raised
+        match RadiusPacket::initialise_packet_from_bytes(&self.host.dictionary, request) {
+            Err(err) => Err(Error::new(ErrorKind::Other, err.to_string())),
+            _        => Ok(())
+        }
+    }
 
-    fn validate_request(&self, request: &[u8]) -> Result<&[u8], Error> {
-        // Step 1. Check that it doesn't contain unsupported attibutes
-        todo!();
+    pub fn initialise_packet_from_bytes(&self, request: &[u8]) -> Result<RadiusPacket, Error> {
+        // Unlike validate_request() returns new RadiusPacket, so user can get data out of it
+        match RadiusPacket::initialise_packet_from_bytes(&self.host.dictionary, request) {
+            Err(err)   => Err(Error::new(ErrorKind::Other, err.to_string())),
+            Ok(packet) => Ok(packet)
+        }
+    }
+
+    pub fn find_dict_value_by_attr_and_value_name(&self, attr_name: &str, value_name: &str) -> Option<&DictionaryValue> {
+        match self.host.dictionary.get_values().iter().find(|&value| value.get_name() == value_name && value.get_attribute_name() == attr_name) {
+            Some(value) => Some(value),
+            _           => None
+        }
     }
 
     fn host_allowed(&self, remote_host: &std::net::SocketAddr) -> bool {
@@ -290,5 +308,27 @@ mod tests {
 
         server.add_request_handler(RadiusMsgType::COA, handle_coa_request).unwrap();
         assert_eq!(server.get_request_handlers().len(), 1);
+    }
+
+    #[test]
+    fn test_find_dict_value_by_attr_and_value_name() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let mut server = Server::initialise_server(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+
+        let dict_value = server.find_dict_value_by_attr_and_value_name("Service-Type", "Login-User").unwrap();
+
+        assert_eq!("Service-Type", dict_value.get_attribute_name());
+        assert_eq!("Login-User",   dict_value.get_name());
+        assert_eq!("1",            dict_value.get_value());
+    }
+
+    #[test]
+    fn test_find_dict_value_by_attr_and_value_name_error() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let mut server = Server::initialise_server(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+
+        let dict_value = server.find_dict_value_by_attr_and_value_name("Service-Type", "Lin-User");
+
+        assert_eq!(None, dict_value);
     }
 }

@@ -34,6 +34,18 @@ pub struct DictionaryValue {
 }
 
 impl DictionaryValue {
+    pub fn get_name(&self) -> &str {
+        &self.value_name
+    }
+
+    pub fn get_attribute_name(&self) -> &str {
+        &self.attribute_name
+    }
+
+    pub fn get_value(&self) -> &str {
+        &self.value
+    }
+
     pub fn to_bytes(&self) -> Vec<u8> {
         [self.attribute_name.as_bytes(), self.value_name.as_bytes(), self.vendor_name.as_bytes(), self.value.as_bytes()].concat()
     }
@@ -95,6 +107,14 @@ impl Dictionary {
 
     pub fn get_attributes(&self) -> &[DictionaryAttribute] {
         &self.attributes
+    }
+
+    pub fn get_values(&self) -> &[DictionaryValue] {
+        &self.values
+    }
+
+    pub fn get_vendors(&self) -> &[DictionaryVendor] {
+        &self.vendors
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {

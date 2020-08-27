@@ -37,7 +37,7 @@ Rationale behind this project:
   - [x] create coa   packet
   - [x] send         packet
   - [x] verify reply packet
-  - [x] generate hash for message-authenticator
+  - [ ] generate hash for message-authenticator (I made wrong implementation. Needs fixing)
 - [x] Server
   - [x] handle auth packet
   - [x] handle acct packet
@@ -57,6 +57,9 @@ Rationale behind this project:
   - [x] radius packet
     - [x] accepts  radius attributes
     - [x] converts itself into bytes
+    - [ ] packet verification
+      - [x] verify that incoming attributes exist in server/client dictionary, otherwise reject/ignore the packet
+      - [ ] verify that incoming attributes of the correct data type,          otherwise reject/ignore the packet
 - [ ] Tools
   - [x] add **IPv6**    to **Vec<u8>** conversion
   - [ ] add **Vec<u8>** to **IPv6**    conversion
@@ -72,13 +75,10 @@ Rationale behind this project:
 - [ ] review the code to ensure there are no unnecessary allocations, redundant code and etc:
   - [ ] redesign **Host** (atm it only serves to map TypeCode to port value) 
   - [x] **Client** should have a method(s) **create_attribute_by...** so it is inline with **Server**
-- [ ] packets verification
-  - [ ] verify that incoming attributes exist in server/client dictionary, otherwise reject/ignore the packet
-  - [ ] verify that incoming attributes of the correct data type,          otherwise reject/ignore the packet, but server also
-    - [ ] should be using VALUE from Dictionary, if attribute name is a match and there are corresponding VALUEs, for example **Acct-Status-Type**
-- [ ] tests
+  - [ ] redesign **run_server()** function (if that's possible)
+- [x] tests
   - [x] client
-  - [ ] server
+  - [x] server
   - [x] protocol
     - [x] dictionary
     - [x] radius attribute
