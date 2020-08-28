@@ -80,7 +80,23 @@ impl TypeCode {
 }
 
 
-#[derive(Debug)]
+pub enum SupportedAttributeTypes {
+    // String
+    AsciiString,
+    // u32
+    Integer,
+    // u64
+    Date,
+    // [u8;4]
+    IPv4Addr,
+    // [u8;16]
+    IPv6Addr,
+    // [u8;18]
+    IPv6Prefix
+}
+
+
+#[derive(Debug, PartialEq)]
 pub struct MalformedPacket(String);
 
 impl fmt::Display for MalformedPacket {
@@ -119,6 +135,18 @@ impl RadiusAttribute {
             Some(attr) => Some(RadiusAttribute { id: attribute_code, value: value }),
             _          => None
         }
+    }
+
+    pub fn override_value(&mut self, new_value: Vec<u8>) {
+        self.value = new_value
+    }
+
+    pub fn get_id(&self) -> u8 {
+        self.id
+    }
+
+    pub fn get_value(&self) -> &[u8] {
+        &self.value
     }
 
     fn to_bytes(&self) -> Vec<u8> {
@@ -195,6 +223,25 @@ impl RadiusPacket {
 
     pub fn override_authenticator(&mut self, new_authenticator: Vec<u8>) {
         self.authenticator = new_authenticator
+    }
+
+    pub fn override_message_authenticator(&mut self, new_message_authenticator: Vec<u8>) -> Result<(), MalformedPacket> {
+        match self.attributes.iter_mut().find(|attr| attr.get_id() == 80) {
+            Some(attr) => {
+                attr.override_value(new_message_authenticator);
+                Ok(())
+            },
+            None       => Err(MalformedPacket(String::from("Message-Authenticator attribute not found in packet")))
+        }
+    }
+
+    pub fn get_message_authenticator(&self) -> Result<&[u8], MalformedPacket> {
+        match self.attributes.iter().find(|attr| attr.get_id() == 80) {
+            Some(attr) => {
+                Ok(attr.get_value())
+            },
+            None       => Err(MalformedPacket(String::from("Message-Authenticator attribute not found in packet")))
+        }
     }
 
     pub fn get_id(&self) -> u8 {
@@ -297,8 +344,8 @@ mod tests {
 
     #[test]
     fn test_initialise_packet_from_bytes() {
-        let dictionary_path     = "./dict_examples/integration_dict";
-        let dict                = Dictionary::from_file(dictionary_path).unwrap();
+        let dictionary_path = "./dict_examples/integration_dict";
+        let dict            = Dictionary::from_file(dictionary_path).unwrap();
 
         let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10").unwrap();
         let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100").unwrap();
@@ -354,5 +401,57 @@ mod tests {
         packet.override_authenticator(new_authenticator);
         
         assert_eq!(exepcted_bytes, packet.to_bytes());
+    }
+
+    #[test]
+    fn test_override_message_authenticator_fail() {
+        let dictionary_path = "./dict_examples/integration_dict";
+        let dict            = Dictionary::from_file(dictionary_path).unwrap();
+
+        let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10").unwrap();
+        let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100").unwrap();
+        let attributes          = vec![
+            RadiusAttribute::create_by_name(&dict, "NAS-IP-Address",     nas_ip_addr_bytes).unwrap(),
+            RadiusAttribute::create_by_name(&dict, "NAS-Port-Id",        integer_to_bytes(0)).unwrap(),
+            RadiusAttribute::create_by_name(&dict, "NAS-Identifier",     String::from("trillian").into_bytes()).unwrap(),
+            RadiusAttribute::create_by_name(&dict, "Called-Station-Id",  String::from("00-04-5F-00-0F-D1").into_bytes()).unwrap(),
+            RadiusAttribute::create_by_name(&dict, "Calling-Station-Id", String::from("00-01-24-80-B3-9C").into_bytes()).unwrap(),
+            RadiusAttribute::create_by_name(&dict, "Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
+        ];
+
+        let new_message_authenticator = vec![1, 50, 0, 20, 0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153];
+        let mut packet = RadiusPacket::initialise_packet(TypeCode::AccountingRequest, attributes);
+
+        match packet.override_message_authenticator(new_message_authenticator) {
+            Err(err) => assert_eq!(MalformedPacket(String::from("Message-Authenticator attribute not found in packet")), err),
+            _        => assert!(false)
+        }
+    }
+
+    fn test_override_message_authenticator_success() {
+        let dictionary_path = "./dict_examples/integration_dict";
+        let dict            = Dictionary::from_file(dictionary_path).unwrap();
+
+        let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10").unwrap();
+        let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100").unwrap();
+        let attributes          = vec![
+            RadiusAttribute::create_by_name(&dict, "Calling-Station-Id",    String::from("00-01-24-80-B3-9C").into_bytes()).unwrap(),
+            RadiusAttribute::create_by_name(&dict, "Message-Authenticator", vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).unwrap()
+        ];
+
+        let new_message_authenticator  = vec![1, 50, 0, 20, 0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153];
+        let mut packet                 = RadiusPacket::initialise_packet(TypeCode::AccountingRequest, attributes);
+        let new_id: u8                 = 50;
+        let new_authenticator: Vec<u8> = vec![0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153, 0, 1, 2, 3];
+
+        packet.override_id(new_id);
+        packet.override_authenticator(new_authenticator);
+
+        let expected_packet_bytes: Vec<u8> = vec![1, 50, 0, 57, 0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153, 0, 1, 2, 3, 31, 19, 48, 48, 45, 48, 49, 45, 50, 52, 45, 56, 48, 45, 66, 51, 45, 57, 67, 80, 18, 1, 50, 0, 20, 0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153];
+
+        match packet.override_message_authenticator(new_message_authenticator) {
+            Err(_) => assert!(false),
+            _      => assert_eq!(expected_packet_bytes, packet.to_bytes())
+        }
     }
 }

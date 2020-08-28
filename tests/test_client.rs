@@ -1,12 +1,6 @@
-use radius_rust::protocol::dictionary::Dictionary;
-use radius_rust::protocol::radius_packet::{ RadiusAttribute, TypeCode };
 use radius_rust::client::Client;
-
-use radius_rust::server::{ RadiusMsgType, Server };
+use radius_rust::protocol::dictionary::Dictionary;
 use radius_rust::tools::{ integer_to_bytes, ipv4_string_to_bytes};
-
-use std::process::Command;
-use std::io::Error;
 
 
 #[test]

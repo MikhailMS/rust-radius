@@ -36,6 +36,10 @@ impl<'client> Client<'client> {
         )
     }
 
+    pub fn create_packet(&self, code: TypeCode, attributes: Vec<RadiusAttribute>) -> RadiusPacket {
+        RadiusPacket::initialise_packet(code, attributes)
+    }
+
     pub fn create_auth_packet(&self, attributes: Vec<RadiusAttribute>) -> RadiusPacket {
         RadiusPacket::initialise_packet(TypeCode::AccessRequest, attributes)
     }
@@ -62,7 +66,7 @@ impl<'client> Client<'client> {
         hash.input(&packet.to_bytes());
         hash.result().code().to_vec()
     }
-    
+
     pub fn send_packet(&mut self, packet: &mut RadiusPacket) -> Result<(), Error> {
         let local_bind = "0.0.0.0:0".parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
         let remote     = format!("{}:{}", &self.server, self.host.get_port(packet.get_code())).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
@@ -91,7 +95,7 @@ impl<'client> Client<'client> {
 
                         if amount > 0 {
                             println!("Received reply: {:?}", &response[0..amount]);
-                            return self.verify_reply(&packet, &mut response[0..amount]);
+                            return self.verify_reply(&packet, &response[0..amount]);
                         }
                     },
                     _ => return Err(Error::new(ErrorKind::Other, "Invalid Token")),
@@ -100,36 +104,51 @@ impl<'client> Client<'client> {
 
             retry += 1;
         }
-
         Err(Error::new(ErrorKind::TimedOut, ""))
     }
 
-    fn verify_reply(&self, request: &RadiusPacket, reply: &mut [u8]) -> Result<(), Error> {
+    fn verify_reply(&self, request: &RadiusPacket, reply: &[u8]) -> Result<(), Error> {
         if request.get_id() != reply[1] {
             return Err(Error::new(ErrorKind::InvalidData, String::from("Packet identifier mismatch")));
         };
 
-        let mut raw_data: Vec<u8> = Vec::new();
-
-        raw_data.append(&mut reply[0..4].to_vec());                  // Append reply type code, reply ID and reply length
-        raw_data.append(&mut request.get_authenticator().to_vec());  // Append request authenticator 
-        raw_data.append(&mut reply[20..].to_vec());                  // Append rest of the reply
-        raw_data.append(&mut self.secret.as_bytes().to_vec());       // Append secret
-
         let mut md5_hasher = Md5::new();
         let mut hash       = [0; 16];
-        
-        md5_hasher.input(&raw_data);
+
+        md5_hasher.input(&reply[0..4]);                 // Append reply type code, reply ID and reply length
+        md5_hasher.input(&request.get_authenticator()); // Append request authenticator
+        md5_hasher.input(&reply[20..]);                 // Append rest of the reply
+        md5_hasher.input(&self.secret.as_bytes());      // Append secret
+
         md5_hasher.result(&mut hash);
 
-        println!("{:?}", &raw_data);
         println!("{:?}", &hash);
         println!("{:?}", &reply[4..20]);
 
         if hash == reply[4..20] {
             Ok(())
         } else {
-            return Err(Error::new(ErrorKind::InvalidData, String::from("Packet authenticator mismatch")));
+            Err(Error::new(ErrorKind::InvalidData, String::from("Packet authenticator mismatch")))
+        }
+    }
+
+    fn verify_message_authenticator(&self, packet: &[u8]) -> Result<(), Error> {
+        let _packet_tmp     = match RadiusPacket::initialise_packet_from_bytes(&self.host.dictionary, &packet) {
+            Ok(value) => value,
+            Err(err)  => return Err(Error::new(ErrorKind::InvalidData, err))
+        };
+        let packet_msg_auth = match _packet_tmp.get_message_authenticator() {
+            Ok(value) => value,
+            Err(err)  => return Err(Error::new(ErrorKind::InvalidData, err))
+        };
+
+        let mut hash = Hmac::new(Md5::new(), self.secret.as_bytes());
+        hash.input(&packet);
+
+        if hash.result().code() == packet_msg_auth {
+            Ok(())
+        } else {
+            Err(Error::new(ErrorKind::InvalidData, String::from("Packet Message-Authenticator mismatch")))
         }
     }
 }

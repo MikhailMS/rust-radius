@@ -37,7 +37,8 @@ Rationale behind this project:
   - [x] create coa   packet
   - [x] send         packet
   - [x] verify reply packet
-  - [ ] generate hash for message-authenticator (I made wrong implementation. Needs fixing)
+  - [x] generate hash for message-authenticator
+  - [x] verify message-authenticator hash
 - [x] Server
   - [x] handle auth packet
   - [x] handle acct packet
