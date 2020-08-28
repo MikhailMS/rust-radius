@@ -21,8 +21,8 @@ Rationale behind this project:
 
 ## Usage
 1. The crate is not published, so for now use any of the following options:
-   - `git clone` & In your **Cargo.toml** add **radius-rust = { path = "/path/to/radius-rust" }**
-   - In your **Cargo.toml** add **radius-rust = { git = "https://github.com/MikhailMS/rust-radius" }**
+   - `git clone` & In your **Cargo.toml** add `radius-rust = { path = "/path/to/radius-rust" }`
+   - In your **Cargo.toml** add `radius-rust = { git = "https://github.com/MikhailMS/rust-radius" }`
 
 
 ## Tests
