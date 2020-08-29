@@ -61,6 +61,8 @@ Rationale behind this project:
     - [ ] packet verification
       - [x] verify that incoming attributes exist in server/client dictionary, otherwise reject/ignore the packet
       - [ ] verify that incoming attributes of the correct data type,          otherwise reject/ignore the packet
+        - [x] add SupportedAttributeType enum that holds all RADIUS data types currently supported
+        - [ ] add verification for all types but string, because **Message-Authenticator** is also a string, however it is not a valid ASCII string, so either ignore all strings (easy solution) or only ignore this attribute
 - [ ] Tools
   - [x] add **IPv6**    to **Vec<u8>** conversion
   - [ ] add **Vec<u8>** to **IPv6**    conversion
@@ -74,9 +76,13 @@ Rationale behind this project:
   - [x] decrypt password
 - [ ] better error handling - at the moment there is no standard to errors from different modules, so need to have a look into it
 - [ ] review the code to ensure there are no unnecessary allocations, redundant code and etc:
-  - [ ] redesign **Host** (atm it only serves to map TypeCode to port value) 
+  - [ ] redesign **Host** (atm it only serves to map TypeCode to port value)
+    - [ ] would hold **secret** value (currently Client & Server has it)
+    - [x] would have **get_dictionary_attribute_by_id** function, that returns reference to **DictionaryAttribute** so we can get SupportedAttributeType value to make type verification
+    - [x] bring all shared functions that currently defined in Client & Server
   - [x] **Client** should have a method(s) **create_attribute_by...** so it is inline with **Server**
-  - [ ] redesign **run_server()** function (if that's possible)
+  - [ ] redesign **run_server()**  function (if that's possible)
+  - [ ] redesign **send_packet()** function (if that's possible)
 - [x] tests
   - [x] client
   - [x] server

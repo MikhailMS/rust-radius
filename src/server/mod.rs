@@ -63,7 +63,7 @@ impl<'server> Server<'server> {
     pub fn initialise_server(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: &Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<Server, Error> {
         Ok(
             Server {
-                host:          Host { auth_port, acct_port, coa_port, dictionary },
+                host:          Host::initialise_host(auth_port, acct_port, coa_port, dictionary),
                 allowed_hosts: Vec::new(),
                 server:        server,
                 secret:        secret,
@@ -105,40 +105,38 @@ impl<'server> Server<'server> {
     }
 
     pub fn create_attribute_by_name(&self, attribute_name: &str, value: Vec<u8>) -> Result<RadiusAttribute, Error> {
-        RadiusAttribute::create_by_name(&self.host.dictionary, attribute_name, value).ok_or(Error::new(ErrorKind::Other, format!("Failed to create: {:?} attribute. Check if attribute exists in provided dictionary file", attribute_name)))
+        self.host.create_attribute_by_name(attribute_name, value)
     }
 
     pub fn create_attribute_by_id(&self, attribute_id: u8, value: Vec<u8>) -> Result<RadiusAttribute, Error> {
-        RadiusAttribute::create_by_id(&self.host.dictionary, attribute_id, value).ok_or(Error::new(ErrorKind::Other, format!("Failed to create: attribute with ID {}. Check if attribute exists in provided dictionary file", attribute_id)))
+        self.host.create_attribute_by_id(attribute_id, value)
     }
 
     pub fn create_reply_packet(&self, reply_code: TypeCode, attributes: Vec<RadiusAttribute>, request: &mut [u8]) -> RadiusPacket {
         let mut reply_packet = RadiusPacket::initialise_packet(reply_code, attributes);
 
-        // We can create new authenticator only after we set correct reply packet ID
+        // We can only create new authenticator after we set reply packet ID to the request's ID
         reply_packet.override_id(request[1]);
 
-        let authenticator = self.create_reply_authenticator(&mut reply_packet.to_bytes(), request[4..20].to_vec());
+        let authenticator = self.create_reply_authenticator(&reply_packet.to_bytes(), &request[4..20]);
         reply_packet.override_authenticator(authenticator);
 
         reply_packet
     }
 
-    fn create_reply_authenticator(&self, raw_reply_packet: &mut Vec<u8>, mut request_authenticator: Vec<u8>) -> Vec<u8> {
+    fn create_reply_authenticator(&self, raw_reply_packet: &[u8], request_authenticator: &[u8]) -> Vec<u8> {
         // We need to create authenticator as MD5 hash (similar to how client verifies server reply)
-        let mut temp: Vec<u8> = Vec::new();
-
-        temp.append(&mut raw_reply_packet[0..4].to_vec());  // Append reply's   type code, reply ID and reply length
-        temp.append(&mut request_authenticator);            // Append request's authenticator 
-        temp.append(&mut raw_reply_packet[20..].to_vec());  // Append reply's   attributes
-        temp.append(&mut self.secret.as_bytes().to_vec());  // Append server's  secret. Possibly it should be client's secret, which sould be stored together with allowed hostnames ?
-
         let mut md5_hasher    = Md5::new();
         let mut authenticator = [0; 16];
+
+        md5_hasher.input(&raw_reply_packet[0..4]); // Append reply's   type code, reply ID and reply length
+        md5_hasher.input(&request_authenticator);  // Append request's authenticator
+        md5_hasher.input(&raw_reply_packet[20..]); // Append reply's   attributes
+        md5_hasher.input(&self.secret.as_bytes()); // Append server's  secret. Possibly it should be client's secret, which sould be stored together with allowed hostnames ?
         
-        md5_hasher.input(&temp);
         md5_hasher.result(&mut authenticator);
         // ----------------
+
         authenticator.to_vec()
     }
 
@@ -254,7 +252,7 @@ impl<'server> Server<'server> {
     }
 
     pub fn initialise_packet_from_bytes(&self, request: &[u8]) -> Result<RadiusPacket, Error> {
-        // Unlike validate_request() returns new RadiusPacket, so user can get data out of it
+        // Unlike validate_request() returns new RadiusPacket (if valid), so user can get data out of it
         match RadiusPacket::initialise_packet_from_bytes(&self.host.dictionary, request) {
             Err(err)   => Err(Error::new(ErrorKind::Other, err.to_string())),
             Ok(packet) => Ok(packet)

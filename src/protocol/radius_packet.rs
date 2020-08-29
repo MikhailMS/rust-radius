@@ -1,9 +1,11 @@
-use super::dictionary::Dictionary;
+use super::dictionary::{ Dictionary, SupportedAttributeTypes };
+use crate::tools::{ bytes_to_integer, bytes_to_timestamp, bytes_to_ipv4_string, bytes_to_ipv6_string };
 
 use rand::Rng;
 
 use std::fmt;
 use std::error::Error;
+use std::convert::TryInto;
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -80,22 +82,6 @@ impl TypeCode {
 }
 
 
-pub enum SupportedAttributeTypes {
-    // String
-    AsciiString,
-    // u32
-    Integer,
-    // u64
-    Date,
-    // [u8;4]
-    IPv4Addr,
-    // [u8;16]
-    IPv6Addr,
-    // [u8;18]
-    IPv6Prefix
-}
-
-
 #[derive(Debug, PartialEq)]
 pub struct MalformedPacket(String);
 
@@ -147,6 +133,24 @@ impl RadiusAttribute {
 
     pub fn get_value(&self) -> &[u8] {
         &self.value
+    }
+
+    pub fn get_original_string_string(&self, allowed_type: &SupportedAttributeTypes) -> Result<String, MalformedPacket> {
+        match allowed_type {
+            SupportedAttributeTypes::AsciiString => Ok(String::from_utf8(self.get_value().to_vec()).expect("invalid ASCII string")),
+            SupportedAttributeTypes::IPv4Addr    => Ok(bytes_to_ipv4_string(self.get_value()).expect("invalid IPv4 string")),
+            SupportedAttributeTypes::IPv6Addr    => Ok(bytes_to_ipv6_string(self.get_value()).expect("invalid IPv6 string")),
+            SupportedAttributeTypes::IPv6Prefix  => Ok(bytes_to_ipv6_string(self.get_value()).expect("invalid IPv6 string")),
+            _ => Err(MalformedPacket(String::from("not a String data type")))
+        }
+    }
+
+    pub fn get_original_integer_value(&self, allowed_type: &SupportedAttributeTypes) -> Result<u64, MalformedPacket> {
+        match allowed_type {
+            SupportedAttributeTypes::Integer => Ok(bytes_to_integer(self.get_value().try_into().expect("slice with incorrect length")) as u64),
+            SupportedAttributeTypes::Date    => Ok(bytes_to_timestamp(self.get_value().try_into().expect("slice with incorrect length"))),
+            _ => Err(MalformedPacket(String::from("not an Integer data type")))
+        }
     }
 
     fn to_bytes(&self) -> Vec<u8> {

@@ -290,7 +290,7 @@ pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, MalformedAddress> {
     Ok(bytes)
 }
 
-pub fn bytes_to_ipv6_string(ipv6: Vec<u8>) -> Result<String, MalformedAddress> {
+pub fn bytes_to_ipv6_string(ipv6: &[u8]) -> Result<String, MalformedAddress> {
     todo!();
 }
 
@@ -307,7 +307,7 @@ pub fn ipv4_string_to_bytes(ipv4: &str) -> Result<Vec<u8>, MalformedAddress> {
     Ok(bytes)
 }
 
-pub fn bytes_to_ipv4_string(ipv4: Vec<u8>) -> Result<String, MalformedAddress> {
+pub fn bytes_to_ipv4_string(ipv4: &[u8]) -> Result<String, MalformedAddress> {
     if ipv4.len() != 4 {
         return Err(MalformedAddress(format!("Malformed IPv4: {:?}", ipv4)))
     }
@@ -320,16 +320,16 @@ pub fn integer_to_bytes(integer: u32) -> Vec<u8> {
     integer.to_be_bytes().to_vec()
 }
 
-pub fn bytes_to_integer(integer: [u8; 4]) -> u32 {
-    u32::from_be_bytes(integer)
+pub fn bytes_to_integer(integer: &[u8; 4]) -> u32 {
+    u32::from_be_bytes(*integer)
 }
 
 pub fn timestamp_to_bytes(timestamp: u64) -> Vec<u8> {
     timestamp.to_be_bytes().to_vec()
 }
 
-pub fn bytes_to_timestamp(timestamp: [u8; 8]) -> u64 {
-    u64::from_be_bytes(timestamp)
+pub fn bytes_to_timestamp(timestamp: &[u8; 8]) -> u64 {
+    u64::from_be_bytes(*timestamp)
 }
 
 pub fn encrypt_data(data: &str, authenticator: &[u8], secret: &[u8]) -> Vec<u8> {
@@ -440,7 +440,8 @@ mod tests {
 
     #[test]
     fn test_ipv4_bytes_to_string() {
-        let ipv4_string = bytes_to_ipv4_string(vec![192, 1, 10, 1]).unwrap();
+        let ipv4_bytes = vec![192, 1, 10, 1];
+        let ipv4_string = bytes_to_ipv4_string(&ipv4_bytes).unwrap();
 
         assert_eq!(ipv4_string, "192.1.10.1".to_string());
     }
@@ -479,7 +480,7 @@ mod tests {
     fn test_bytes_to_integer() {
         let integer_bytes = [0, 0, 39, 16];
 
-        assert_eq!(10000, bytes_to_integer(integer_bytes));
+        assert_eq!(10000, bytes_to_integer(&integer_bytes));
     }
 
     #[test]
@@ -493,6 +494,6 @@ mod tests {
     fn test_bytes_to_timestamp() {
         let timestamp_bytes = [0, 0, 0, 0, 95, 71, 138, 29];
 
-        assert_eq!(1598523933, bytes_to_timestamp(timestamp_bytes));
+        assert_eq!(1598523933, bytes_to_timestamp(&timestamp_bytes));
     }
 }

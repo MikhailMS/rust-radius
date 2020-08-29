@@ -2,12 +2,34 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::error::Error;
 
+
+#[derive(Debug, PartialEq)]
+pub enum SupportedAttributeTypes {
+    // String
+    AsciiString,
+    // u32
+    Integer,
+    // u64
+    Date,
+    // [u8;4]
+    IPv4Addr,
+    // [u8;16]
+    IPv6Addr,
+    // [u8;18]
+    IPv6Prefix
+}
+
+
 #[derive(Debug, PartialEq)]
 pub struct DictionaryAttribute {
+    /*
+     * |--------|   name  | code | code type |
+     * ATTRIBUTE User-Name   1      string
+     */
     name:        String,
     vendor_name: String,
     code:        String,
-    code_type:   String
+    code_type:   Option<SupportedAttributeTypes>
 }
 
 impl DictionaryAttribute {
@@ -17,10 +39,6 @@ impl DictionaryAttribute {
 
     pub fn get_code(&self) -> &str {
         &self.code
-    }
-
-    pub fn to_bytes(&self) -> Vec<u8> {
-        [self.name.as_bytes(), self.vendor_name.as_bytes(), self.code.as_bytes(), self.code_type.as_bytes()].concat()
     }
 }
 
@@ -45,10 +63,6 @@ impl DictionaryValue {
     pub fn get_value(&self) -> &str {
         &self.value
     }
-
-    pub fn to_bytes(&self) -> Vec<u8> {
-        [self.attribute_name.as_bytes(), self.value_name.as_bytes(), self.vendor_name.as_bytes(), self.value.as_bytes()].concat()
-    }
 }
 
 
@@ -56,12 +70,6 @@ impl DictionaryValue {
 pub struct DictionaryVendor {
     name: String,
     id:   String  // ideally should be u16
-}
-
-impl DictionaryVendor {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        [self.name.as_bytes(), self.id.as_bytes()].concat()
-    }
 }
 
 
@@ -116,30 +124,25 @@ impl Dictionary {
     pub fn get_vendors(&self) -> &[DictionaryVendor] {
         &self.vendors
     }
-
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes: Vec<u8> = Vec::new();
-        for attr in &self.attributes {
-            bytes.extend(&attr.to_bytes());
-        };
-        for value in &self.values {
-            bytes.extend(&value.to_bytes());
-        };
-        for vendor in &self.vendors {
-            bytes.extend(&vendor.to_bytes());
-        };
-        
-        bytes
-    }
 }
 
+fn assign_attribute_type(code_type: &str) -> Option<SupportedAttributeTypes> {
+    match code_type {
+        "string"     => Some(SupportedAttributeTypes::AsciiString),
+        "integer"    => Some(SupportedAttributeTypes::Integer),
+        "ipaddr"     => Some(SupportedAttributeTypes::IPv4Addr),
+        "ipv6addr"   => Some(SupportedAttributeTypes::IPv6Addr),
+        "ipv6prefix" => Some(SupportedAttributeTypes::IPv6Prefix),
+        _            => None
+    }
+}
 
 fn parse_attribute(parsed_line: Vec<&str>, vendor_name: &str, attributes: &mut Vec<DictionaryAttribute>) {
     attributes.push(DictionaryAttribute {
         name:        parsed_line[1].to_string(),
         vendor_name: vendor_name.to_string(),
         code:        parsed_line[2].to_string(),
-        code_type:   parsed_line[3].to_string().to_lowercase()
+        code_type:   assign_attribute_type(parsed_line[3])
     });
 }
 
@@ -165,75 +168,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_attribute_to_bytes() {
-        let mut attributes: Vec<DictionaryAttribute> = Vec::new();
-        attributes.push(DictionaryAttribute {
-            name:        "User-Name".to_string(),
-            vendor_name: "".to_string(),
-            code:        "1".to_string(),
-            code_type:   "string".to_string()
-        });
-        
-        let attribute_as_bytes = attributes[0].to_bytes();
-        assert_eq!(String::from_utf8(attribute_as_bytes).unwrap(), "User-Name1string".to_string());
-    }
-
-    #[test]
-    fn test_value_to_bytes() {
-        let mut values: Vec<DictionaryValue> = Vec::new();
-        values.push(DictionaryValue {
-            attribute_name: "Framed-Protocol".to_string(),
-            value_name:     "PPP".to_string(),
-            vendor_name:    "".to_string(),
-            value:          "1".to_string()
-        });
-        
-        let value_as_bytes = values[0].to_bytes();
-        assert_eq!(String::from_utf8(value_as_bytes).unwrap(), "Framed-ProtocolPPP1".to_string());
-    }
-
-    #[test]
-    fn test_vendor_to_bytes() {
-        let mut vendors: Vec<DictionaryVendor> = Vec::new();
-        vendors.push(DictionaryVendor {
-            name: "Somevendor".to_string(),
-            id:   "10".to_string(),
-        });
-        
-        let vendor_as_bytes = vendors[0].to_bytes();
-        assert_eq!(String::from_utf8(vendor_as_bytes).unwrap(), "Somevendor10".to_string());
-    }
-
-    #[test]
-    fn test_dictionary_to_bytes() {
-        let mut attributes: Vec<DictionaryAttribute> = Vec::new();
-        attributes.push(DictionaryAttribute {
-            name:        "User-Name".to_string(),
-            vendor_name: "".to_string(),
-            code:        "1".to_string(),
-            code_type:   "string".to_string()
-        });
-        let mut values: Vec<DictionaryValue> = Vec::new();
-        values.push(DictionaryValue {
-            attribute_name: "Framed-Protocol".to_string(),
-            value_name:     "PPP".to_string(),
-            vendor_name:    "".to_string(),
-            value:          "1".to_string()
-        });
-        let mut vendors: Vec<DictionaryVendor> = Vec::new();
-        vendors.push(DictionaryVendor {
-            name: "Somevendor".to_string(),
-            id:   "10".to_string(),
-        });
-
-        let dictionary = Dictionary { attributes, values, vendors };
-        let dictionary_as_bytes = dictionary.to_bytes();
-
-        assert_eq!(String::from_utf8(dictionary_as_bytes).unwrap(), "User-Name1stringFramed-ProtocolPPP1Somevendor10".to_string())
-    }
-    
-
-    #[test]
     fn test_from_file() {
         let dictionary_path = "./dict_examples/test_dictionary_dict";
 
@@ -244,43 +178,43 @@ mod tests {
             name:        "User-Name".to_string(),
             vendor_name: "".to_string(),
             code:        "1".to_string(),
-            code_type:   "string".to_string()
+            code_type:   Some(SupportedAttributeTypes::AsciiString) 
         });
         attributes.push(DictionaryAttribute {
             name:        "NAS-IP-Address".to_string(),
             vendor_name: "".to_string(),
             code:        "4".to_string(),
-            code_type:   "ipaddr".to_string()
+            code_type:   Some(SupportedAttributeTypes::IPv4Addr)
         });
         attributes.push(DictionaryAttribute {
             name:        "NAS-Port-Id".to_string(),
             vendor_name: "".to_string(),
             code:        "5".to_string(),
-            code_type:   "integer".to_string()
+            code_type:   Some(SupportedAttributeTypes::Integer)
         });
         attributes.push(DictionaryAttribute {
             name:        "Framed-Protocol".to_string(),
             vendor_name: "".to_string(),
             code:        "7".to_string(),
-            code_type:   "integer".to_string()
+            code_type:   Some(SupportedAttributeTypes::Integer)
         });
         attributes.push(DictionaryAttribute {
             name:        "Somevendor-Name".to_string(),
             vendor_name: "Somevendor".to_string(),
             code:        "1".to_string(),
-            code_type:   "string".to_string()
+            code_type:   Some(SupportedAttributeTypes::AsciiString)
         });
         attributes.push(DictionaryAttribute {
             name:        "Somevendor-Number".to_string(),
             vendor_name: "Somevendor".to_string(),
             code:        "2".to_string(),
-            code_type:   "integer".to_string()
+            code_type:   Some(SupportedAttributeTypes::Integer)
         });
         attributes.push(DictionaryAttribute {
             name:        "Test-IP".to_string(),
             vendor_name: "".to_string(),
             code:        "25".to_string(),
-            code_type:   "ipaddr".to_string()
+            code_type:   Some(SupportedAttributeTypes::IPv4Addr)
         });
         
         let mut values: Vec<DictionaryValue> = Vec::new();

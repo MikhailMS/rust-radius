@@ -26,7 +26,7 @@ impl<'client> Client<'client> {
     pub fn initialise_client(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: &Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<Client, Error> {
         Ok(
             Client {
-                host:        Host { auth_port, acct_port, coa_port, dictionary },
+                host:        Host::initialise_host(auth_port, acct_port, coa_port, dictionary),
                 server:      server,
                 secret:      secret,
                 retries:     retries,
@@ -53,11 +53,11 @@ impl<'client> Client<'client> {
     }
 
     pub fn create_attribute_by_name(&self, attribute_name: &str, value: Vec<u8>) -> Result<RadiusAttribute, Error> {
-        RadiusAttribute::create_by_name(&self.host.dictionary, attribute_name, value).ok_or(Error::new(ErrorKind::Other, format!("Failed to create: {} attribute. Check if attribute exists in provided dictionary file", attribute_name)))
+        self.host.create_attribute_by_name(attribute_name, value)
     }
 
     pub fn create_attribute_by_id(&self, attribute_id: u8, value: Vec<u8>) -> Result<RadiusAttribute, Error> {
-        RadiusAttribute::create_by_id(&self.host.dictionary, attribute_id, value).ok_or(Error::new(ErrorKind::Other, format!("Failed to create: attribute with ID {}. Check if attribute exists in provided dictionary file", attribute_id)))
+        self.host.create_attribute_by_id(attribute_id, value)
     }
 
     pub fn generate_message_hash(&self, packet: &mut RadiusPacket) -> Vec<u8> {
@@ -85,7 +85,7 @@ impl<'client> Client<'client> {
             println!("Sending: {:?}", &packet.to_bytes());
             socket.send_to(&packet.to_bytes(), remote)?;
 
-            self.socket_poll.poll(&mut events, Some(timeout));
+            self.socket_poll.poll(&mut events, Some(timeout))?;
 
             for event in events.iter() {
                 match event.token() {
@@ -133,22 +133,6 @@ impl<'client> Client<'client> {
     }
 
     fn verify_message_authenticator(&self, packet: &[u8]) -> Result<(), Error> {
-        let _packet_tmp     = match RadiusPacket::initialise_packet_from_bytes(&self.host.dictionary, &packet) {
-            Ok(value) => value,
-            Err(err)  => return Err(Error::new(ErrorKind::InvalidData, err))
-        };
-        let packet_msg_auth = match _packet_tmp.get_message_authenticator() {
-            Ok(value) => value,
-            Err(err)  => return Err(Error::new(ErrorKind::InvalidData, err))
-        };
-
-        let mut hash = Hmac::new(Md5::new(), self.secret.as_bytes());
-        hash.input(&packet);
-
-        if hash.result().code() == packet_msg_auth {
-            Ok(())
-        } else {
-            Err(Error::new(ErrorKind::InvalidData, String::from("Packet Message-Authenticator mismatch")))
-        }
+        self.host.verify_message_authenticator(&self.secret, &packet)
     }
 }
