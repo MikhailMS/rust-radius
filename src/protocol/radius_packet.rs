@@ -101,6 +101,31 @@ impl Error for MalformedPacket {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub struct MalformedAttribute(String);
+
+impl fmt::Display for MalformedAttribute {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "malformed RADIUS packet attribute: \"{}\"", self.0)
+    }
+}
+
+impl MalformedAttribute {
+    pub fn new(msg: String) -> MalformedAttribute {
+        MalformedAttribute(msg)
+    }
+}
+
+impl Error for MalformedAttribute {
+    fn description(&self) -> &str {
+        "RADIUS packet attribute is malformed"
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        None
+    }
+}
+
 
 #[derive(Debug, PartialEq)]
 pub struct RadiusAttribute {
@@ -135,21 +160,51 @@ impl RadiusAttribute {
         &self.value
     }
 
-    pub fn get_original_string_string(&self, allowed_type: &SupportedAttributeTypes) -> Result<String, MalformedPacket> {
+    pub fn get_original_string_value(&self, allowed_type: &Option<SupportedAttributeTypes>) -> Result<String, MalformedAttribute> {
         match allowed_type {
-            SupportedAttributeTypes::AsciiString => Ok(String::from_utf8(self.get_value().to_vec()).expect("invalid ASCII string")),
-            SupportedAttributeTypes::IPv4Addr    => Ok(bytes_to_ipv4_string(self.get_value()).expect("invalid IPv4 string")),
-            SupportedAttributeTypes::IPv6Addr    => Ok(bytes_to_ipv6_string(self.get_value()).expect("invalid IPv6 string")),
-            SupportedAttributeTypes::IPv6Prefix  => Ok(bytes_to_ipv6_string(self.get_value()).expect("invalid IPv6 string")),
-            _ => Err(MalformedPacket(String::from("not a String data type")))
+            Some(SupportedAttributeTypes::AsciiString) => {
+                match String::from_utf8(self.get_value().to_vec()) {
+                    Ok(value) => Ok(value),
+                    _         => Err(MalformedAttribute(String::from("invalid ASCII bytes")))
+                }
+            },
+            Some(SupportedAttributeTypes::IPv4Addr)    => {
+                match bytes_to_ipv4_string(self.get_value()) {
+                    Ok(value) => Ok(value),
+                    _         => Err(MalformedAttribute(String::from("invalid IPv4 bytes")))
+                }
+            },
+            Some(SupportedAttributeTypes::IPv6Addr)    => {
+                match bytes_to_ipv6_string(self.get_value()) {
+                    Ok(value) => Ok(value),
+                    _         => Err(MalformedAttribute(String::from("invalid IPv6 bytes")))
+                }
+            },
+            Some(SupportedAttributeTypes::IPv6Prefix)  => {
+                match bytes_to_ipv6_string(self.get_value()) {
+                    Ok(value) => Ok(value),
+                    _         => Err(MalformedAttribute(String::from("invalid IPv6 bytes")))
+                }
+            },
+            _                                          => Err(MalformedAttribute(String::from("not a String data type")))
         }
     }
 
-    pub fn get_original_integer_value(&self, allowed_type: &SupportedAttributeTypes) -> Result<u64, MalformedPacket> {
+    pub fn get_original_integer_value(&self, allowed_type: &Option<SupportedAttributeTypes>) -> Result<u64, MalformedAttribute> {
         match allowed_type {
-            SupportedAttributeTypes::Integer => Ok(bytes_to_integer(self.get_value().try_into().expect("slice with incorrect length")) as u64),
-            SupportedAttributeTypes::Date    => Ok(bytes_to_timestamp(self.get_value().try_into().expect("slice with incorrect length"))),
-            _ => Err(MalformedPacket(String::from("not an Integer data type")))
+            Some(SupportedAttributeTypes::Integer) => {
+                match self.get_value().try_into() {
+                    Ok(value) => Ok(bytes_to_integer(value) as u64),
+                    _         => Err(MalformedAttribute(String::from("invalid Integer bytes")))
+                }
+            } ,
+            Some(SupportedAttributeTypes::Date)    => {
+                match self.get_value().try_into() {
+                    Ok(value) => Ok(bytes_to_timestamp(value) as u64),
+                    _         => Err(MalformedAttribute(String::from("invalid Date bytes")))
+                }
+            },
+            _                                      => Err(MalformedAttribute(String::from("not an Integer data type")))
         }
     }
 

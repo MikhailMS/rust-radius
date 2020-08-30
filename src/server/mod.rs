@@ -259,13 +259,6 @@ impl<'server> Server<'server> {
         }
     }
 
-    pub fn find_dict_value_by_attr_and_value_name(&self, attr_name: &str, value_name: &str) -> Option<&DictionaryValue> {
-        match self.host.dictionary.get_values().iter().find(|&value| value.get_name() == value_name && value.get_attribute_name() == attr_name) {
-            Some(value) => Some(value),
-            _           => None
-        }
-    }
-
     fn host_allowed(&self, remote_host: &std::net::SocketAddr) -> bool {
         let remote_host_name            = remote_host.to_string();
         let remote_host_name: Vec<&str> = remote_host_name.split(":").collect();
@@ -306,27 +299,5 @@ mod tests {
 
         server.add_request_handler(RadiusMsgType::COA, handle_coa_request).unwrap();
         assert_eq!(server.get_request_handlers().len(), 1);
-    }
-
-    #[test]
-    fn test_find_dict_value_by_attr_and_value_name() {
-        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let mut server = Server::initialise_server(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
-
-        let dict_value = server.find_dict_value_by_attr_and_value_name("Service-Type", "Login-User").unwrap();
-
-        assert_eq!("Service-Type", dict_value.get_attribute_name());
-        assert_eq!("Login-User",   dict_value.get_name());
-        assert_eq!("1",            dict_value.get_value());
-    }
-
-    #[test]
-    fn test_find_dict_value_by_attr_and_value_name_error() {
-        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let mut server = Server::initialise_server(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
-
-        let dict_value = server.find_dict_value_by_attr_and_value_name("Service-Type", "Lin-User");
-
-        assert_eq!(None, dict_value);
     }
 }

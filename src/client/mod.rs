@@ -1,5 +1,5 @@
 use super::protocol::host::Host;
-use super::protocol::radius_packet::{ RadiusPacket, RadiusAttribute, TypeCode };
+use super::protocol::radius_packet::{ MalformedAttribute, RadiusPacket, RadiusAttribute, TypeCode };
 use super::protocol::dictionary::Dictionary;
 
 use crypto::digest::Digest;
@@ -14,7 +14,7 @@ use std::time::Duration;
 
 #[derive(Debug)]
 pub struct Client<'client> {
-    pub host:    Host<'client>,
+    host:        Host<'client>,
     server:      String,
     secret:      String,
     retries:     u16,
@@ -65,6 +65,24 @@ impl<'client> Client<'client> {
 
         hash.input(&packet.to_bytes());
         hash.result().code().to_vec()
+    }
+
+    pub fn get_radius_attr_original_string_value(&self, attribute: &RadiusAttribute) -> Result<String, MalformedAttribute> {
+        let dict_attr = match self.host.get_dictionary_attribute_by_id(attribute.get_id()) {
+            Some(attr) => attr,
+            _          => return Err(MalformedAttribute::new(format!("No attribute with ID: {} found in dictionary", attribute.get_id())))
+        };
+
+        attribute.get_original_string_value(dict_attr.get_code_type())
+    }
+
+    pub fn get_radius_attr_original_integer_value(&self, attribute: &RadiusAttribute) -> Result<u64, MalformedAttribute> {
+        let dict_attr = match self.host.get_dictionary_attribute_by_id(attribute.get_id()) {
+            Some(attr) => attr,
+            _          => return Err(MalformedAttribute::new(format!("No attribute with ID: {} found in dictionary", attribute.get_id())))
+        };
+
+        attribute.get_original_integer_value(dict_attr.get_code_type())
     }
 
     pub fn send_packet(&mut self, packet: &mut RadiusPacket) -> Result<(), Error> {
@@ -134,5 +152,65 @@ impl<'client> Client<'client> {
 
     fn verify_message_authenticator(&self, packet: &[u8]) -> Result<(), Error> {
         self.host.verify_message_authenticator(&self.secret, &packet)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tools::integer_to_bytes;
+
+    #[test]
+    fn test_get_radius_attr_original_string_value() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let mut client = Client::initialise_client(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+
+        let attributes = vec![client.create_attribute_by_name("User-Name", String::from("testing").into_bytes()).unwrap()];
+
+        match client.get_radius_attr_original_string_value(&attributes[0]) {
+            Ok(value) => assert_eq!(String::from("testing"), value),
+            _         => assert!(false)
+        }
+    }
+
+    #[test]
+    fn test_get_radius_attr_original_string_value_error() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let mut client = Client::initialise_client(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+
+        let invalid_string = vec![215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
+        let attributes     = vec![client.create_attribute_by_name("User-Name", invalid_string).unwrap()];
+
+        match client.get_radius_attr_original_string_value(&attributes[0]) {
+            Ok(_)      => assert!(false),
+            Err(error) => assert_eq!(MalformedAttribute::new(String::from("invalid ASCII bytes")), error)
+        }
+    }
+
+    #[test]
+    fn test_get_radius_attr_original_integer_value() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let mut client = Client::initialise_client(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+
+        let attributes = vec![client.create_attribute_by_name("NAS-Port-Id", integer_to_bytes(0)).unwrap()];
+
+        match client.get_radius_attr_original_integer_value(&attributes[0]) {
+            Ok(value) => assert_eq!(0, value),
+            _         => assert!(false)
+        }
+    }
+
+    #[test]
+    fn test_get_radius_attr_original_integer_value_error() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let mut client = Client::initialise_client(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+
+        let invalid_integer = vec![215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
+        let attributes      = vec![client.create_attribute_by_name("NAS-Port-Id", invalid_integer).unwrap()];
+
+        match client.get_radius_attr_original_integer_value(&attributes[0]) {
+            Ok(_)      => assert!(false),
+            Err(error) => assert_eq!(MalformedAttribute::new(String::from("invalid Integer bytes")), error)
+        }
     }
 }

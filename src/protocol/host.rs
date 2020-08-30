@@ -1,4 +1,4 @@
-use super::dictionary::{ Dictionary, DictionaryAttribute };
+use super::dictionary::{ Dictionary, DictionaryAttribute, DictionaryValue };
 use super::radius_packet::{ RadiusPacket, RadiusAttribute, TypeCode };
 
 use crypto::digest::Digest;
@@ -38,6 +38,13 @@ impl<'host> Host<'host> {
         }
     }
 
+    pub fn get_dictionary_value_by_attr_and_value_name(&self, attr_name: &str, value_name: &str) -> Option<&DictionaryValue> {
+        match self.dictionary.get_values().iter().find(|&value| value.get_name() == value_name && value.get_attribute_name() == attr_name) {
+            Some(value) => Some(value),
+            _           => None
+        }
+    }
+
     pub fn get_dictionary_attribute_by_id(&self, packet_attr_id: u8) -> Option<&DictionaryAttribute> {
         match self.dictionary.get_attributes().iter().find(|&attr| attr.get_code() == packet_attr_id.to_string()) {
             Some(value) => Some(value),
@@ -63,5 +70,54 @@ impl<'host> Host<'host> {
         } else {
             Err(Error::new(ErrorKind::InvalidData, String::from("Packet Message-Authenticator mismatch")))
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::protocol::dictionary::SupportedAttributeTypes;
+
+    #[test]
+    fn test_get_dictionary_value_by_attr_and_value_name() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let mut host   = Host::initialise_host(1812, 1813, 3799, &dictionary);
+
+        let dict_value = host.get_dictionary_value_by_attr_and_value_name("Service-Type", "Login-User").unwrap();
+
+        assert_eq!("Service-Type", dict_value.get_attribute_name());
+        assert_eq!("Login-User",   dict_value.get_name());
+        assert_eq!("1",            dict_value.get_value());
+    }
+
+    #[test]
+    fn test_get_dictionary_value_by_attr_and_value_name_error() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let mut host   = Host::initialise_host(1812, 1813, 3799, &dictionary);
+
+        let dict_value = host.get_dictionary_value_by_attr_and_value_name("Service-Type", "Lin-User");
+        assert_eq!(None, dict_value);
+    }
+
+    #[test]
+    fn test_get_dictionary_attribute_by_id() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let mut host   = Host::initialise_host(1812, 1813, 3799, &dictionary);
+
+        let dict_attr = host.get_dictionary_attribute_by_id(80).unwrap();
+
+        assert_eq!("Message-Authenticator",                    dict_attr.get_name());
+        assert_eq!("80",                                       dict_attr.get_code());
+        assert_eq!(&Some(SupportedAttributeTypes::AsciiString), dict_attr.get_code_type());
+    }
+
+    #[test]
+    fn test_get_dictionary_attribute_by_id_error() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let mut host   = Host::initialise_host(1812, 1813, 3799, &dictionary);
+
+        let dict_attr = host.get_dictionary_attribute_by_id(255);
+        assert_eq!(None, dict_attr);
     }
 }

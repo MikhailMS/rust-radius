@@ -40,6 +40,10 @@ impl DictionaryAttribute {
     pub fn get_code(&self) -> &str {
         &self.code
     }
+
+    pub fn get_code_type(&self) -> &Option<SupportedAttributeTypes> {
+        &self.code_type
+    }
 }
 
 
