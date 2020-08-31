@@ -1,6 +1,6 @@
 use super::protocol::host::Host;
 use super::protocol::radius_packet::{ RadiusPacket, RadiusAttribute, TypeCode };
-use super::protocol::dictionary::{ Dictionary, DictionaryValue };
+use super::protocol::dictionary::Dictionary;
 
 use crypto::digest::Digest;
 use crypto::md5::Md5;
@@ -249,6 +249,12 @@ impl<'server> Server<'server> {
             Err(err) => Err(Error::new(ErrorKind::Other, err.to_string())),
             _        => Ok(())
         }
+    }
+
+    fn verify_request_attributes(&self, request: &[u8]) -> Result<(), Error> {
+        // Check that incoming packet attributes have correct values
+        // In case it has unknown or malformed attributes an error would be raised
+        self.host.verify_packet_attributes(&request)
     }
 
     pub fn initialise_packet_from_bytes(&self, request: &[u8]) -> Result<RadiusPacket, Error> {

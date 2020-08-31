@@ -52,6 +52,32 @@ impl<'host> Host<'host> {
         }
     }
 
+    pub fn get_dictionary_attribute_by_name(&self, packet_attr_name: &str) -> Option<&DictionaryAttribute> {
+        match self.dictionary.get_attributes().iter().find(|&attr| attr.get_name() == packet_attr_name) {
+            Some(value) => Some(value),
+            _           => None
+        }
+    }
+
+    pub fn verify_packet_attributes(&self, packet: &[u8]) -> Result<(), Error> {
+        let ignore_attribute = "Message-Authenticator";
+        let _packet_tmp      = match RadiusPacket::initialise_packet_from_bytes(&self.dictionary, &packet) {
+            Ok(value) => value,
+            Err(err)  => return Err(Error::new(ErrorKind::InvalidData, err))
+        };
+
+        for packet_attr in _packet_tmp.get_attributes().iter().filter(|&attr| attr.get_name() != ignore_attribute) {
+            let _dict_attr           = self.get_dictionary_attribute_by_id(packet_attr.get_id()).unwrap();
+            let _dict_attr_data_type = _dict_attr.get_code_type();
+
+            match packet_attr.verify_original_value(_dict_attr_data_type) {
+                Err(err) => return Err(Error::new(ErrorKind::InvalidData, err)),
+                _        => continue
+            }
+        }
+        Ok(())
+    }
+
     pub fn verify_message_authenticator(&self, secret: &str, packet: &[u8]) -> Result<(), Error> {
         let _packet_tmp     = match RadiusPacket::initialise_packet_from_bytes(&self.dictionary, &packet) {
             Ok(value) => value,
@@ -82,7 +108,7 @@ mod tests {
     #[test]
     fn test_get_dictionary_value_by_attr_and_value_name() {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let mut host   = Host::initialise_host(1812, 1813, 3799, &dictionary);
+        let host       = Host::initialise_host(1812, 1813, 3799, &dictionary);
 
         let dict_value = host.get_dictionary_value_by_attr_and_value_name("Service-Type", "Login-User").unwrap();
 
@@ -94,7 +120,7 @@ mod tests {
     #[test]
     fn test_get_dictionary_value_by_attr_and_value_name_error() {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let mut host   = Host::initialise_host(1812, 1813, 3799, &dictionary);
+        let host       = Host::initialise_host(1812, 1813, 3799, &dictionary);
 
         let dict_value = host.get_dictionary_value_by_attr_and_value_name("Service-Type", "Lin-User");
         assert_eq!(None, dict_value);
@@ -103,7 +129,7 @@ mod tests {
     #[test]
     fn test_get_dictionary_attribute_by_id() {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let mut host   = Host::initialise_host(1812, 1813, 3799, &dictionary);
+        let host       = Host::initialise_host(1812, 1813, 3799, &dictionary);
 
         let dict_attr = host.get_dictionary_attribute_by_id(80).unwrap();
 
@@ -115,9 +141,41 @@ mod tests {
     #[test]
     fn test_get_dictionary_attribute_by_id_error() {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let mut host   = Host::initialise_host(1812, 1813, 3799, &dictionary);
+        let host       = Host::initialise_host(1812, 1813, 3799, &dictionary);
 
         let dict_attr = host.get_dictionary_attribute_by_id(255);
         assert_eq!(None, dict_attr);
+    }
+
+    #[test]
+    fn test_verify_packet_attributes() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let host       = Host::initialise_host(1812, 1813, 3799, &dictionary);
+
+        let packet_bytes = [4, 43, 0, 83, 215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73, 4, 6, 192, 168, 1, 10, 5, 6, 0, 0, 0, 0, 32, 10, 116, 114, 105, 108, 108, 105, 97, 110, 30, 19, 48, 48, 45, 48, 52, 45, 53, 70, 45, 48, 48, 45, 48, 70, 45, 68, 49, 31, 19, 48, 48, 45, 48, 49, 45, 50, 52, 45, 56, 48, 45, 66, 51, 45, 57, 67, 8, 6, 10, 0, 0, 100];
+
+        match host.verify_packet_attributes(&packet_bytes) {
+            Err(err) => {
+                println!("{:?}", err);
+                assert!(false)
+            },
+            _        => assert!(true)
+        }
+    }
+
+    #[test]
+    fn test_verify_packet_attributes_fail() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let host       = Host::initialise_host(1812, 1813, 3799, &dictionary);
+
+        let packet_bytes = [4, 43, 0, 82, 215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73, 4, 5, 192, 168, 10, 5, 6, 0, 0, 0, 0, 32, 10, 116, 114, 105, 108, 108, 105, 97, 110, 30, 19, 48, 48, 45, 48, 52, 45, 53, 70, 45, 48, 48, 45, 48, 70, 45, 68, 49, 31, 19, 48, 48, 45, 48, 49, 45, 50, 52, 45, 56, 48, 45, 66, 51, 45, 57, 67, 8, 6, 10, 0, 0, 100];
+
+        match host.verify_packet_attributes(&packet_bytes) {
+            Err(err) => {
+                println!("{:?}", err);
+                assert!(true)
+            },
+            _        => assert!(false)
+        }
     }
 }

@@ -153,6 +153,10 @@ impl<'client> Client<'client> {
     fn verify_message_authenticator(&self, packet: &[u8]) -> Result<(), Error> {
         self.host.verify_message_authenticator(&self.secret, &packet)
     }
+
+    fn verify_packet_attributes(&self, packet: &[u8]) -> Result<(), Error> {
+        self.host.verify_packet_attributes(&packet)
+    }
 }
 
 #[cfg(test)]
@@ -163,7 +167,7 @@ mod tests {
     #[test]
     fn test_get_radius_attr_original_string_value() {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let mut client = Client::initialise_client(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+        let client     = Client::initialise_client(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
         let attributes = vec![client.create_attribute_by_name("User-Name", String::from("testing").into_bytes()).unwrap()];
 
@@ -176,7 +180,7 @@ mod tests {
     #[test]
     fn test_get_radius_attr_original_string_value_error() {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let mut client = Client::initialise_client(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+        let client     = Client::initialise_client(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
         let invalid_string = vec![215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
         let attributes     = vec![client.create_attribute_by_name("User-Name", invalid_string).unwrap()];
@@ -190,7 +194,7 @@ mod tests {
     #[test]
     fn test_get_radius_attr_original_integer_value() {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let mut client = Client::initialise_client(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+        let client     = Client::initialise_client(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
         let attributes = vec![client.create_attribute_by_name("NAS-Port-Id", integer_to_bytes(0)).unwrap()];
 
@@ -203,7 +207,7 @@ mod tests {
     #[test]
     fn test_get_radius_attr_original_integer_value_error() {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let mut client = Client::initialise_client(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+        let client     = Client::initialise_client(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
         let invalid_integer = vec![215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
         let attributes      = vec![client.create_attribute_by_name("NAS-Port-Id", invalid_integer).unwrap()];

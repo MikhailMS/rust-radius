@@ -58,11 +58,11 @@ Rationale behind this project:
   - [x] radius packet
     - [x] accepts  radius attributes
     - [x] converts itself into bytes
-    - [ ] packet verification
+    - [x] packet verification
       - [x] verify that incoming attributes exist in server/client dictionary, otherwise reject/ignore the packet
-      - [ ] verify that incoming attributes of the correct data type,          otherwise reject/ignore the packet
+      - [x] verify that incoming attributes of the correct data type,          otherwise reject/ignore the packet
         - [x] add SupportedAttributeType enum that holds all RADIUS data types currently supported
-        - [ ] add verification for all types but string, because **Message-Authenticator** is also a string, however it is not a valid ASCII string, so either ignore all strings (easy solution) or only ignore this attribute
+        - [x] add verification for all currently supported types **Note2**
 - [ ] Tools
   - [x] add **IPv6**    to **Vec<u8>** conversion
   - [ ] add **Vec<u8>** to **IPv6**    conversion
@@ -76,13 +76,13 @@ Rationale behind this project:
   - [x] decrypt password
 - [ ] better error handling - at the moment there is no standard to errors from different modules, so need to have a look into it
 - [ ] review the code to ensure there are no unnecessary allocations, redundant code and etc:
-  - [ ] redesign **Host** (atm it only serves to map TypeCode to port value)
-    - [ ] would hold **secret** value (currently Client & Server has it)
+  - [x] redesign **Host** (atm it only serves to map TypeCode to port value)
     - [x] would have **get_dictionary_attribute_by_id** function, that returns reference to **DictionaryAttribute** so we can get SupportedAttributeType value to make type verification
     - [x] bring all shared functions that currently defined in Client & Server
   - [x] **Client** should have a method(s) **create_attribute_by...** so it is inline with **Server**
   - [ ] redesign **run_server()**  function (if that's possible)
   - [ ] redesign **send_packet()** function (if that's possible)
+  - [ ] check that it is well written
 - [x] tests
   - [x] client
   - [x] server
@@ -94,3 +94,4 @@ Rationale behind this project:
 
 ## Notes
 1. Big thanks to [pyrad](https://github.com/pyradius/pyrad) and [radius-rust-client](https://github.com/athonet-open/rust-radius-client) projects, which helped me to start this project
+2. Value of **Message-Authenticator** RadiusAttribute won't be validated, because in RADIUS dictionary it has **string** type, however it is not valid ASCII string (**Message-Authenticator** is a HMAC-MD5 hash)
