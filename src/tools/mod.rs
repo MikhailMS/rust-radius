@@ -1,10 +1,9 @@
 use crypto::digest::Digest;
 use crypto::md5::Md5;
 
-use std::fmt;
-use std::error::Error;
 use std::str::FromStr;
 
+use crate::protocol::error::{ RadiusError, MalformedIpAddr };
 
 /* Convertion of IPv6 from string into bytes
  * 
@@ -14,47 +13,31 @@ use std::str::FromStr;
  *
  */
 
-#[derive(Debug)]
-pub struct MalformedAddress(String);
-
-impl fmt::Display for MalformedAddress {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "malformed address: \"{}\"", self.0)
-    }
-}
-
-impl Error for MalformedAddress {
-    fn description(&self) -> &str {
-        "the string cannot be parsed as an IP address"
-    }
-
-    fn cause(&self) -> Option<&Error> {
-        None
-    }
-}
-
 #[derive(Debug, Copy, Eq, PartialEq, Hash, Clone)]
+/// Represents IPv4 Address
 struct Ipv4Address(u32);
 
 impl Ipv4Address {
-    fn parse(_: &[u8]) -> Result<u32, MalformedAddress> {
+    fn parse(_: &[u8]) -> Result<u32, RadiusError> {
         unimplemented!();
     }
 }
 
 #[derive(Debug, Copy, Eq, PartialEq, Hash, Clone)]
+/// Represents IPv4 Address
 struct Ipv6Address {
     address: u128
 }
 
 impl Ipv6Address {
+    /// Converts IPv6 Address u128 into vector of bytes
     pub fn to_bytes(&self) -> Vec<u8> {
         self.address.to_be_bytes().to_vec()
     }
 }
 
 impl FromStr for Ipv6Address {
-    type Err = MalformedAddress;
+    type Err = RadiusError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // We'll manipulate bytes instead of UTF-8 characters, because the characters that
@@ -70,7 +53,7 @@ impl FromStr for Ipv6Address {
         //      ::
         //
         if bytes.len() > 38 || bytes.len() < 2 {
-            return Err(MalformedAddress(s.into()));
+            return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } );
         }
 
         let mut offset = 0;
@@ -87,7 +70,7 @@ impl FromStr for Ipv6Address {
             } else {
                 // An IPv6 cannot start with a single column. It must be a double column.
                 // So this is an invalid address
-                return Err(MalformedAddress(s.into()));
+                return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } );
             }
         }
 
@@ -115,7 +98,7 @@ impl FromStr for Ipv6Address {
                         // Check if already saw an ellipsis. If so, fail parsing, because an IPv6
                         // can only have one ellipsis.
                         if ellipsis.is_some() {
-                            return Err(MalformedAddress(s.into()));
+                            return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } )
                         }
                         // Otherwise, remember the position of the ellipsis. We'll need that later
                         // to count the number of zeros the ellipsis represents.
@@ -127,7 +110,7 @@ impl FromStr for Ipv6Address {
                     // We now the first character does not represent an hexadecimal digit
                     // (otherwise read_hextet() would have read at least one character), and that
                     // it's not ":", so the string does not represent an IPv6 address
-                    _ => return Err(MalformedAddress(s.into())),
+                    _    => return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } )
                 }
             }
 
@@ -174,20 +157,20 @@ impl FromStr for Ipv6Address {
                     // we'll fail later.
                     break;
                 }
-                _ => return Err(MalformedAddress(s.into())),
+                _    => return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } )
             }
         } // end of loop
 
         // If we exited the loop, we should have reached the end of the buffer.
         // If there are trailing characters, parsing should fail.
         if offset < bytes.len() {
-            return Err(MalformedAddress(s.into()));
+            return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } );
         }
 
         if hextet_index == 8 && ellipsis.is_some() {
             // We parsed an address that looks like 1111:2222::3333:4444:5555:6666:7777,
             // ie with an empty ellipsis.
-            return Err(MalformedAddress(s.into()));
+            return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } );
         }
 
         // We didn't parse enough hextets, but this may be due to an ellipsis
@@ -201,7 +184,7 @@ impl FromStr for Ipv6Address {
                     address[index] = 0;
                 }
             } else {
-                return Err(MalformedAddress(s.into()));
+                return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } );
             }
         }
 
@@ -278,7 +261,11 @@ fn read_hextet(bytes: &[u8]) -> (usize, u16) {
 // -----------------------------------------
 
 // The only thing which needs to be available to users
-pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, MalformedAddress> {
+
+/// Converts IPv6 Address string into vector of bytes
+///
+/// Should be used for any Attribute of type ipv6addr or ipv6prefix to ensure value is encoded correctly
+pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, RadiusError> {
     let parsed_ipv6: Vec<&str> = ipv6.split("/").collect();
     let mut bytes: Vec<u8>     = Vec::with_capacity(18);
     let mut ipv6_address       = Ipv6Address::from_str(parsed_ipv6[0]).unwrap().to_bytes();
@@ -290,13 +277,17 @@ pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, MalformedAddress> {
     Ok(bytes)
 }
 
-pub fn bytes_to_ipv6_string(ipv6: &[u8]) -> Result<String, MalformedAddress> {
+/// Converts IPv6 bytes into IPv6 string
+pub fn bytes_to_ipv6_string(ipv6: &[u8]) -> Result<String, RadiusError> {
     todo!();
 }
 
-pub fn ipv4_string_to_bytes(ipv4: &str) -> Result<Vec<u8>, MalformedAddress> {
+/// Converts IPv4 Address string into vector of bytes
+///
+/// Should be used for any Attribute of type ipaddr to ensure value is encoded correctly
+pub fn ipv4_string_to_bytes(ipv4: &str) -> Result<Vec<u8>, RadiusError> {
     if ipv4.contains("/") {
-        return Err(MalformedAddress(format!("Subnets are not supported for IPv4: {}", ipv4)))
+        return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(format!("Subnets are not supported for IPv4: {}", ipv4)) } )
     }
 
     let mut bytes: Vec<u8> = Vec::with_capacity(4);
@@ -307,31 +298,42 @@ pub fn ipv4_string_to_bytes(ipv4: &str) -> Result<Vec<u8>, MalformedAddress> {
     Ok(bytes)
 }
 
-pub fn bytes_to_ipv4_string(ipv4: &[u8]) -> Result<String, MalformedAddress> {
+/// Converts IPv4 bytes into IPv4 string
+pub fn bytes_to_ipv4_string(ipv4: &[u8]) -> Result<String, RadiusError> {
     if ipv4.len() != 4 {
-        return Err(MalformedAddress(format!("Malformed IPv4: {:?}", ipv4)))
+        return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(format!("Malformed IPv4: {:?}", ipv4)) } )
     }
 
     let ipv4_string: Vec<String> = ipv4.iter().map(|group| group.to_string()).collect();
     Ok(ipv4_string.join("."))
 }
 
+/// Converts u32 into vector of bytes
+///
+/// Should be used for any Attribute of type integer to ensure value is encoded correctly
 pub fn integer_to_bytes(integer: u32) -> Vec<u8> {
     integer.to_be_bytes().to_vec()
 }
 
+/// Converts integer bytes into u32
 pub fn bytes_to_integer(integer: &[u8; 4]) -> u32 {
     u32::from_be_bytes(*integer)
 }
 
+/// Converts timestamp (u64) into vector of bytes
+///
+/// Should be used for any Attribute of type date to ensure value is encoded correctly
 pub fn timestamp_to_bytes(timestamp: u64) -> Vec<u8> {
     timestamp.to_be_bytes().to_vec()
 }
 
+/// Converts timestamp bytes into u64
 pub fn bytes_to_timestamp(timestamp: &[u8; 8]) -> u64 {
     u64::from_be_bytes(*timestamp)
 }
 
+/// Encrypts data (mainly value of **User-Password** attribute) since RADIUS packet is sent in
+/// plain text
 pub fn encrypt_data(data: &str, authenticator: &[u8], secret: &[u8]) -> Vec<u8> {
     /* Step 1. Ensure that data buffer's length is multiple of 16
     *  Step 2. Construct hash:
@@ -372,6 +374,7 @@ pub fn encrypt_data(data: &str, authenticator: &[u8], secret: &[u8]) -> Vec<u8> 
     result   
 }
 
+/// Decrypts data (mainly value of **User-Password** attribute)
 pub fn decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8> {
     /* 
      * To decrypt the data, we need to apply the same algorithm as in encrypt_data()

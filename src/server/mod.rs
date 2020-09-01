@@ -1,6 +1,7 @@
 use super::protocol::host::Host;
 use super::protocol::radius_packet::{ RadiusPacket, RadiusAttribute, TypeCode };
 use super::protocol::dictionary::Dictionary;
+use super::protocol::error::RadiusError;
 
 use crypto::digest::Digest;
 use crypto::md5::Md5;
@@ -17,14 +18,18 @@ const COA_SOCKET:  Token = Token(3);
 
 
 #[derive(PartialEq, Eq, Hash)]
+/// Allowed types of RADIUS messages/packets
 pub enum RadiusMsgType {
+    /// Authentication packet
     AUTH,
+    /// Accounting packet
     ACCT,
+    /// Change of Authorisation packet
     COA
 }
 
 impl fmt::Display for RadiusMsgType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             RadiusMsgType::AUTH => f.write_str("Auth"),
             RadiusMsgType::ACCT => f.write_str("Acct"),
@@ -34,18 +39,19 @@ impl fmt::Display for RadiusMsgType {
 }
 
 
-pub struct Server<'server> {
-    host:          Host<'server>,
+/// Represents RADIUS server instance
+pub struct Server {
+    host:          Host,
     allowed_hosts: Vec<String>,
     server:        String,
     secret:        String,
     retries:       u16,
     timeout:       u16,
     socket_poll:   Poll,
-    handlers:      HashMap<RadiusMsgType, fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, Error>>
+    handlers:      HashMap<RadiusMsgType, fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, RadiusError>>
 }
 
-impl<'server> fmt::Debug for Server<'server> {
+impl fmt::Debug for Server {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Server")
          .field("host",          &self.host)
@@ -59,8 +65,9 @@ impl<'server> fmt::Debug for Server<'server> {
     }
 }
 
-impl<'server> Server<'server> {
-    pub fn initialise_server(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: &Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<Server, Error> {
+impl Server {
+    /// Initialises RADIUS server instance
+    pub fn initialise_server(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<Server, RadiusError> {
         Ok(
             Server {
                 host:          Host::initialise_host(auth_port, acct_port, coa_port, dictionary),
@@ -75,15 +82,45 @@ impl<'server> Server<'server> {
         )
     }
 
+    /// Adds client host address to allowed hosts list
     pub fn add_allowed_hosts(&mut self, host_addr: String) {
         self.allowed_hosts.push(host_addr);
     }
 
+    /// Returns allowed hosts list
     pub fn get_allowed_hosts(&self) -> &[String] {
         &self.allowed_hosts
     }
 
-    pub fn add_request_handler(&mut self, handler_type: RadiusMsgType, handler_function: fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, Error>) -> Result<(), Error> {
+    /// Adds packet handller function to server instance
+    ///
+    /// Note: server can only have 3 handlers, 1 for each Radius message/packet type
+    ///
+    /// # Example
+    /// ```
+    ///
+    /// use radius_rust::protocol::dictionary::Dictionary;
+    /// use radius_rust::protocol::error::RadiusError;
+    /// use radius_rust::protocol::radius_packet::{ RadiusAttribute, TypeCode };
+    /// use radius_rust::server::{ RadiusMsgType, Server };
+    ///
+    /// fn handle_coa_request(server: &Server, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
+    ///     let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
+    ///
+    ///     let mut reply_packet = server.create_reply_packet(TypeCode::CoAACK, attributes, request);
+    ///     Ok(reply_packet.to_bytes())
+    /// }
+    ///
+    /// fn main() -> Result<(), RadiusError> {
+    ///     let dictionary = Dictionary::from_file("./dict_examples/integration_dict")?;
+    ///     let mut server = Server::initialise_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2)?;
+    ///
+    ///     server.add_request_handler(RadiusMsgType::COA,  handle_coa_request)?;
+    ///     Ok(())
+    /// }
+    ///
+    /// ```
+    pub fn add_request_handler(&mut self, handler_type: RadiusMsgType, handler_function: fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, RadiusError>) -> Result<(), RadiusError> {
         match handler_type {
             RadiusMsgType::AUTH => {
                 self.handlers.insert(handler_type, handler_function);
@@ -100,18 +137,28 @@ impl<'server> Server<'server> {
         }
     }
 
-    pub fn get_request_handlers(&self) -> &HashMap<RadiusMsgType, fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, Error>> {
+    /// Returns HashMap with packet handler functions
+    pub fn get_request_handlers(&self) -> &HashMap<RadiusMsgType, fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, RadiusError>> {
         &self.handlers
     }
 
-    pub fn create_attribute_by_name(&self, attribute_name: &str, value: Vec<u8>) -> Result<RadiusAttribute, Error> {
+    /// Creates RADIUS packet attribute by name, that is defined in dictionary file
+    ///
+    /// For example, see Client (these function are same)
+    pub fn create_attribute_by_name(&self, attribute_name: &str, value: Vec<u8>) -> Result<RadiusAttribute, RadiusError> {
         self.host.create_attribute_by_name(attribute_name, value)
     }
 
-    pub fn create_attribute_by_id(&self, attribute_id: u8, value: Vec<u8>) -> Result<RadiusAttribute, Error> {
+    /// Creates RADIUS packet attribute by id, that is defined in dictionary file
+    ///
+    /// For example, see Client (these function are same)
+    pub fn create_attribute_by_id(&self, attribute_id: u8, value: Vec<u8>) -> Result<RadiusAttribute, RadiusError> {
         self.host.create_attribute_by_id(attribute_id, value)
     }
 
+    /// Creates reply RADIUS packet
+    ///
+    /// Similar to Client **create_packet()**, however also sets correct packet ID and authenticator
     pub fn create_reply_packet(&self, reply_code: TypeCode, attributes: Vec<RadiusAttribute>, request: &mut [u8]) -> RadiusPacket {
         let mut reply_packet = RadiusPacket::initialise_packet(reply_code, attributes);
 
@@ -140,7 +187,10 @@ impl<'server> Server<'server> {
         authenticator.to_vec()
     }
 
-    pub fn run_server(&mut self) -> Result<(), Error> {
+    /// Main function, that starts and keeps server running
+    ///
+    /// For example see examples/simple_radius_server.rs
+    pub fn run_server(&mut self) -> Result<(), RadiusError> {
         let auth_bind_addr = format!("{}:{}", &self.server, self.host.get_port(&TypeCode::AccessRequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
         let acct_bind_addr = format!("{}:{}", &self.server, self.host.get_port(&TypeCode::AccountingRequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
         let coa_bind_addr  = format!("{}:{}", &self.server, self.host.get_port(&TypeCode::CoARequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
@@ -180,7 +230,7 @@ impl<'server> Server<'server> {
                                 break;
                             },
                             Err(error) => {
-                                return Err(error);
+                                return Err( RadiusError::SocketConnectionError(error) );
                             }
                         }
                     },
@@ -205,7 +255,7 @@ impl<'server> Server<'server> {
                                 break;
                             },
                             Err(error) => {
-                                return Err(error);
+                                return Err( RadiusError::SocketConnectionError(error) );
                             }
                         }
                     },
@@ -230,37 +280,46 @@ impl<'server> Server<'server> {
                                 break;
                             },
                             Err(error) => {
-                                return Err(error);
+                                return Err( RadiusError::SocketConnectionError(error) );
                             }
                         }
                     },
                     _ => {
-                        return Err(Error::new(ErrorKind::Other, format!("Non-supported UDP request: {:?}", event)))
+                        return Err( RadiusError::SocketConnectionError(Error::new(ErrorKind::Other, format!("Non-supported UDP request: {:?}", event))) );
                     }
                 }
             }
         }
     }
 
-    pub fn validate_request(&self, request: &[u8]) -> Result<(), Error> {
+    /// Validates incoming RADIUS packet:
+    ///
+    /// Server would try to build RadiusPacket from raw bytes, and if it successeds then packet is
+    /// valid, otherwise would return RadiusError
+    pub fn validate_request(&self, request: &[u8]) -> Result<(), RadiusError> {
         // Check that incoming packet has all correct attributes
         // In case it has unknown or malformed attributes an error would be raised
-        match RadiusPacket::initialise_packet_from_bytes(&self.host.dictionary, request) {
-            Err(err) => Err(Error::new(ErrorKind::Other, err.to_string())),
+        match RadiusPacket::initialise_packet_from_bytes(&self.host.get_dictionary(), request) {
+            Err(err) => Err(err),
             _        => Ok(())
         }
     }
 
-    fn verify_request_attributes(&self, request: &[u8]) -> Result<(), Error> {
+    /// Validates RadiusAttributes's values of incoming RADIUS packet:
+    ///
+    /// Server would try to build RadiusPacket from raw bytes, and then it would try to restore
+    /// RadiusAttribute original value from bytes, based on the attribute data type (see SupportedAttributeTypes)
+    fn verify_request_attributes(&self, request: &[u8]) -> Result<(), RadiusError> {
         // Check that incoming packet attributes have correct values
         // In case it has unknown or malformed attributes an error would be raised
         self.host.verify_packet_attributes(&request)
     }
 
-    pub fn initialise_packet_from_bytes(&self, request: &[u8]) -> Result<RadiusPacket, Error> {
+    /// Initialises RadiusPacket from bytes
+    pub fn initialise_packet_from_bytes(&self, request: &[u8]) -> Result<RadiusPacket, RadiusError> {
         // Unlike validate_request() returns new RadiusPacket (if valid), so user can get data out of it
-        match RadiusPacket::initialise_packet_from_bytes(&self.host.dictionary, request) {
-            Err(err)   => Err(Error::new(ErrorKind::Other, err.to_string())),
+        match RadiusPacket::initialise_packet_from_bytes(&self.host.get_dictionary(), request) {
+            Err(err)   => Err(err),
             Ok(packet) => Ok(packet)
         }
     }
@@ -278,7 +337,7 @@ impl<'server> Server<'server> {
 mod tests {
     use super::*;
 
-    fn handle_coa_request(server: &Server, request: &mut [u8]) -> Result<Vec<u8>, Error> {
+    fn handle_coa_request(server: &Server, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
         let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
 
         let mut reply_packet = server.create_reply_packet(TypeCode::CoAACK, attributes, request);
@@ -288,7 +347,7 @@ mod tests {
     #[test]
     fn test_add_allowed_hosts() {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let mut server = Server::initialise_server(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+        let mut server = Server::initialise_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
         assert_eq!(server.get_allowed_hosts().len(), 0);
 
@@ -299,7 +358,7 @@ mod tests {
     #[test]
     fn test_add_request_handler() {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let mut server = Server::initialise_server(1812, 1813, 3799, &dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+        let mut server = Server::initialise_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
         assert_eq!(server.get_request_handlers().len(), 0);
 

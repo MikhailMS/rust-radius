@@ -74,15 +74,6 @@ Rationale behind this project:
   - [x] add **Vec<u8>** to **Date**    conversion
   - [x] encrypt password
   - [x] decrypt password
-- [ ] better error handling - at the moment there is no standard to errors from different modules, so need to have a look into it
-- [ ] review the code to ensure there are no unnecessary allocations, redundant code and etc:
-  - [x] redesign **Host** (atm it only serves to map TypeCode to port value)
-    - [x] would have **get_dictionary_attribute_by_id** function, that returns reference to **DictionaryAttribute** so we can get SupportedAttributeType value to make type verification
-    - [x] bring all shared functions that currently defined in Client & Server
-  - [x] **Client** should have a method(s) **create_attribute_by...** so it is inline with **Server**
-  - [ ] redesign **run_server()**  function (if that's possible)
-  - [ ] redesign **send_packet()** function (if that's possible)
-  - [ ] check that it is well written
 - [x] tests
   - [x] client
   - [x] server
@@ -90,6 +81,17 @@ Rationale behind this project:
     - [x] dictionary
     - [x] radius attribute
     - [x] radius packet
+- [ ] review the code to ensure there are no unnecessary allocations, redundant code and etc:
+  - [x] redesign **Host** (atm it only serves to map TypeCode to port value)
+    - [x] would have **get_dictionary_attribute_by_id** function, that returns reference to **DictionaryAttribute** so we can get SupportedAttributeType value to make type verification
+    - [x] bring all shared functions that currently defined in Client & Server
+  - [x] **Client** should have a method(s) **create_attribute_by...** so it is inline with **Server**
+  - [ ] redesign **run_server()**  function (if that's possible)
+  - [ ] redesign **send_packet()** function (if that's possible)
+  - [x] better error handling - at the moment there is no standard to errors from different modules, so need to have a look into it (`https://nick.groenen.me/posts/rust-error-handling/`)
+  - [x] **example/simple_radius_server.rs** -> handle Result better than `.unwrap()`
+  - [x] pass **Dictionary** to **Host** instead of **&Dictionary**
+  - [ ] check that it is well written
 
 
 ## Notes

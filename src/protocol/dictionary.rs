@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{self, BufRead};
-use std::error::Error;
 
+use super::error::RadiusError;
 
 #[derive(Debug, PartialEq)]
 pub enum SupportedAttributeTypes {
@@ -90,14 +90,14 @@ impl Dictionary {
         todo!()
     }
 
-    pub fn from_file(file_path: &str) -> Result<Dictionary, Box<dyn Error>> {
+    pub fn from_file(file_path: &str) -> Result<Dictionary, RadiusError> {
         let mut attributes:  Vec<DictionaryAttribute> = Vec::new();
         let mut values:      Vec<DictionaryValue>     = Vec::new();
         let mut vendors:     Vec<DictionaryVendor>    = Vec::new();
         let mut vendor_name: String                   = String::new();
         let comment_prefix:  String                   = String::from("#");
 
-        let reader = io::BufReader::new(File::open(file_path)?);
+        let reader = io::BufReader::new(File::open(file_path).map_err(|error| RadiusError::MalformedDictionary { error })?);
         let lines  = reader.lines()
             .filter_map(Result::ok)
             .filter(|line| !line.is_empty())
