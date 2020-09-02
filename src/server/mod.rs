@@ -48,6 +48,9 @@ pub struct Server {
     retries:       u16,
     timeout:       u16,
     socket_poll:   Poll,
+    auth_socket:   UdpSocket,
+    acct_socket:   UdpSocket,
+    coa_socket:    UdpSocket,
     handlers:      HashMap<RadiusMsgType, fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, RadiusError>>
 }
 
@@ -68,15 +71,33 @@ impl fmt::Debug for Server {
 impl Server {
     /// Initialises RADIUS server instance
     pub fn initialise_server(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<Server, RadiusError> {
+        let socket_poll = Poll::new()?;
+        let host        = Host::initialise_host(auth_port, acct_port, coa_port, dictionary);
+
+        let auth_bind_addr = format!("{}:{}", server, host.get_port(&TypeCode::AccessRequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
+        let acct_bind_addr = format!("{}:{}", server, host.get_port(&TypeCode::AccountingRequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
+        let coa_bind_addr  = format!("{}:{}", server, host.get_port(&TypeCode::CoARequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
+
+        let mut auth_server = UdpSocket::bind(auth_bind_addr)?;
+        let mut acct_server = UdpSocket::bind(acct_bind_addr)?;
+        let mut coa_server  = UdpSocket::bind(coa_bind_addr)?;
+
+        socket_poll.registry().register(&mut auth_server, AUTH_SOCKET, Interest::READABLE)?;
+        socket_poll.registry().register(&mut acct_server, ACCT_SOCKET, Interest::READABLE)?;
+        socket_poll.registry().register(&mut coa_server,  COA_SOCKET,  Interest::READABLE)?;
+
         Ok(
             Server {
-                host:          Host::initialise_host(auth_port, acct_port, coa_port, dictionary),
+                host:          host,
                 allowed_hosts: Vec::new(),
                 server:        server,
                 secret:        secret,
                 retries:       retries,
                 timeout:       timeout,
-                socket_poll:   Poll::new()?,
+                socket_poll:   socket_poll,
+                auth_socket:   auth_server,
+                acct_socket:   acct_server,
+                coa_socket:    coa_server,
                 handlers:      HashMap::with_capacity(3)
             }
         )
@@ -96,30 +117,7 @@ impl Server {
     ///
     /// Note: server can only have 3 handlers, 1 for each Radius message/packet type
     ///
-    /// # Example
-    /// ```
-    ///
-    /// use radius_rust::protocol::dictionary::Dictionary;
-    /// use radius_rust::protocol::error::RadiusError;
-    /// use radius_rust::protocol::radius_packet::{ RadiusAttribute, TypeCode };
-    /// use radius_rust::server::{ RadiusMsgType, Server };
-    ///
-    /// fn handle_coa_request(server: &Server, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
-    ///     let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
-    ///
-    ///     let mut reply_packet = server.create_reply_packet(TypeCode::CoAACK, attributes, request);
-    ///     Ok(reply_packet.to_bytes())
-    /// }
-    ///
-    /// fn main() -> Result<(), RadiusError> {
-    ///     let dictionary = Dictionary::from_file("./dict_examples/integration_dict")?;
-    ///     let mut server = Server::initialise_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2)?;
-    ///
-    ///     server.add_request_handler(RadiusMsgType::COA,  handle_coa_request)?;
-    ///     Ok(())
-    /// }
-    ///
-    /// ```
+    /// For example refer to `examples/simple_radius_server.rs`
     pub fn add_request_handler(&mut self, handler_type: RadiusMsgType, handler_function: fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, RadiusError>) -> Result<(), RadiusError> {
         match handler_type {
             RadiusMsgType::AUTH => {
@@ -189,20 +187,8 @@ impl Server {
 
     /// Main function, that starts and keeps server running
     ///
-    /// For example see examples/simple_radius_server.rs
+    /// For example see `examples/simple_radius_server.rs`
     pub fn run_server(&mut self) -> Result<(), RadiusError> {
-        let auth_bind_addr = format!("{}:{}", &self.server, self.host.get_port(&TypeCode::AccessRequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
-        let acct_bind_addr = format!("{}:{}", &self.server, self.host.get_port(&TypeCode::AccountingRequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
-        let coa_bind_addr  = format!("{}:{}", &self.server, self.host.get_port(&TypeCode::CoARequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
-        
-        let mut auth_server = UdpSocket::bind(auth_bind_addr)?;
-        let mut acct_server = UdpSocket::bind(acct_bind_addr)?;
-        let mut coa_server  = UdpSocket::bind(coa_bind_addr)?;
-        
-        self.socket_poll.registry().register(&mut auth_server, AUTH_SOCKET, Interest::READABLE)?;
-        self.socket_poll.registry().register(&mut acct_server, ACCT_SOCKET, Interest::READABLE)?;
-        self.socket_poll.registry().register(&mut coa_server,  COA_SOCKET,  Interest::READABLE)?;
-
         let mut events = Events::with_capacity(1024);
         
         loop {
@@ -214,12 +200,12 @@ impl Server {
                         println!("Received AUTH request");
                         let mut request = [0; 4096];
                         
-                        match auth_server.recv_from(&mut request) {
+                        match self.auth_socket.recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
                                 if self.host_allowed(&source_address) {
                                     let handle_auth_request = self.handlers.get(&RadiusMsgType::AUTH).expect("Auth handler is not defined!");
                                     let response            = handle_auth_request(&self, &mut request[..packet_size])?;
-                                    auth_server.send_to(&response.as_slice(), source_address)?;
+                                    self.auth_socket.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
                                     println!("{:?} is not listed as allowed", &source_address);
@@ -238,13 +224,13 @@ impl Server {
                         println!("Received ACCT request");
                         let mut request = [0; 4096];
                         
-                        match acct_server.recv_from(&mut request) {
+                        match self.acct_socket.recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
                                 if self.host_allowed(&source_address) {
                                     let handle_acct_request = self.handlers.get(&RadiusMsgType::ACCT).expect("Acct handler is not defined!");
                                     let response            = handle_acct_request(&self, &mut request[..packet_size])?;
                                     
-                                    acct_server.send_to(&response.as_slice(), source_address)?;
+                                    self.acct_socket.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
                                     println!("{:?} is not listed as allowed", &source_address);
@@ -263,13 +249,13 @@ impl Server {
                         println!("Received CoA  request");
                         let mut request = [0; 4096];
                         
-                        match coa_server.recv_from(&mut request) {
+                        match self.coa_socket.recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
                                 if self.host_allowed(&source_address) {
                                     let handle_coa_request = self.handlers.get(&RadiusMsgType::COA).expect("CoA handler is not defined!");
                                     let response           = handle_coa_request(&self, &mut request[..packet_size])?;
                                     
-                                    coa_server.send_to(&response.as_slice(), source_address)?;
+                                    self.coa_socket.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
                                     println!("{:?} is not listed as allowed", &source_address);
@@ -316,12 +302,10 @@ impl Server {
     }
 
     /// Initialises RadiusPacket from bytes
+    ///
+    /// Unlike validate_request() returns new RadiusPacket (if valid), so user can get data out of it
     pub fn initialise_packet_from_bytes(&self, request: &[u8]) -> Result<RadiusPacket, RadiusError> {
-        // Unlike validate_request() returns new RadiusPacket (if valid), so user can get data out of it
-        match RadiusPacket::initialise_packet_from_bytes(&self.host.get_dictionary(), request) {
-            Err(err)   => Err(err),
-            Ok(packet) => Ok(packet)
-        }
+        self.host.initialise_packet_from_bytes(request)
     }
 
     fn host_allowed(&self, remote_host: &std::net::SocketAddr) -> bool {
@@ -345,20 +329,14 @@ mod tests {
     }
 
     #[test]
-    fn test_add_allowed_hosts() {
+    fn test_add_allowed_hosts_and_add_request_handler() {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let mut server = Server::initialise_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+        let mut server = Server::initialise_server(1810, 1809, 3790, dictionary, String::from("0.0.0.0"), String::from("secret"), 1, 2).unwrap();
 
         assert_eq!(server.get_allowed_hosts().len(), 0);
 
         server.add_allowed_hosts(String::from("127.0.0.1"));
         assert_eq!(server.get_allowed_hosts().len(), 1);
-    }
-
-    #[test]
-    fn test_add_request_handler() {
-        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let mut server = Server::initialise_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
         assert_eq!(server.get_request_handlers().len(), 0);
 

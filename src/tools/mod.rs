@@ -3,7 +3,7 @@ use crypto::md5::Md5;
 
 use std::str::FromStr;
 
-use crate::protocol::error::{ RadiusError, MalformedIpAddr };
+use crate::protocol::error::RadiusError;
 
 /* Convertion of IPv6 from string into bytes
  * 
@@ -53,7 +53,7 @@ impl FromStr for Ipv6Address {
         //      ::
         //
         if bytes.len() > 38 || bytes.len() < 2 {
-            return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } );
+            return Err( RadiusError::MalformedIpAddr { error: s.into() } );
         }
 
         let mut offset = 0;
@@ -70,7 +70,7 @@ impl FromStr for Ipv6Address {
             } else {
                 // An IPv6 cannot start with a single column. It must be a double column.
                 // So this is an invalid address
-                return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } );
+                return Err( RadiusError::MalformedIpAddr { error: s.into() } );
             }
         }
 
@@ -98,7 +98,7 @@ impl FromStr for Ipv6Address {
                         // Check if already saw an ellipsis. If so, fail parsing, because an IPv6
                         // can only have one ellipsis.
                         if ellipsis.is_some() {
-                            return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } )
+                            return Err( RadiusError::MalformedIpAddr { error: s.into() } )
                         }
                         // Otherwise, remember the position of the ellipsis. We'll need that later
                         // to count the number of zeros the ellipsis represents.
@@ -110,7 +110,7 @@ impl FromStr for Ipv6Address {
                     // We now the first character does not represent an hexadecimal digit
                     // (otherwise read_hextet() would have read at least one character), and that
                     // it's not ":", so the string does not represent an IPv6 address
-                    _    => return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } )
+                    _    => return Err( RadiusError::MalformedIpAddr { error: s.into() } )
                 }
             }
 
@@ -157,20 +157,20 @@ impl FromStr for Ipv6Address {
                     // we'll fail later.
                     break;
                 }
-                _    => return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } )
+                _    => return Err( RadiusError::MalformedIpAddr { error: s.into() } )
             }
         } // end of loop
 
         // If we exited the loop, we should have reached the end of the buffer.
         // If there are trailing characters, parsing should fail.
         if offset < bytes.len() {
-            return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } );
+            return Err( RadiusError::MalformedIpAddr { error: s.into() } );
         }
 
         if hextet_index == 8 && ellipsis.is_some() {
             // We parsed an address that looks like 1111:2222::3333:4444:5555:6666:7777,
             // ie with an empty ellipsis.
-            return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } );
+            return Err( RadiusError::MalformedIpAddr { error: s.into() } );
         }
 
         // We didn't parse enough hextets, but this may be due to an ellipsis
@@ -184,7 +184,7 @@ impl FromStr for Ipv6Address {
                     address[index] = 0;
                 }
             } else {
-                return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(s.into()) } );
+                return Err( RadiusError::MalformedIpAddr { error: s.into() } );
             }
         }
 
@@ -287,7 +287,7 @@ pub fn bytes_to_ipv6_string(ipv6: &[u8]) -> Result<String, RadiusError> {
 /// Should be used for any Attribute of type ipaddr to ensure value is encoded correctly
 pub fn ipv4_string_to_bytes(ipv4: &str) -> Result<Vec<u8>, RadiusError> {
     if ipv4.contains("/") {
-        return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(format!("Subnets are not supported for IPv4: {}", ipv4)) } )
+        return Err( RadiusError::MalformedIpAddr { error: format!("Subnets are not supported for IPv4: {}", ipv4) } )
     }
 
     let mut bytes: Vec<u8> = Vec::with_capacity(4);
@@ -301,7 +301,7 @@ pub fn ipv4_string_to_bytes(ipv4: &str) -> Result<Vec<u8>, RadiusError> {
 /// Converts IPv4 bytes into IPv4 string
 pub fn bytes_to_ipv4_string(ipv4: &[u8]) -> Result<String, RadiusError> {
     if ipv4.len() != 4 {
-        return Err( RadiusError::MalformedIpAddr { error: MalformedIpAddr::new(format!("Malformed IPv4: {:?}", ipv4)) } )
+        return Err( RadiusError::MalformedIpAddr { error: format!("Malformed IPv4: {:?}", ipv4) } )
     }
 
     let ipv4_string: Vec<String> = ipv4.iter().map(|group| group.to_string()).collect();

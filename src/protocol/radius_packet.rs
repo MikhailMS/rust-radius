@@ -1,5 +1,5 @@
 use super::dictionary::{ Dictionary, SupportedAttributeTypes };
-use super::error::{ RadiusError, MalformedPacket, MalformedAttribute };
+use super::error::RadiusError;
 use crate::tools::{ bytes_to_integer, bytes_to_timestamp, bytes_to_ipv4_string, bytes_to_ipv6_string };
 
 use rand::Rng;
@@ -8,34 +8,36 @@ use std::convert::TryInto;
 
 
 #[derive(Debug, Clone, PartialEq)]
+/// Contains all supported Codes of RADIUS message/packet
+/// as defined in RFC 2865 & RFC 3576
 pub enum TypeCode {
-    // AccessRequest      = 1
+    /// AccessRequest      = 1
     AccessRequest,
-    // AccessAccept       = 2
+    /// AccessAccept       = 2
     AccessAccept,
-    // AccessReject       = 3
+    /// AccessReject       = 3
     AccessReject,
-    // AccountingRequest  = 4
+    /// AccountingRequest  = 4
     AccountingRequest,
-    // AccountingResponse = 5
+    /// AccountingResponse = 5
     AccountingResponse,
-    // AccessChallenge    = 11
+    /// AccessChallenge    = 11
     AccessChallenge,
-    // StatusServer       = 12
+    /// StatusServer       = 12
     StatusServer,
-    // StatusClient       = 13
+    /// StatusClient       = 13
     StatusClient,
-    // DisconnectRequest  = 40
+    /// DisconnectRequest  = 40
     DisconnectRequest,
-    // DisconnectACK      = 41
+    /// DisconnectACK      = 41
     DisconnectACK,
-    // DisconnectNAK      = 42
+    /// DisconnectNAK      = 42
     DisconnectNAK,
-    // CoARequest         = 43
+    /// CoARequest         = 43
     CoARequest,
-    // CoAACK             = 44
+    /// CoAACK             = 44
     CoAACK,
-    // CoANAK             = 45
+    /// CoANAK             = 45
     CoANAK
 }
 
@@ -82,6 +84,7 @@ impl TypeCode {
 
 
 #[derive(Debug, PartialEq)]
+/// Represents an attribute, which would be sent to RADIUS Server/client as a part of RadiusPacket
 pub struct RadiusAttribute {
     id:    u8,
     name:  String,
@@ -89,6 +92,9 @@ pub struct RadiusAttribute {
 }
 
 impl RadiusAttribute {
+    /// Creates RadiusAttribute with given name
+    ///
+    /// Returns None, if ATTRIBUTE with such name is not found in Dictionary
     pub fn create_by_name(dictionary: &Dictionary, attribute_name: &str, value: Vec<u8>) -> Option<RadiusAttribute> {
         match dictionary.get_attributes().iter().find(|&attr| attr.get_name() == attribute_name) {
             Some(attr) => Some(RadiusAttribute {
@@ -100,6 +106,9 @@ impl RadiusAttribute {
         }
     }
 
+    /// Creates RadiusAttribute with given id
+    ///
+    /// Returns None, if ATTRIBUTE with such id is not found in Dictionary
     pub fn create_by_id(dictionary: &Dictionary, attribute_code: u8, value: Vec<u8>) -> Option<RadiusAttribute> {
         match dictionary.get_attributes().iter().find(|&attr| attr.get_code() == attribute_code.to_string()) {
             Some(attr) => Some(RadiusAttribute {
@@ -111,46 +120,53 @@ impl RadiusAttribute {
         }
     }
 
+    /// Overriddes RadiusAttribute value
+    ///
+    /// Mainly used when building Message-Authenticator
     pub fn override_value(&mut self, new_value: Vec<u8>) {
         self.value = new_value
     }
 
+    /// Returns RadiusAttribute id
     pub fn get_id(&self) -> u8 {
         self.id
     }
 
+    /// Returns RadiusAttribute value
     pub fn get_value(&self) -> &[u8] {
         &self.value
     }
 
+    /// Returns RadiusAttribute name
     pub fn get_name(&self) -> &str {
         &self.name
     }
 
+    /// Verifies RadiusAttribute value, based on the ATTRIBUTE code type
     pub fn verify_original_value(&self, allowed_type: &Option<SupportedAttributeTypes>) -> Result<(), RadiusError> {
         match allowed_type {
             Some(SupportedAttributeTypes::AsciiString) => {
                 match String::from_utf8(self.get_value().to_vec()) {
                     Ok(_) => Ok(()),
-                    _     => Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(String::from("invalid ASCII bytes"))} )
+                    _     => Err( RadiusError::MalformedAttribute {error: String::from("invalid ASCII bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::IPv4Addr)    => {
                 match bytes_to_ipv4_string(self.get_value()) {
                     Ok(_) => Ok(()),
-                    _     => Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(String::from("invalid IPv4 bytes"))} )
+                    _     => Err( RadiusError::MalformedAttribute {error: String::from("invalid IPv4 bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::IPv6Addr)    => {
                 match bytes_to_ipv6_string(self.get_value()) {
                     Ok(_) => Ok(()),
-                    _     => Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(String::from("invalid IPv6 bytes"))} )
+                    _     => Err( RadiusError::MalformedAttribute {error: String::from("invalid IPv6 bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::IPv6Prefix)  => {
                 match bytes_to_ipv6_string(self.get_value()) {
                     Ok(_) => Ok(()),
-                    _     => Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(String::from("invalid IPv6 bytes"))} )
+                    _     => Err( RadiusError::MalformedAttribute {error: String::from("invalid IPv6 bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::Integer)     => {
@@ -159,7 +175,7 @@ impl RadiusAttribute {
                         bytes_to_integer(value);
                         Ok(())
                     },
-                    _     => Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(String::from("invalid Integer bytes"))} )
+                    _     => Err( RadiusError::MalformedAttribute {error: String::from("invalid Integer bytes")} )
                 }
             } ,
             Some(SupportedAttributeTypes::Date)        => {
@@ -168,58 +184,62 @@ impl RadiusAttribute {
                         bytes_to_timestamp(value);
                         Ok(())
                     },
-                    _     => Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(String::from("invalid Date bytes"))} )
+                    _     => Err( RadiusError::MalformedAttribute {error: String::from("invalid Date bytes")} )
                 }
             },
-            _                                          => Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(String::from("unsupported attribute code type"))} )
+            _                                          => Err( RadiusError::MalformedAttribute {error: String::from("unsupported attribute code type")} )
         }
     }
 
+    /// Returns RadiusAttribute value, if the attribute is dictionary's ATTRIBUTE with code type string, ipaddr,
+    /// ipv6addr or aipv6prefix
     pub fn get_original_string_value(&self, allowed_type: &Option<SupportedAttributeTypes>) -> Result<String, RadiusError> {
         match allowed_type {
             Some(SupportedAttributeTypes::AsciiString) => {
                 match String::from_utf8(self.get_value().to_vec()) {
                     Ok(value) => Ok(value),
-                    _         => Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(String::from("invalid ASCII bytes"))} )
+                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid ASCII bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::IPv4Addr)    => {
                 match bytes_to_ipv4_string(self.get_value()) {
                     Ok(value) => Ok(value),
-                    _         => Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(String::from("invalid IPv4 bytes"))} )
+                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid IPv4 bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::IPv6Addr)    => {
                 match bytes_to_ipv6_string(self.get_value()) {
                     Ok(value) => Ok(value),
-                    _         => Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(String::from("invalid IPv6 bytes"))} )
+                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid IPv6 bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::IPv6Prefix)  => {
                 match bytes_to_ipv6_string(self.get_value()) {
                     Ok(value) => Ok(value),
-                    _         => Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(String::from("invalid IPv6 bytes"))} )
+                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid IPv6 bytes")} )
                 }
             },
-            _                                          => Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(String::from("not a String data type"))} )
+            _                                          => Err( RadiusError::MalformedAttribute {error: String::from("not a String data type")} )
         }
     }
 
+    /// Returns RadiusAttribute value, if the attribute is dictionary's ATTRIBUTE with code type
+    /// integer of date
     pub fn get_original_integer_value(&self, allowed_type: &Option<SupportedAttributeTypes>) -> Result<u64, RadiusError> {
         match allowed_type {
             Some(SupportedAttributeTypes::Integer) => {
                 match self.get_value().try_into() {
                     Ok(value) => Ok(bytes_to_integer(value) as u64),
-                    _         => Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(String::from("invalid Integer bytes"))} )
+                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid Integer bytes")} )
                 }
             } ,
             Some(SupportedAttributeTypes::Date)    => {
                 match self.get_value().try_into() {
                     Ok(value) => Ok(bytes_to_timestamp(value) as u64),
-                    _         => Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(String::from("invalid Date bytes"))} )
+                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid Date bytes")} )
                 }
             },
-            _                                      => Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(String::from("not an Integer data type"))} )
+            _                                      => Err( RadiusError::MalformedAttribute {error: String::from("not an Integer data type")} )
         }
     }
 
@@ -239,6 +259,7 @@ impl RadiusAttribute {
 
 
 #[derive(Debug, PartialEq)]
+/// Represents RADIUS packet
 pub struct RadiusPacket {
     id:            u8,
     code:          TypeCode,
@@ -247,6 +268,7 @@ pub struct RadiusPacket {
 }
 
 impl RadiusPacket {
+    /// Initialises RADIUS packet with random ID and authenticator
     pub fn initialise_packet(code: TypeCode, attributes: Vec<RadiusAttribute>) -> RadiusPacket {
         RadiusPacket {
             id:            RadiusPacket::create_id(),
@@ -256,9 +278,10 @@ impl RadiusPacket {
         }
     }
 
+    /// Initialises RADIUS packet from raw bytes
     pub fn initialise_packet_from_bytes(dictionary: &Dictionary, bytes: &[u8]) -> Result<RadiusPacket, RadiusError> {
         let code           = match TypeCode::from_u8(bytes[0]) {
-            Err(error) => return Err( RadiusError::MalformedPacket {error: MalformedPacket::new(String::from(error))} ),
+            Err(error) => return Err( RadiusError::MalformedPacket {error: String::from(error)} ),
             Ok(code)   => code
         };
         let id             = bytes[1];
@@ -278,7 +301,7 @@ impl RadiusPacket {
                     last_index += attr_length;
                 },
                 _ => {
-                    return Err( RadiusError::MalformedPacket {error: MalformedPacket::new(format!("attribute with ID: {} is not found in dictionary", attr_id))} )
+                    return Err( RadiusError::MalformedPacket {error:format!("attribute with ID: {} is not found in dictionary", attr_id)} )
                 }
             }
         }
@@ -291,49 +314,60 @@ impl RadiusPacket {
         })
     }
 
+    /// Overrides RadiusPacket id
     pub fn override_id(&mut self, new_id: u8) {
         self.id = new_id
     }
 
+    /// Overrides RadiusPacket authenticator
     pub fn override_authenticator(&mut self, new_authenticator: Vec<u8>) {
         self.authenticator = new_authenticator
     }
 
+    /// Overrides RadiusPacket Message-Authenticator
+    ///
+    /// Note: would fail if RadiusPacket has no Message-Authenticator attribute defined
     pub fn override_message_authenticator(&mut self, new_message_authenticator: Vec<u8>) -> Result<(), RadiusError> {
-        match self.attributes.iter_mut().find(|attr| attr.get_id() == 80) {
+        match self.attributes.iter_mut().find(|attr| attr.get_name() == "Message-Authenticator") {
             Some(attr) => {
                 attr.override_value(new_message_authenticator);
                 Ok(())
             },
-            None       => Err( RadiusError::MalformedPacket {error: MalformedPacket::new(String::from("Message-Authenticator attribute not found in packet"))} )
+            None       => Err( RadiusError::MalformedPacket {error:String::from("Message-Authenticator attribute not found in packet")} )
         }
     }
 
+    /// Returns Message-Authenticator value, if exists in RadiusPacket
     pub fn get_message_authenticator(&self) -> Result<&[u8], RadiusError> {
         match self.attributes.iter().find(|attr| attr.get_name() == "Message-Authenticator") {
             Some(attr) => {
                 Ok(attr.get_value())
             },
-            None       => Err( RadiusError::MalformedPacket {error: MalformedPacket::new(String::from("Message-Authenticator attribute not found in packet"))} )
+            None       => Err( RadiusError::MalformedPacket {error: String::from("Message-Authenticator attribute not found in packet")} )
         }
     }
 
+    /// Returns RadiusPacket id
     pub fn get_id(&self) -> u8 {
         self.id
     }
 
+    /// Returns RadiusPacket authenticator
     pub fn get_authenticator(&self) -> &[u8] {
         &self.authenticator
     }
 
+    /// Returns RadiusPacket code
     pub fn get_code(&self) -> &TypeCode {
         &self.code
     }
 
+    /// Returns RadiusPacket attributes
     pub fn get_attributes(&self) -> &[RadiusAttribute] {
         &self.attributes
     }
 
+    /// Returns RadiusAttribute with given name
     pub fn get_attribute_by_name(&self, name: &str) -> Option<&RadiusAttribute> {
         match self.attributes.iter().find(|&attr| attr.get_name() == name) {
             Some(attr) => Some(attr),
@@ -341,6 +375,7 @@ impl RadiusPacket {
         }
     }
 
+    /// Returns RadiusAttribute with given id
     pub fn get_attribute_by_id(&self, id: u8) -> Option<&RadiusAttribute> {
         match self.attributes.iter().find(|&attr| attr.get_id() == id) {
             Some(attr) => Some(attr),
@@ -348,6 +383,7 @@ impl RadiusPacket {
         }
     }
 
+    /// Converts RadiusPacket into ready-to-be-sent bytes vector
     pub fn to_bytes(&mut self) -> Vec<u8> {
         /* Prepare packet for a transmission to server/client
          *

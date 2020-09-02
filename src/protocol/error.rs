@@ -11,13 +11,13 @@ pub enum RadiusError {
     ValidationError         { error: String },
     #[error("Radius packet is malformed")]
     /// Error happens, when packet has been badly constructed or got corrupted
-    MalformedPacket         { error: MalformedPacket },
+    MalformedPacket         { error: String },
     #[error("Radius packet attribute is malformed")]
     /// Error happens, when attribute has been badly constructed or got corrupted
-    MalformedAttribute      { error: MalformedAttribute },
+    MalformedAttribute      { error: String },
     #[error("Provided IPv6 address is malformed")]
     /// Error happens, when IPv6 Address was badly added to Radius Packet or got corrupted
-    MalformedIpAddr         { error: MalformedIpAddr },
+    MalformedIpAddr         { error: String },
     #[error(transparent)]
     /// Error happens, when there is some sort of connection error between sockets, or socket
     /// cannot bind to the given hostname/port

@@ -1,5 +1,5 @@
 use super::protocol::dictionary::Dictionary;
-use super::protocol::error::{ MalformedAttribute, RadiusError };
+use super::protocol::error::RadiusError;
 use super::protocol::host::Host;
 use super::protocol::radius_packet::{ RadiusPacket, RadiusAttribute, TypeCode };
 
@@ -16,25 +16,33 @@ use std::time::Duration;
 #[derive(Debug)]
 /// Represents RADIUS client instance
 pub struct Client {
-    host:        Host,
-    server:      String,
-    secret:      String,
-    retries:     u16,
-    timeout:     u16,
-    socket_poll: Poll
+    host:           Host,
+    server:         String,
+    secret:         String,
+    retries:        u16,
+    timeout:        u16,
+    socket_poll:    Poll,
+    socket_handler: UdpSocket
 }
 
 impl Client {
     /// Initialise RADIUS client instance
     pub fn initialise_client(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<Client, RadiusError> {
+        let local_bind  = "0.0.0.0:0".parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
+        let mut socket  = UdpSocket::bind(local_bind).map_err(|error| RadiusError::SocketConnectionError(error))?;
+        let socket_poll = Poll::new()?;
+
+        socket_poll.registry().register(&mut socket, Token(0), Interest::READABLE).map_err(|error| RadiusError::SocketConnectionError(error))?;
+
         Ok(
             Client {
-                host:        Host::initialise_host(auth_port, acct_port, coa_port, dictionary),
-                server:      server,
-                secret:      secret,
-                retries:     retries,
-                timeout:     timeout,
-                socket_poll: Poll::new()?
+                host:           Host::initialise_host(auth_port, acct_port, coa_port, dictionary),
+                server:         server,
+                secret:         secret,
+                retries:        retries,
+                timeout:        timeout,
+                socket_poll:    socket_poll,
+                socket_handler: socket
             }
         )
     }
@@ -110,35 +118,25 @@ impl Client {
     /// Gets the original value as a String if the RadiusAttribute respresents dictionary attribute
     /// that has type: string, ipaddr, ipv6addr or ipv6prefix
     pub fn get_radius_attr_original_string_value(&self, attribute: &RadiusAttribute) -> Result<String, RadiusError> {
-        // TODO - potentially remove match and use something like .ok_else()
-        let dict_attr = match self.host.get_dictionary_attribute_by_id(attribute.get_id()) {
-            Some(attr) => attr,
-            _          => return Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(format!("No attribute with ID: {} found in dictionary", attribute.get_id()))} )
-        };
-
+        let dict_attr = self.host.get_dictionary_attribute_by_id(attribute.get_id()).ok_or_else(|| RadiusError::MalformedAttribute {error: format!("No attribute with ID: {} found in dictionary", attribute.get_id())} )?;
         attribute.get_original_string_value(dict_attr.get_code_type())
     }
 
     /// Gets the original value as a String if the RadiusAttribute respresents dictionary attribute
     /// that has type:integer or date
     pub fn get_radius_attr_original_integer_value(&self, attribute: &RadiusAttribute) -> Result<u64, RadiusError> {
-        // TODO - potentially remove match and use something like .ok_else()
-        let dict_attr = match self.host.get_dictionary_attribute_by_id(attribute.get_id()) {
-            Some(attr) => attr,
-            _          => return Err( RadiusError::MalformedAttribute {error: MalformedAttribute::new(format!("No attribute with ID: {} found in dictionary", attribute.get_id()))} )
-        };
-
+        let dict_attr = self.host.get_dictionary_attribute_by_id(attribute.get_id()).ok_or_else(|| RadiusError::MalformedAttribute {error: format!("No attribute with ID: {} found in dictionary", attribute.get_id())} )?;
         attribute.get_original_integer_value(dict_attr.get_code_type())
+    }
+
+    /// Initialises RadiusPacket from bytes
+    pub fn initialise_packet_from_bytes(&self, reply: &[u8]) -> Result<RadiusPacket, RadiusError> {
+        self.host.initialise_packet_from_bytes(reply)
     }
 
     /// Sends packet to RADIUS server but does not return a response
     pub fn send_packet(&mut self, packet: &mut RadiusPacket) -> Result<(), RadiusError> {
-        let local_bind = "0.0.0.0:0".parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
         let remote     = format!("{}:{}", &self.server, self.host.get_port(packet.get_code())).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
-
-        let mut socket = UdpSocket::bind(local_bind).map_err(|error| RadiusError::SocketConnectionError(error))?;
-        self.socket_poll.registry().register(&mut socket, Token(0), Interest::READABLE).map_err(|error| RadiusError::SocketConnectionError(error))?;
-
         let timeout    = Duration::from_secs(self.timeout as u64);
         let mut events = Events::with_capacity(1024);
         let mut retry  = 0;
@@ -148,7 +146,41 @@ impl Client {
                 break;
             }
             println!("Sending: {:?}", &packet.to_bytes());
-            socket.send_to(&packet.to_bytes(), remote).map_err(|error| RadiusError::SocketConnectionError(error))?;
+            self.socket_handler.send_to(&packet.to_bytes(), remote).map_err(|error| RadiusError::SocketConnectionError(error))?;
+            self.socket_poll.poll(&mut events, Some(timeout)).map_err(|error| RadiusError::SocketConnectionError(error))?;
+
+            for event in events.iter() {
+                match event.token() {
+                    Token(0) => {
+                        let mut response = [0; 4096];
+                        let amount = self.socket_handler.recv(&mut response).map_err(|error| RadiusError::SocketConnectionError(error))?;
+
+                        if amount > 0 {
+                            println!("Received reply: {:?}", &response[0..amount]);
+                            return Ok(());
+                        }
+                    },
+                    _ => return Err( RadiusError::SocketInvalidConnection { error: String::from("Received data from invalid Token") } ),
+                }
+            }
+            retry += 1;
+        }
+        Err( RadiusError::SocketConnectionError(Error::new(ErrorKind::TimedOut, "")) )
+    }
+
+    /// Sends packet to RADIUS server and returns a response
+    pub fn send_and_receive_packet(&mut self, packet: &mut RadiusPacket) -> Result<Vec<u8>, RadiusError> {
+        let remote     = format!("{}:{}", &self.server, self.host.get_port(packet.get_code())).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
+        let timeout    = Duration::from_secs(self.timeout as u64);
+        let mut events = Events::with_capacity(1024);
+        let mut retry  = 0;
+
+        loop {
+            if retry >= self.retries {
+                break;
+            }
+            println!("Sending: {:?}", &packet.to_bytes());
+            self.socket_handler.send_to(&packet.to_bytes(), remote).map_err(|error| RadiusError::SocketConnectionError(error))?;
 
             self.socket_poll.poll(&mut events, Some(timeout)).map_err(|error| RadiusError::SocketConnectionError(error))?;
 
@@ -156,11 +188,11 @@ impl Client {
                 match event.token() {
                     Token(0) => {
                         let mut response = [0; 4096];
-                        let amount = socket.recv(&mut response).map_err(|error| RadiusError::SocketConnectionError(error))?;
+                        let amount = self.socket_handler.recv(&mut response).map_err(|error| RadiusError::SocketConnectionError(error))?;
 
                         if amount > 0 {
                             println!("Received reply: {:?}", &response[0..amount]);
-                            return self.verify_reply(&packet, &response[0..amount]);
+                            return Ok(response[0..amount].to_vec());
                         }
                     },
                     _ => return Err( RadiusError::SocketInvalidConnection { error: String::from("Received data from invalid Token") } ),
@@ -172,7 +204,8 @@ impl Client {
         Err( RadiusError::SocketConnectionError(Error::new(ErrorKind::TimedOut, "")) )
     }
 
-    fn verify_reply(&self, request: &RadiusPacket, reply: &[u8]) -> Result<(), RadiusError> {
+    /// Verifies that reply packet's ID and authenticator are a match
+    pub fn verify_reply(&self, request: &RadiusPacket, reply: &[u8]) -> Result<(), RadiusError> {
         if request.get_id() != reply[1] {
             return Err( RadiusError::ValidationError { error: String::from("Packet identifier mismatch") } )
         };
@@ -197,11 +230,13 @@ impl Client {
         }
     }
 
-    fn verify_message_authenticator(&self, packet: &[u8]) -> Result<(), RadiusError> {
+    /// Verifies that reply packet's Message-Autthenticator attribute is valid
+    pub fn verify_message_authenticator(&self, packet: &[u8]) -> Result<(), RadiusError> {
         self.host.verify_message_authenticator(&self.secret, &packet)
     }
 
-    fn verify_packet_attributes(&self, packet: &[u8]) -> Result<(), RadiusError> {
+    /// Verifies that reply packet's attributes have valid values
+    pub fn verify_packet_attributes(&self, packet: &[u8]) -> Result<(), RadiusError> {
         self.host.verify_packet_attributes(&packet)
     }
 }

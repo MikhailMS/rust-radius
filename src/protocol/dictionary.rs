@@ -4,23 +4,26 @@ use std::io::{self, BufRead};
 use super::error::RadiusError;
 
 #[derive(Debug, PartialEq)]
+/// Represents a list of supported data types
+/// as defined in RFC 2865
 pub enum SupportedAttributeTypes {
-    // String
+    /// Rust's String
     AsciiString,
-    // u32
+    /// Rust's u32
     Integer,
-    // u64
+    /// Rust's u64
     Date,
-    // [u8;4]
+    /// Rust's [u8;4]
     IPv4Addr,
-    // [u8;16]
+    /// Rust's [u8;16]
     IPv6Addr,
-    // [u8;18]
+    /// Rust's [u8;18]
     IPv6Prefix
 }
 
 
 #[derive(Debug, PartialEq)]
+/// Represents an ATTRIBUTE from RADIUS dictionary file
 pub struct DictionaryAttribute {
     /*
      * |--------|   name  | code | code type |
@@ -48,6 +51,7 @@ impl DictionaryAttribute {
 
 
 #[derive(Debug, PartialEq)]
+/// Represents a VALUE from RADIUS dictionary file
 pub struct DictionaryValue {
     attribute_name: String,
     value_name:     String,
@@ -71,6 +75,7 @@ impl DictionaryValue {
 
 
 #[derive(Debug, PartialEq)]
+/// Represents a VENDOR from RADIUS dictionary file
 pub struct DictionaryVendor {
     name: String,
     id:   String  // ideally should be u16
@@ -78,6 +83,7 @@ pub struct DictionaryVendor {
 
 
 #[derive(Debug, Default, PartialEq)]
+/// Represents RADIUS dictionary
 pub struct Dictionary {
     attributes: Vec<DictionaryAttribute>,
     values:     Vec<DictionaryValue>,
@@ -86,10 +92,12 @@ pub struct Dictionary {
 
 #[allow(unused)]
 impl Dictionary {
+    /// Creates Dictionary from a string
     pub fn from_str(dictionary_str: &str) -> Dictionary {
         todo!()
     }
 
+    /// Creates Dictionary from a RADIUS dictionary file
     pub fn from_file(file_path: &str) -> Result<Dictionary, RadiusError> {
         let mut attributes:  Vec<DictionaryAttribute> = Vec::new();
         let mut values:      Vec<DictionaryValue>     = Vec::new();
@@ -117,14 +125,17 @@ impl Dictionary {
         Ok(Dictionary { attributes, values, vendors })
     }
 
+    /// Returns parsed DictionaryAttributes
     pub fn get_attributes(&self) -> &[DictionaryAttribute] {
         &self.attributes
     }
 
+    /// Returns parsed DictionaryValues
     pub fn get_values(&self) -> &[DictionaryValue] {
         &self.values
     }
 
+    /// Returns parsed DictionaryVendors
     pub fn get_vendors(&self) -> &[DictionaryVendor] {
         &self.vendors
     }

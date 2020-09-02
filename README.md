@@ -86,8 +86,8 @@ Rationale behind this project:
     - [x] would have **get_dictionary_attribute_by_id** function, that returns reference to **DictionaryAttribute** so we can get SupportedAttributeType value to make type verification
     - [x] bring all shared functions that currently defined in Client & Server
   - [x] **Client** should have a method(s) **create_attribute_by...** so it is inline with **Server**
-  - [ ] redesign **run_server()**  function (if that's possible)
-  - [ ] redesign **send_packet()** function (if that's possible)
+  - [ ] redesign `run_server()` function (if that's possible)
+  - [x] redesign `send_*()`     function - it would try to bind to socket on each function call
   - [x] better error handling - at the moment there is no standard to errors from different modules, so need to have a look into it (`https://nick.groenen.me/posts/rust-error-handling/`)
   - [x] **example/simple_radius_server.rs** -> handle Result better than `.unwrap()`
   - [x] pass **Dictionary** to **Host** instead of **&Dictionary**
