@@ -74,10 +74,7 @@ impl Host{
     /// ASCII string
     pub fn verify_packet_attributes(&self, packet: &[u8]) -> Result<(), RadiusError> {
         let ignore_attribute = "Message-Authenticator";
-        let _packet_tmp      = match RadiusPacket::initialise_packet_from_bytes(&self.dictionary, &packet) {
-            Ok(value) => value,
-            Err(err)  => return Err( RadiusError::ValidationError {error: err.to_string()} )
-        };
+        let _packet_tmp      = RadiusPacket::initialise_packet_from_bytes(&self.dictionary, &packet)?;
 
         for packet_attr in _packet_tmp.get_attributes().iter().filter(|&attr| attr.get_name() != ignore_attribute) {
             let _dict_attr           = self.get_dictionary_attribute_by_id(packet_attr.get_id()).unwrap();
@@ -93,14 +90,8 @@ impl Host{
 
     /// Verifies Message-Authenticator value
     pub fn verify_message_authenticator(&self, secret: &str, packet: &[u8]) -> Result<(), RadiusError> {
-        let _packet_tmp     = match RadiusPacket::initialise_packet_from_bytes(&self.dictionary, &packet) {
-            Ok(value) => value,
-            Err(err)  => return Err( RadiusError::ValidationError {error: err.to_string()} )
-        };
-        let packet_msg_auth = match _packet_tmp.get_message_authenticator() {
-            Ok(value) => value,
-            Err(err)  => return Err( RadiusError::ValidationError {error: err.to_string()} )
-        };
+        let _packet_tmp     = RadiusPacket::initialise_packet_from_bytes(&self.dictionary, &packet)?;
+        let packet_msg_auth = _packet_tmp.get_message_authenticator()?;
 
         let mut hash = Hmac::new(Md5::new(), secret.as_bytes());
         hash.input(&packet);

@@ -230,7 +230,7 @@ impl Client {
         }
     }
 
-    /// Verifies that reply packet's Message-Autthenticator attribute is valid
+    /// Verifies that reply packet's Message-Authenticator attribute is valid
     pub fn verify_message_authenticator(&self, packet: &[u8]) -> Result<(), RadiusError> {
         self.host.verify_message_authenticator(&self.secret, &packet)
     }

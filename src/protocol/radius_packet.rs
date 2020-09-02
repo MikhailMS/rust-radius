@@ -42,7 +42,7 @@ pub enum TypeCode {
 }
 
 impl TypeCode {
-    pub fn from_u8(code: u8) -> Result<TypeCode, String> {
+    pub fn from_u8(code: u8) -> Result<TypeCode, RadiusError> {
         match code {
             1u8  => Ok(TypeCode::AccessRequest),
             2u8  => Ok(TypeCode::AccessAccept),
@@ -58,7 +58,7 @@ impl TypeCode {
             43u8 => Ok(TypeCode::CoARequest ),
             44u8 => Ok(TypeCode::CoAACK),
             45u8 => Ok(TypeCode::CoANAK),
-            _ => Err(format!("Unknown RADIUS code {}", code)),
+            _ => Err( RadiusError::UnsupportedTypeCode { error: format!("Unknown RADIUS code {}", code) }),
         }
     }
 
@@ -280,10 +280,7 @@ impl RadiusPacket {
 
     /// Initialises RADIUS packet from raw bytes
     pub fn initialise_packet_from_bytes(dictionary: &Dictionary, bytes: &[u8]) -> Result<RadiusPacket, RadiusError> {
-        let code           = match TypeCode::from_u8(bytes[0]) {
-            Err(error) => return Err( RadiusError::MalformedPacket {error: String::from(error)} ),
-            Ok(code)   => code
-        };
+        let code           = TypeCode::from_u8(bytes[0])?;
         let id             = bytes[1];
         let authenticator  = bytes[4..20].to_vec();
         let mut attributes = Vec::new();
@@ -300,9 +297,7 @@ impl RadiusPacket {
                     attributes.push(attr);
                     last_index += attr_length;
                 },
-                _ => {
-                    return Err( RadiusError::MalformedPacket {error:format!("attribute with ID: {} is not found in dictionary", attr_id)} )
-                }
+                _          => return Err( RadiusError::MalformedPacket {error:format!("attribute with ID: {} is not found in dictionary", attr_id)} )
             }
         }
 
@@ -333,7 +328,7 @@ impl RadiusPacket {
                 attr.override_value(new_message_authenticator);
                 Ok(())
             },
-            None       => Err( RadiusError::MalformedPacket {error:String::from("Message-Authenticator attribute not found in packet")} )
+            _          => Err( RadiusError::MalformedPacket {error:String::from("Message-Authenticator attribute not found in packet")} )
         }
     }
 
@@ -343,7 +338,7 @@ impl RadiusPacket {
             Some(attr) => {
                 Ok(attr.get_value())
             },
-            None       => Err( RadiusError::MalformedPacket {error: String::from("Message-Authenticator attribute not found in packet")} )
+            _          => Err( RadiusError::MalformedPacket {error: String::from("Message-Authenticator attribute not found in packet")} )
         }
     }
 
@@ -369,18 +364,12 @@ impl RadiusPacket {
 
     /// Returns RadiusAttribute with given name
     pub fn get_attribute_by_name(&self, name: &str) -> Option<&RadiusAttribute> {
-        match self.attributes.iter().find(|&attr| attr.get_name() == name) {
-            Some(attr) => Some(attr),
-            _          => None
-        }
+        self.attributes.iter().find(|&attr| attr.get_name() == name)
     }
 
     /// Returns RadiusAttribute with given id
     pub fn get_attribute_by_id(&self, id: u8) -> Option<&RadiusAttribute> {
-        match self.attributes.iter().find(|&attr| attr.get_id() == id) {
-            Some(attr) => Some(attr),
-            _          => None
-        }
+        self.attributes.iter().find(|&attr| attr.get_id() == id)
     }
 
     /// Converts RadiusPacket into ready-to-be-sent bytes vector
