@@ -278,26 +278,22 @@ impl Server {
         }
     }
 
-    /// Validates incoming RADIUS packet:
+    /// Verifies incoming RADIUS packet:
     ///
     /// Server would try to build RadiusPacket from raw bytes, and if it successeds then packet is
     /// valid, otherwise would return RadiusError
-    pub fn validate_request(&self, request: &[u8]) -> Result<(), RadiusError> {
-        // Check that incoming packet has all correct attributes
-        // In case it has unknown or malformed attributes an error would be raised
+    pub fn verify_request(&self, request: &[u8]) -> Result<(), RadiusError> {
         match RadiusPacket::initialise_packet_from_bytes(&self.host.get_dictionary(), request) {
             Err(err) => Err(err),
             _        => Ok(())
         }
     }
 
-    /// Validates RadiusAttributes's values of incoming RADIUS packet:
+    /// Verifies RadiusAttributes's values of incoming RADIUS packet:
     ///
     /// Server would try to build RadiusPacket from raw bytes, and then it would try to restore
     /// RadiusAttribute original value from bytes, based on the attribute data type (see SupportedAttributeTypes)
-    fn verify_request_attributes(&self, request: &[u8]) -> Result<(), RadiusError> {
-        // Check that incoming packet attributes have correct values
-        // In case it has unknown or malformed attributes an error would be raised
+    pub fn verify_request_attributes(&self, request: &[u8]) -> Result<(), RadiusError> {
         self.host.verify_packet_attributes(&request)
     }
 
