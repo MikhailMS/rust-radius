@@ -63,7 +63,7 @@ Rationale behind this project:
       - [x] verify that incoming attributes of the correct data type,          otherwise reject/ignore the packet
         - [x] add SupportedAttributeType enum that holds all RADIUS data types currently supported
         - [x] add verification for all currently supported types **Note2**
-- [ ] Tools
+- [x] Tools
   - [x] add **IPv6**    to **Vec<u8>** conversion
   - [x] add **Vec<u8>** to **IPv6**    conversion
   - [x] add **IPv4**    to **Vec<u8>** conversion
