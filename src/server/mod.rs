@@ -280,7 +280,7 @@ impl Server {
 
     /// Verifies incoming RADIUS packet:
     ///
-    /// Server would try to build RadiusPacket from raw bytes, and if it successeds then packet is
+    /// Server would try to build RadiusPacket from raw bytes, and if it succeeds then packet is
     /// valid, otherwise would return RadiusError
     pub fn verify_request(&self, request: &[u8]) -> Result<(), RadiusError> {
         match RadiusPacket::initialise_packet_from_bytes(&self.host.get_dictionary(), request) {
