@@ -58,7 +58,7 @@ impl TypeCode {
             43u8 => Ok(TypeCode::CoARequest ),
             44u8 => Ok(TypeCode::CoAACK),
             45u8 => Ok(TypeCode::CoANAK),
-            _ => Err( RadiusError::UnsupportedTypeCode { error: format!("Unknown RADIUS code {}", code) }),
+            _ => Err( RadiusError::UnsupportedTypeCode { error: format!("Unknown RADIUS code: {}", code) }),
         }
     }
 
@@ -175,7 +175,7 @@ impl RadiusAttribute {
                         bytes_to_integer(value);
                         Ok(())
                     },
-                    _     => Err( RadiusError::MalformedAttribute {error: String::from("invalid Integer bytes")} )
+                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid Integer bytes")} )
                 }
             } ,
             Some(SupportedAttributeTypes::Date)        => {
@@ -184,7 +184,7 @@ impl RadiusAttribute {
                         bytes_to_timestamp(value);
                         Ok(())
                     },
-                    _     => Err( RadiusError::MalformedAttribute {error: String::from("invalid Date bytes")} )
+                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid Date bytes")} )
                 }
             },
             _                                          => Err( RadiusError::MalformedAttribute {error: String::from("unsupported attribute code type")} )

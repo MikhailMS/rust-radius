@@ -17,7 +17,7 @@ pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, RadiusError> {
     let ipv6_address           = Ipv6Addr::from_str(parsed_ipv6[0]).map_err(|error| RadiusError::MalformedIpAddr { error: error.to_string() })?;
 
     if parsed_ipv6.len() == 2 {
-        bytes.append( &mut encode_subnet(parsed_ipv6[1].parse::<u16>().unwrap()).to_vec() )
+        bytes.append( &mut u16_to_be_bytes(parsed_ipv6[1].parse::<u16>().unwrap()).to_vec() )
     }
     bytes.append(&mut ipv6_address.octets().to_vec());
     Ok(bytes)
@@ -187,8 +187,8 @@ pub fn decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8>
 }
 
 // -----------------------------------------
-fn encode_subnet(u16_data: u16) -> [u8;2] {
-    [ (u16_data >> 8) as u8, u16_data as u8 ]
+fn u16_to_be_bytes(u16_data: u16) -> [u8;2] {
+    u16_data.to_be_bytes()
 }
 
 fn u16_from_be_bytes(bytes: &[u8]) -> u16 {

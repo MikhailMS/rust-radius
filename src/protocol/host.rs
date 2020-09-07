@@ -34,12 +34,12 @@ impl Host{
     }
 
     /// Returns port of RADIUS server, that receives given type of RADIUS message/packet
-    pub fn get_port(&self, code: &TypeCode) -> u16 {
+    pub fn get_port(&self, code: &TypeCode) -> Option<u16> {
         match code {
-            TypeCode::AccessRequest     => self.auth_port,
-            TypeCode::AccountingRequest => self.acct_port,
-            TypeCode::CoARequest        => self.coa_port,
-            _                           => 0u16
+            TypeCode::AccessRequest     => Some(self.auth_port),
+            TypeCode::AccountingRequest => Some(self.acct_port),
+            TypeCode::CoARequest        => Some(self.coa_port),
+            _                           => None
         }
     }
 

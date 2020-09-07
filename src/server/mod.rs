@@ -74,13 +74,17 @@ impl Server {
         let socket_poll = Poll::new()?;
         let host        = Host::initialise_host(auth_port, acct_port, coa_port, dictionary);
 
-        let auth_bind_addr = format!("{}:{}", server, host.get_port(&TypeCode::AccessRequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
-        let acct_bind_addr = format!("{}:{}", server, host.get_port(&TypeCode::AccountingRequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
-        let coa_bind_addr  = format!("{}:{}", server, host.get_port(&TypeCode::CoARequest)).parse().map_err(|e| Error::new(ErrorKind::Other, e))?;
+        let auth_port = host.get_port(&TypeCode::AccessRequest).ok_or_else(|| RadiusError::SocketInvalidConnection { error: String::from("There is no port match for AccessRequest") })?;
+        let acct_port = host.get_port(&TypeCode::AccountingRequest).ok_or_else(|| RadiusError::SocketInvalidConnection { error: String::from("There is no port match for AccountingRequest") })?;
+        let coa_port  = host.get_port(&TypeCode::CoARequest).ok_or_else(|| RadiusError::SocketInvalidConnection { error: String::from("There is no port match for CoARequest") })?;
 
-        let mut auth_server = UdpSocket::bind(auth_bind_addr)?;
-        let mut acct_server = UdpSocket::bind(acct_bind_addr)?;
-        let mut coa_server  = UdpSocket::bind(coa_bind_addr)?;
+        let auth_bind_addr = format!("{}:{}", server, auth_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
+        let acct_bind_addr = format!("{}:{}", server, acct_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
+        let coa_bind_addr  = format!("{}:{}", server, coa_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
+
+        let mut auth_server = UdpSocket::bind(auth_bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
+        let mut acct_server = UdpSocket::bind(acct_bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
+        let mut coa_server  = UdpSocket::bind(coa_bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
 
         socket_poll.registry().register(&mut auth_server, AUTH_SOCKET, Interest::READABLE)?;
         socket_poll.registry().register(&mut acct_server, ACCT_SOCKET, Interest::READABLE)?;

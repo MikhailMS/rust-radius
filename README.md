@@ -92,6 +92,8 @@ Rationale behind this project:
   - [x] **example/simple_radius_server.rs** -> handle Result better than `.unwrap()`
   - [x] pass **Dictionary** to **Host** instead of **&Dictionary**
   - [ ] check that it is well written
+  - [x] remove functions that convert **u16** into **[u8;2]** and use `u16.to_be_bytes()` instead
+- [x] `host.get_port()` should return `Option<u16>`, in case it cannot map request type to port **None** is returned instead of **0**
 
 
 ## Notes
