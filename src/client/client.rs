@@ -172,7 +172,7 @@ impl Client {
     }
 
     /// Sends packet to RADIUS server and returns a response
-    pub fn send_and_receive_packet(&mut self, packet: &mut RadiusPacket) -> Result<Vec<u8>, RadiusError> {
+    pub fn send_and_receive_packet(&self, packet: &mut RadiusPacket) -> Result<Vec<u8>, RadiusError> {
         let remote_port = self.host.get_port(packet.get_code()).ok_or_else(|| RadiusError::MalformedPacket { error: String::from("There is no port match for packet code") })?;
         let remote      = format!("{}:{}", &self.server, remote_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
         let timeout     = Duration::from_secs(self.timeout as u64);

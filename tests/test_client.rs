@@ -7,7 +7,7 @@ use radius_rust::tools::{ integer_to_bytes, ipv4_string_to_bytes};
 #[test]
 fn test_client_auth_request() {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-    let mut client = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+    let client     = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
     let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10").unwrap();
     let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100").unwrap();
@@ -35,12 +35,22 @@ fn test_client_auth_request() {
             assert!(true)
         }
     }
+
+    match client.send_and_receive_packet(&mut auth_packet) {
+        Err(error) => {
+            println!("{:?}", error);
+            assert!(false)
+        },
+        _ => {
+            assert!(true)
+        }
+    }
 }
 
 #[test]
 fn test_client_acct_request() {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-    let mut client = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+    let client     = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
     let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10").unwrap();
     let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100").unwrap();
@@ -65,12 +75,22 @@ fn test_client_acct_request() {
             assert!(true)
         }
     }
+
+    match client.send_and_receive_packet(&mut acct_packet) {
+        Err(error) => {
+            println!("{:?}", error);
+            assert!(false)
+        },
+        _ => {
+            assert!(true)
+        }
+    }
 }
 
 #[test]
 fn test_client_coa_request() {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-    let mut client = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+    let client     = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
     let attributes = vec![
         client.create_attribute_by_name("User-Name",          String::from("testing").into_bytes()).unwrap(),
@@ -80,6 +100,16 @@ fn test_client_coa_request() {
     let mut coa_packet = client.create_coa_packet(attributes);
 
     match client.send_packet(&mut coa_packet) {
+        Err(error) => {
+            println!("{:?}", error);
+            assert!(false)
+        },
+        _ => {
+            assert!(true)
+        }
+    }
+
+    match client.send_and_receive_packet(&mut coa_packet) {
         Err(error) => {
             println!("{:?}", error);
             assert!(false)

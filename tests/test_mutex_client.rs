@@ -35,6 +35,16 @@ fn test_mutex_client_auth_request() {
             assert!(true)
         }
     }
+
+    match client.send_and_receive_packet(&mut auth_packet) {
+        Err(error) => {
+            println!("{:?}", error);
+            assert!(false)
+        },
+        _ => {
+            assert!(true)
+        }
+    }
 }
 
 #[test]
@@ -65,6 +75,16 @@ fn test_mutex_client_acct_request() {
             assert!(true)
         }
     }
+
+    match client.send_and_receive_packet(&mut acct_packet) {
+        Err(error) => {
+            println!("{:?}", error);
+            assert!(false)
+        },
+        _ => {
+            assert!(true)
+        }
+    }
 }
 
 #[test]
@@ -80,6 +100,16 @@ fn test_mutex_client_coa_request() {
     let mut coa_packet = client.create_coa_packet(attributes);
 
     match client.send_packet(&mut coa_packet) {
+        Err(error) => {
+            println!("{:?}", error);
+            assert!(false)
+        },
+        _ => {
+            assert!(true)
+        }
+    }
+
+    match client.send_and_receive_packet(&mut coa_packet) {
         Err(error) => {
             println!("{:?}", error);
             assert!(false)
