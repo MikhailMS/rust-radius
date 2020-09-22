@@ -15,25 +15,21 @@ use std::time::Duration;
 
 #[derive(Debug)]
 /// Represents RADIUS client instance
+///
+/// Note: every time you call any of `send*_packet()` functions, such call would create and bind to
+/// new socket. If such behavoiur is not what you are looking for, then try to switch to
+/// MutexClient, which has no such issue
 pub struct Client {
     host:           Host,
     server:         String,
     secret:         String,
     retries:        u16,
     timeout:        u16,
-    socket_poll:    Poll,
-    socket_handler: UdpSocket
 }
 
 impl Client {
     /// Initialise RADIUS client instance
     pub fn initialise_client(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<Client, RadiusError> {
-        let local_bind  = "0.0.0.0:0".parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
-        let mut socket  = UdpSocket::bind(local_bind).map_err(|error| RadiusError::SocketConnectionError(error))?;
-        let socket_poll = Poll::new()?;
-
-        socket_poll.registry().register(&mut socket, Token(0), Interest::READABLE).map_err(|error| RadiusError::SocketConnectionError(error))?;
-
         Ok(
             Client {
                 host:           Host::initialise_host(auth_port, acct_port, coa_port, dictionary),
@@ -41,8 +37,6 @@ impl Client {
                 secret:         secret,
                 retries:        retries,
                 timeout:        timeout,
-                socket_poll:    socket_poll,
-                socket_handler: socket
             }
         )
     }
@@ -135,26 +129,34 @@ impl Client {
     }
 
     /// Sends packet to RADIUS server but does not return a response
-    pub fn send_packet(&mut self, packet: &mut RadiusPacket) -> Result<(), RadiusError> {
+    pub fn send_packet(&self, packet: &mut RadiusPacket) -> Result<(), RadiusError> {
         let remote_port = self.host.get_port(packet.get_code()).ok_or_else(|| RadiusError::MalformedPacket { error: String::from("There is no port match for packet code") })?;
         let remote      = format!("{}:{}", &self.server, remote_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
         let timeout     = Duration::from_secs(self.timeout as u64);
         let mut events  = Events::with_capacity(1024);
         let mut retry   = 0;
 
+        // Bind socket
+        let local_bind  = "0.0.0.0:0".parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
+        let mut socket  = UdpSocket::bind(local_bind).map_err(|error| RadiusError::SocketConnectionError(error))?;
+        let mut socket_poll = Poll::new()?;
+
+        socket_poll.registry().register(&mut socket, Token(0), Interest::READABLE).map_err(|error| RadiusError::SocketConnectionError(error))?;
+        // --------------------
+
         loop {
             if retry >= self.retries {
                 break;
             }
             println!("Sending: {:?}", &packet.to_bytes());
-            self.socket_handler.send_to(&packet.to_bytes(), remote).map_err(|error| RadiusError::SocketConnectionError(error))?;
-            self.socket_poll.poll(&mut events, Some(timeout)).map_err(|error| RadiusError::SocketConnectionError(error))?;
+            socket.send_to(&packet.to_bytes(), remote).map_err(|error| RadiusError::SocketConnectionError(error))?;
+            socket_poll.poll(&mut events, Some(timeout)).map_err(|error| RadiusError::SocketConnectionError(error))?;
 
             for event in events.iter() {
                 match event.token() {
                     Token(0) => {
                         let mut response = [0; 4096];
-                        let amount = self.socket_handler.recv(&mut response).map_err(|error| RadiusError::SocketConnectionError(error))?;
+                        let amount = socket.recv(&mut response).map_err(|error| RadiusError::SocketConnectionError(error))?;
 
                         if amount > 0 {
                             println!("Received reply: {:?}", &response[0..amount]);
@@ -177,20 +179,28 @@ impl Client {
         let mut events  = Events::with_capacity(1024);
         let mut retry   = 0;
 
+        // Bind socket
+        let local_bind  = "0.0.0.0:0".parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
+        let mut socket  = UdpSocket::bind(local_bind).map_err(|error| RadiusError::SocketConnectionError(error))?;
+        let mut socket_poll = Poll::new()?;
+
+        socket_poll.registry().register(&mut socket, Token(0), Interest::READABLE).map_err(|error| RadiusError::SocketConnectionError(error))?;
+        // --------------------
+
         loop {
             if retry >= self.retries {
                 break;
             }
             println!("Sending: {:?}", &packet.to_bytes());
-            self.socket_handler.send_to(&packet.to_bytes(), remote).map_err(|error| RadiusError::SocketConnectionError(error))?;
+            socket.send_to(&packet.to_bytes(), remote).map_err(|error| RadiusError::SocketConnectionError(error))?;
 
-            self.socket_poll.poll(&mut events, Some(timeout)).map_err(|error| RadiusError::SocketConnectionError(error))?;
+            socket_poll.poll(&mut events, Some(timeout)).map_err(|error| RadiusError::SocketConnectionError(error))?;
 
             for event in events.iter() {
                 match event.token() {
                     Token(0) => {
                         let mut response = [0; 4096];
-                        let amount = self.socket_handler.recv(&mut response).map_err(|error| RadiusError::SocketConnectionError(error))?;
+                        let amount = socket.recv(&mut response).map_err(|error| RadiusError::SocketConnectionError(error))?;
 
                         if amount > 0 {
                             println!("Received reply: {:?}", &response[0..amount]);
