@@ -148,7 +148,7 @@ impl Client {
         let timeout         = Duration::from_secs(self.timeout as u64);
         let mut events      = Events::with_capacity(1024);
         let mut retry       = 0;
-        let mut socket_poll = self.socket_poll.lock().unwrap();
+        let mut socket_poll = self.socket_poll.lock().map_err(|error| RadiusError::MutexLockFailure { error: error.to_string() })?;
 
         loop {
             if retry >= self.retries {
@@ -186,7 +186,7 @@ impl Client {
         let timeout         = Duration::from_secs(self.timeout as u64);
         let mut events      = Events::with_capacity(1024);
         let mut retry       = 0;
-        let mut socket_poll = self.socket_poll.lock().unwrap();
+        let mut socket_poll = self.socket_poll.lock().map_err(|error| RadiusError::MutexLockFailure { error: error.to_string() })?;
 
         loop {
             if retry >= self.retries {
