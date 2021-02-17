@@ -1,8 +1,8 @@
 [package]
 authors       = ["MikhailMS <1488maiklm@gmail.com>"]
 categories    = ["radius"]
-description   = "Pure Rust implementation of RADIUS"
-documentation = ""
+description   = "Pure Rust implementation of RADIUS Server/Client"
+documentation = "https://docs.rs/radius-rust/0.2.1"
 edition       = "2018"
 include       = [
   "Cargo.toml",
@@ -15,12 +15,12 @@ include       = [
   "tests/*"
 ]
 homepage      = "https://github.com/MikhailMS/rust-radius"
-keywords      = ["radius"]
+keywords      = ["radius", "radius-client", "radius-server"]
 license       = "MIT"
 name          = "radius-rust"
 readme        = "README.md"
 repository    = "https://github.com/MikhailMS/rust-radius"
-version       = "0.2.0"
+version       = "0.2.1"
 
 [dependencies]
 mio         = { version = "0.7", features = ["os-poll", "udp"] }
