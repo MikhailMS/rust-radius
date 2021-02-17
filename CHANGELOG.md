@@ -1,3 +1,17 @@
+=============
+# v0.2.1 (17 February 2021)
+
+Last minor release before [publishing](https://crates.io/)
+
+## What's new
+
+## What's removed or deprecated
+
+## What's changed
+* Upgrade dependencies so non of them are yanked
+
+
+=============
 # v0.2.0 (12 September 2020)
 
 First proper release with basic functionality in place, so it could be moved into more production-like environments
@@ -18,6 +32,8 @@ First proper release with basic functionality in place, so it could be moved int
 * `Dictionary` is now should be passed to Server/Client, instead of `&Dictionary`
 * `simple_radius_server.rs` example now has better error handling (removed all **unwrap** calls)
 
+
+=============
 # v0.1.0 (22 August 2020)
 
 Initial version with limited support - basically a PoC to see, how feasible is to create RADIUS server/client library from scratch.
