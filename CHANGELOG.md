@@ -5,6 +5,7 @@ Last minor release before [publishing](https://crates.io/)
 
 ## What's new
 * Add `log` crate to handle logs (instead of `println!`)
+* Add a few more rust versions to Actions pipeline (crate compiles on `1.45.0+` and `nightly` versions)
 
 ## What's removed or deprecated
 
