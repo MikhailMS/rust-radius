@@ -9,7 +9,7 @@
 [crates-badge]: https://img.shields.io/crates/v/radius-rust.svg
 [crates-url]:   https://crates.io/crates/radius-rust
 [docs-badge]:   https://docs.rs/radius-rust/badge.svg
-[docs-url]:     https://docs.rs/radius-rust/badge.svg
+[docs-url]:     https://docs.rs/radius-rust
 [mit-badge]:    https://img.shields.io/badge/license-MIT-blue.svg
 [mit-url]:      LICENSE
 
