@@ -23,7 +23,7 @@ repository    = "https://github.com/MikhailMS/rust-radius"
 version       = "0.2.1"
 
 [dependencies]
-mio         = { version = "0.7", features = ["os-poll", "udp"] }
+mio         = { version = "0.7.7", features = ["os-poll", "udp"] }
 rand        = "0.7.3"
-rust-crypto = "0.2"
-thiserror   = "1.0.20"
+rust-crypto = "0.2.36"
+thiserror   = "1.0.23"
