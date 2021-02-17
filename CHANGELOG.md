@@ -4,6 +4,7 @@
 Last minor release before [publishing](https://crates.io/)
 
 ## What's new
+* Add `log` crate to handle logs (instead of `println!`)
 
 ## What's removed or deprecated
 

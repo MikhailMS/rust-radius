@@ -5,6 +5,7 @@ use super::protocol::error::RadiusError;
 
 use crypto::digest::Digest;
 use crypto::md5::Md5;
+use log::{ debug, warn };
 use mio::{ Events, Interest, Poll, Token };
 use mio::net::UdpSocket;
 use std::collections::HashMap;
@@ -201,7 +202,7 @@ impl Server {
             for event in events.iter() {
                 match event.token() {
                     AUTH_SOCKET => loop {
-                        println!("Received AUTH request");
+                        debug!("Received AUTH request");
                         let mut request = [0; 4096];
                         
                         match self.auth_socket.recv_from(&mut request) {
@@ -212,7 +213,7 @@ impl Server {
                                     self.auth_socket.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
-                                    println!("{:?} is not listed as allowed", &source_address);
+                                    warn!("{:?} is not listed as allowed", &source_address);
                                     break;
                                 }
                             },
@@ -225,7 +226,7 @@ impl Server {
                         }
                     },
                     ACCT_SOCKET => loop {
-                        println!("Received ACCT request");
+                        debug!("Received ACCT request");
                         let mut request = [0; 4096];
                         
                         match self.acct_socket.recv_from(&mut request) {
@@ -237,7 +238,7 @@ impl Server {
                                     self.acct_socket.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
-                                    println!("{:?} is not listed as allowed", &source_address);
+                                    warn!("{:?} is not listed as allowed", &source_address);
                                     break;
                                 }
                             },
@@ -250,7 +251,7 @@ impl Server {
                         }
                     },
                     COA_SOCKET  => loop {
-                        println!("Received CoA  request");
+                        debug!("Received CoA  request");
                         let mut request = [0; 4096];
                         
                         match self.coa_socket.recv_from(&mut request) {
@@ -262,7 +263,7 @@ impl Server {
                                     self.coa_socket.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
-                                    println!("{:?} is not listed as allowed", &source_address);
+                                    warn!("{:?} is not listed as allowed", &source_address);
                                     break;
                                 }
                             },

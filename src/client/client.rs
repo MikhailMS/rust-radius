@@ -7,6 +7,7 @@ use crypto::digest::Digest;
 use crypto::md5::Md5;
 use crypto::mac::Mac;
 use crypto::hmac::Hmac;
+use log::debug;
 use mio::{ Events, Interest, Poll, Token };
 use mio::net::UdpSocket;
 use std::io::{Error, ErrorKind};
@@ -148,7 +149,7 @@ impl Client {
             if retry >= self.retries {
                 break;
             }
-            println!("Sending: {:?}", &packet.to_bytes());
+            debug!("Sending: {:?}", &packet.to_bytes());
             socket.send_to(&packet.to_bytes(), remote).map_err(|error| RadiusError::SocketConnectionError(error))?;
             socket_poll.poll(&mut events, Some(timeout)).map_err(|error| RadiusError::SocketConnectionError(error))?;
 
@@ -159,7 +160,7 @@ impl Client {
                         let amount = socket.recv(&mut response).map_err(|error| RadiusError::SocketConnectionError(error))?;
 
                         if amount > 0 {
-                            println!("Received reply: {:?}", &response[0..amount]);
+                            debug!("Received reply: {:?}", &response[0..amount]);
                             return Ok(());
                         }
                     },
@@ -191,7 +192,7 @@ impl Client {
             if retry >= self.retries {
                 break;
             }
-            println!("Sending: {:?}", &packet.to_bytes());
+            debug!("Sending: {:?}", &packet.to_bytes());
             socket.send_to(&packet.to_bytes(), remote).map_err(|error| RadiusError::SocketConnectionError(error))?;
 
             socket_poll.poll(&mut events, Some(timeout)).map_err(|error| RadiusError::SocketConnectionError(error))?;
@@ -203,7 +204,7 @@ impl Client {
                         let amount = socket.recv(&mut response).map_err(|error| RadiusError::SocketConnectionError(error))?;
 
                         if amount > 0 {
-                            println!("Received reply: {:?}", &response[0..amount]);
+                            debug!("Received reply: {:?}", &response[0..amount]);
                             return Ok(response[0..amount].to_vec());
                         }
                     },
@@ -232,8 +233,8 @@ impl Client {
 
         md5_hasher.result(&mut hash);
 
-        println!("{:?}", &hash);
-        println!("{:?}", &reply[4..20]);
+        debug!("{:?}", &hash);
+        debug!("{:?}", &reply[4..20]);
 
         if hash == reply[4..20] {
             Ok(())
