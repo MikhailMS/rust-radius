@@ -1,11 +1,30 @@
 [package]
-name    = "radius-rust"
-version = "0.2.0"
-authors = ["MikhailMS <1488maiklm@gmail.com>"]
-edition = "2018"
+authors       = ["MikhailMS <1488maiklm@gmail.com>"]
+categories    = ["radius"]
+description   = "Pure Rust implementation of RADIUS Server/Client"
+documentation = "https://docs.rs/radius-rust/0.2.1"
+edition       = "2018"
+include       = [
+  "Cargo.toml",
+  "LICENSE",
+  "README.md",
+  "CHANGELOG.md",
+  "dict_examples/*",
+  "examples/*",
+  "src/*",
+  "tests/*"
+]
+homepage      = "https://github.com/MikhailMS/rust-radius"
+keywords      = ["radius", "radius-client", "radius-server"]
+license       = "MIT"
+name          = "radius-rust"
+readme        = "README.md"
+repository    = "https://github.com/MikhailMS/rust-radius"
+version       = "0.2.1"
 
 [dependencies]
-mio         = { version = "0.7", features = ["os-poll", "udp"] }
+mio         = { version = "0.7.7", features = ["os-poll", "udp"] }
 rand        = "0.7.3"
-rust-crypto = "0.2"
-thiserror   = "1.0.20"
+rust-crypto = "0.2.36"
+thiserror   = "1.0.23"
+log         = "0.4.14"

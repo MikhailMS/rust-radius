@@ -2,7 +2,6 @@ use super::dictionary::{ Dictionary, DictionaryAttribute, DictionaryValue };
 use super::radius_packet::{ RadiusPacket, RadiusAttribute, TypeCode };
 use super::error::RadiusError;
 
-use crypto::digest::Digest;
 use crypto::md5::Md5;
 use crypto::mac::Mac;
 use crypto::hmac::Hmac;

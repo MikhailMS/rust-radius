@@ -31,5 +31,8 @@ pub enum RadiusError {
     MalformedDictionary     { error: std::io::Error },
     /// Error happens, when wrong RADIUS Code is supplied
     #[error("Supplied RADIUS Code is not supported by this library")]
-    UnsupportedTypeCode     { error: String }
+    UnsupportedTypeCode     { error: String },
+    /// Error happens, when MutexClient cannot acquire the lock on socket_poll
+    #[error("MutexClient is not able to acquire the lock on socket_poll")]
+    MutexLockFailure        { error: String }
 }

@@ -1,5 +1,5 @@
 /*
- * Simpple example of RADIUS server
+ * Simple example of RADIUS server
  * 
  * cargo run --example simple_radius_server 
  */

@@ -1,8 +1,15 @@
 [![MIT licensed][mit-badge]][mit-url]
 [![Actions Status][action-badge]][action-url]
+[![Crates.io][crates-badge]][crates-url]
+[![Docs.rs][docs-badge]][docs-url]
+
 
 [action-badge]: https://github.com/MikhailMS/rust-radius/workflows/RustRadius/badge.svg
 [action-url]:   https://github.com/MikhailMS/rust-radius/actions
+[crates-badge]: https://img.shields.io/crates/v/radius-rust.svg
+[crates-url]:   https://crates.io/crates/radius-rust
+[docs-badge]:   https://docs.rs/radius-rust/badge.svg
+[docs-url]:     https://docs.rs/radius-rust
 [mit-badge]:    https://img.shields.io/badge/license-MIT-blue.svg
 [mit-url]:      LICENSE
 
@@ -17,11 +24,6 @@ Rationale behind this project:
 3. However there were no good RADIUS implementations in Rust
 4. ????
 5. Profit - now there is one, so I can try to push Rust internally in my team ^_^
-
-
-## Usage
-1. The crate is not published, so for now you can:
-   - Add `radius-rust = { git = "https://github.com/MikhailMS/rust-radius" }` to your **Cargo.toml** and that's it
 
 
 ## Tests
@@ -42,6 +44,7 @@ Rationale behind this project:
 
 
 ## Notes
-1. Main core functionality is completed, but there is a chance that I've missed something here and there because it is not needed for my projects yet. If this is the case, raise an issue and I'll see what could be done to get it resolved
-2. Big thanks to [pyrad](https://github.com/pyradius/pyrad) and [radius-rust-client](https://github.com/athonet-open/rust-radius-client) projects, which helped me to start this project
-3. Value of **Message-Authenticator** RadiusAttribute won't be validated, because in RADIUS dictionary it has **string** type, however it is not valid ASCII string (**Message-Authenticator** is a HMAC-MD5 hash)
+1. Main core functionality is completed, but there is a chance that I've missed something here and there because it is not needed for my projects yet. If this is the case, **raise an issue and I'll see what could be done to get it resolved**
+2. Minimum required version of Rust - `1.45.0`
+3. Big thanks to [pyrad](https://github.com/pyradius/pyrad) and [radius-rust-client](https://github.com/athonet-open/rust-radius-client) projects, which helped me to start this project
+4. Value of **Message-Authenticator** RadiusAttribute won't be validated, because in RADIUS dictionary it has **string** type, however it is not valid ASCII string (**Message-Authenticator** is a HMAC-MD5 hash)

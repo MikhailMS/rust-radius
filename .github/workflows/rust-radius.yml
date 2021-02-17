@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [stable, nightly]
+        rust: [1.45.0, 1.46.0, 1.47.0, 1.48.0, 1.49.0, stable, nightly]
         os:   [ubuntu-latest]
     steps:
     - name: Checkout

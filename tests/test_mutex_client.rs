@@ -1,11 +1,11 @@
-use radius_rust::client::client::Client;
+use radius_rust::client::mutex_client::Client;
 use radius_rust::protocol::dictionary::Dictionary;
 use radius_rust::tools::{ integer_to_bytes, ipv4_string_to_bytes};
 
 
-// Test normal RadiusClient
+// Test Mutex RadiusClient
 #[test]
-fn test_client_auth_request() {
+fn test_mutex_client_auth_request() {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let client     = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
@@ -48,7 +48,7 @@ fn test_client_auth_request() {
 }
 
 #[test]
-fn test_client_acct_request() {
+fn test_mutex_client_acct_request() {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let client     = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
@@ -88,7 +88,7 @@ fn test_client_acct_request() {
 }
 
 #[test]
-fn test_client_coa_request() {
+fn test_mutex_client_coa_request() {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let client     = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
