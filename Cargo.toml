@@ -1,6 +1,6 @@
 [package]
 authors       = ["MikhailMS <1488maiklm@gmail.com>"]
-categories    = ["radius"]
+categories    = ["network-programming"]
 description   = "Pure Rust implementation of RADIUS Server/Client"
 documentation = "https://docs.rs/radius-rust/0.2.1"
 edition       = "2018"
