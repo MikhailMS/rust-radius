@@ -8,18 +8,12 @@ use crypto::md5::Md5;
 use crypto::mac::Mac;
 use crypto::hmac::Hmac;
 use log::debug;
-use mio::{ Events, Interest, Poll, Token };
-use mio::net::UdpSocket;
+use async_std::net::UdpSocket;
 use std::io::{Error, ErrorKind};
-use std::time::Duration;
 
 
 #[derive(Debug)]
-/// Represents RADIUS client instance
-///
-/// Note: every time you call any of `send*_packet()` functions, such call would create and bind to
-/// new socket. If such behavoiur is not what you are looking for, then try to switch to
-/// MutexClient, which has no such issue
+/// Represents Async RADIUS client instance
 pub struct Client {
     host:           Host,
     server:         String,
@@ -66,7 +60,7 @@ impl Client {
     /// # Examples
     ///
     /// ```
-    /// use radius_rust::client::client::Client;
+    /// use radius_rust::clients::async_client::Client;
     /// use radius_rust::protocol::dictionary::Dictionary;
     /// use radius_rust::protocol::radius_packet::TypeCode;
     ///
@@ -85,7 +79,7 @@ impl Client {
     /// # Examples
     ///
     /// ```
-    /// use radius_rust::client::client::Client;
+    /// use radius_rust::clients::async_client::Client;
     /// use radius_rust::protocol::dictionary::Dictionary;
     /// use radius_rust::protocol::radius_packet::TypeCode;
     ///
@@ -130,86 +124,62 @@ impl Client {
     }
 
     /// Sends packet to RADIUS server but does not return a response
-    pub fn send_packet(&self, packet: &mut RadiusPacket) -> Result<(), RadiusError> {
+    pub async fn send_packet(&self, packet: &mut RadiusPacket) -> Result<(), RadiusError> {
         let remote_port = self.host.get_port(packet.get_code()).ok_or_else(|| RadiusError::MalformedPacket { error: String::from("There is no port match for packet code") })?;
-        let remote      = format!("{}:{}", &self.server, remote_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
-        let timeout     = Duration::from_secs(self.timeout as u64);
-        let mut events  = Events::with_capacity(1024);
+        let remote      = format!("{}:{}", &self.server, remote_port);
         let mut retry   = 0;
 
         // Bind socket
-        let local_bind  = "0.0.0.0:0".parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
-        let mut socket  = UdpSocket::bind(local_bind).map_err(|error| RadiusError::SocketConnectionError(error))?;
-        let mut socket_poll = Poll::new()?;
-
-        socket_poll.registry().register(&mut socket, Token(0), Interest::READABLE).map_err(|error| RadiusError::SocketConnectionError(error))?;
+        let socket = UdpSocket::bind("0.0.0.0:0").await.map_err(|error| RadiusError::SocketConnectionError(error))?;
         // --------------------
 
         loop {
             if retry >= self.retries {
                 break;
             }
+            // Send RADIUS packet to RADIUS server
             debug!("Sending: {:?}", &packet.to_bytes());
-            socket.send_to(&packet.to_bytes(), remote).map_err(|error| RadiusError::SocketConnectionError(error))?;
-            socket_poll.poll(&mut events, Some(timeout)).map_err(|error| RadiusError::SocketConnectionError(error))?;
+            socket.send_to(&packet.to_bytes(), &remote).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
 
-            for event in events.iter() {
-                match event.token() {
-                    Token(0) => {
-                        let mut response = [0; 4096];
-                        let amount = socket.recv(&mut response).map_err(|error| RadiusError::SocketConnectionError(error))?;
+            // Receive RADIUS server response and ignore it
+            let mut response = [0; 4096];
+            let (amount, _)  = socket.recv_from(&mut response).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
 
-                        if amount > 0 {
-                            debug!("Received reply: {:?}", &response[0..amount]);
-                            return Ok(());
-                        }
-                    },
-                    _ => return Err( RadiusError::SocketInvalidConnection { error: String::from("Received data from invalid Token") } ),
-                }
+            if amount > 0 {
+                debug!("Received reply: {:?}", &response[0..amount]);
+                return Ok(())
             }
+
             retry += 1;
         }
         Err( RadiusError::SocketConnectionError(Error::new(ErrorKind::TimedOut, "")) )
     }
 
     /// Sends packet to RADIUS server and returns a response
-    pub fn send_and_receive_packet(&self, packet: &mut RadiusPacket) -> Result<Vec<u8>, RadiusError> {
+    pub async fn send_and_receive_packet(&self, packet: &mut RadiusPacket) -> Result<Vec<u8>, RadiusError> {
         let remote_port = self.host.get_port(packet.get_code()).ok_or_else(|| RadiusError::MalformedPacket { error: String::from("There is no port match for packet code") })?;
-        let remote      = format!("{}:{}", &self.server, remote_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
-        let timeout     = Duration::from_secs(self.timeout as u64);
-        let mut events  = Events::with_capacity(1024);
+        let remote      = format!("{}:{}", &self.server, remote_port);
         let mut retry   = 0;
 
         // Bind socket
-        let local_bind  = "0.0.0.0:0".parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
-        let mut socket  = UdpSocket::bind(local_bind).map_err(|error| RadiusError::SocketConnectionError(error))?;
-        let mut socket_poll = Poll::new()?;
-
-        socket_poll.registry().register(&mut socket, Token(0), Interest::READABLE).map_err(|error| RadiusError::SocketConnectionError(error))?;
+        let socket = UdpSocket::bind("0.0.0.0:0").await.map_err(|error| RadiusError::SocketConnectionError(error))?;
         // --------------------
 
         loop {
             if retry >= self.retries {
                 break;
             }
+            // Send RADIUS packet to RADIUS server
             debug!("Sending: {:?}", &packet.to_bytes());
-            socket.send_to(&packet.to_bytes(), remote).map_err(|error| RadiusError::SocketConnectionError(error))?;
+            socket.send_to(&packet.to_bytes(), &remote).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
 
-            socket_poll.poll(&mut events, Some(timeout)).map_err(|error| RadiusError::SocketConnectionError(error))?;
+            // Receive RADIUS server response and return it
+            let mut response = [0; 4096];
+            let (amount, _)  = socket.recv_from(&mut response).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
 
-            for event in events.iter() {
-                match event.token() {
-                    Token(0) => {
-                        let mut response = [0; 4096];
-                        let amount = socket.recv(&mut response).map_err(|error| RadiusError::SocketConnectionError(error))?;
-
-                        if amount > 0 {
-                            debug!("Received reply: {:?}", &response[0..amount]);
-                            return Ok(response[0..amount].to_vec());
-                        }
-                    },
-                    _ => return Err( RadiusError::SocketInvalidConnection { error: String::from("Received data from invalid Token") } ),
-                }
+            if amount > 0 {
+                debug!("Received reply: {:?}", &response[0..amount]);
+                return Ok(response[0..amount].to_vec())
             }
 
             retry += 1;
@@ -313,3 +283,4 @@ mod tests {
         }
     }
 }
+

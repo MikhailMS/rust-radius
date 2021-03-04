@@ -18,7 +18,7 @@ use std::sync::Mutex;
 #[derive(Debug)]
 /// Represents RADIUS client instance
 ///
-/// The key difference between this client and the one from `radius_rust::client::client::Client`
+/// The key difference between this client and the one from `radius_rust::clients::client::Client`
 /// is that this client's socket poll is wrapped into Mutex (there are cases when we cannot use mut
 /// reference to Client and socket_poll is the only thing which blocks the Client usage in such
 /// cases)
@@ -78,7 +78,7 @@ impl Client {
     /// # Examples
     ///
     /// ```
-    /// use radius_rust::client::mutex_client::Client;
+    /// use radius_rust::clients::mutex_client::Client;
     /// use radius_rust::protocol::dictionary::Dictionary;
     /// use radius_rust::protocol::radius_packet::TypeCode;
     ///
@@ -97,7 +97,7 @@ impl Client {
     /// # Examples
     ///
     /// ```
-    /// use radius_rust::client::mutex_client::Client;
+    /// use radius_rust::clients::mutex_client::Client;
     /// use radius_rust::protocol::dictionary::Dictionary;
     /// use radius_rust::protocol::radius_packet::TypeCode;
     ///
