@@ -22,9 +22,24 @@ readme        = "README.md"
 repository    = "https://github.com/MikhailMS/rust-radius"
 version       = "0.2.1"
 
+[features]
+# Default doesn\t include anythin - keep it simple
+default      = []
+# In case one needs to use async RADIUS Server/Client
+async-radius = []
+
 [dependencies]
+log         = "0.4.14"
 mio         = { version = "0.7.7", features = ["os-poll", "udp"] }
 rand        = "0.7.3"
 rust-crypto = "0.2.36"
 thiserror   = "1.0.23"
-log         = "0.4.14"
+
+[target.'cfg(target_feature = "async-radius")'.dependencies]
+async-std = "1.9.0"
+
+[dev-dependencies]
+async-std = "1.9.0"
+
+[[example]]
+name = "simple_radius_server"

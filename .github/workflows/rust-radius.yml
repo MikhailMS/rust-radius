@@ -2,7 +2,7 @@ name: RustRadius
 
 on:
   push:
-    branches: [ master, development ]
+    branches: [ master, development, feature/prob_add_async_std ]
   pull_request:
     branches: [ master ]
 
@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [1.45.0, 1.46.0, 1.47.0, 1.48.0, 1.49.0, stable, nightly]
+        rust: [1.43.0, 1.44.0, 1.45.0, 1.46.0, 1.47.0, 1.48.0, 1.49.0, stable, nightly]
         os:   [ubuntu-latest]
     steps:
     - name: Checkout

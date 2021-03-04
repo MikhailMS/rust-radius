@@ -1,4 +1,4 @@
-use radius_rust::client::mutex_client::Client;
+use radius_rust::clients::mutex_client::Client;
 use radius_rust::protocol::dictionary::Dictionary;
 use radius_rust::tools::{ integer_to_bytes, ipv4_string_to_bytes};
 
