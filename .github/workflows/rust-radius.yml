@@ -2,7 +2,7 @@ name: RustRadius
 
 on:
   push:
-    branches: [ master, development, feature/prob_add_async_std ]
+    branches: [ master, development, feature/* ]
   pull_request:
     branches: [ master ]
 
@@ -20,9 +20,10 @@ jobs:
         rust: [1.43.0, 1.44.0, 1.45.0, 1.46.0, 1.47.0, 1.48.0, 1.49.0, stable, nightly]
         os:   [ubuntu-latest]
     steps:
+
     - name: Checkout
       uses: actions/checkout@v2
-    
+
     - name: Install rust
       uses: actions-rs/toolchain@v1
       with:
@@ -36,28 +37,30 @@ jobs:
         command: install
         args:    --debug cargo-make
         
+    # Tarpaulin only compiles on rust version 1.45.0+ (and I only run it on nightly rust)
     - name: Install tarpaulin
+      if:   matrix.rust == 'nightly'
       uses: actions-rs/cargo@v1
       with:
         command: install
         args:    --debug cargo-tarpaulin
-    
+
     - name: Build
       run: cargo build --verbose
 
     - name: Start simple RADIUS server
       run: cargo run --example simple_radius_server &
-    
+
     - name: Run tests
       run: cargo test --verbose
-    
+
     - name: Run CI
       if:   matrix.rust != 'nightly'
       uses: actions-rs/cargo@v1
       with:
         command: make
         args:    ci-flow
-    
+
     - name: Run CI (Allow Failures)
       if:                matrix.rust == 'nightly'
       continue-on-error: true
@@ -65,7 +68,7 @@ jobs:
       with:
         command: make
         args:    ci-flow
-      
+
     - name: Generate code coverage
       if:  matrix.rust == 'nightly'
       run: |
