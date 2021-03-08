@@ -106,16 +106,16 @@ impl Client {
 
     /// Gets the original value as a String if the RadiusAttribute respresents dictionary attribute
     /// that has type: string, ipaddr, ipv6addr or ipv6prefix
-    pub fn get_radius_attr_original_string_value(&self, attribute: &RadiusAttribute) -> Result<String, RadiusError> {
-        let dict_attr = self.host.get_dictionary_attribute_by_id(attribute.get_id()).ok_or_else(|| RadiusError::MalformedAttribute {error: format!("No attribute with ID: {} found in dictionary", attribute.get_id())} )?;
-        attribute.get_original_string_value(dict_attr.get_code_type())
+    pub fn radius_attr_original_string_value(&self, attribute: &RadiusAttribute) -> Result<String, RadiusError> {
+        let dict_attr = self.host.dictionary_attribute_by_id(attribute.id()).ok_or_else(|| RadiusError::MalformedAttribute {error: format!("No attribute with ID: {} found in dictionary", attribute.id())} )?;
+        attribute.original_string_value(dict_attr.code_type())
     }
 
     /// Gets the original value as a String if the RadiusAttribute respresents dictionary attribute
     /// that has type:integer or date
-    pub fn get_radius_attr_original_integer_value(&self, attribute: &RadiusAttribute) -> Result<u64, RadiusError> {
-        let dict_attr = self.host.get_dictionary_attribute_by_id(attribute.get_id()).ok_or_else(|| RadiusError::MalformedAttribute {error: format!("No attribute with ID: {} found in dictionary", attribute.get_id())} )?;
-        attribute.get_original_integer_value(dict_attr.get_code_type())
+    pub fn radius_attr_original_integer_value(&self, attribute: &RadiusAttribute) -> Result<u64, RadiusError> {
+        let dict_attr = self.host.dictionary_attribute_by_id(attribute.id()).ok_or_else(|| RadiusError::MalformedAttribute {error: format!("No attribute with ID: {} found in dictionary", attribute.id())} )?;
+        attribute.original_integer_value(dict_attr.code_type())
     }
 
     /// Initialises RadiusPacket from bytes
@@ -125,7 +125,7 @@ impl Client {
 
     /// Sends packet to RADIUS server but does not return a response
     pub async fn send_packet(&self, packet: &mut RadiusPacket) -> Result<(), RadiusError> {
-        let remote_port = self.host.get_port(packet.get_code()).ok_or_else(|| RadiusError::MalformedPacket { error: String::from("There is no port match for packet code") })?;
+        let remote_port = self.host.port(packet.code()).ok_or_else(|| RadiusError::MalformedPacket { error: String::from("There is no port match for packet code") })?;
         let remote      = format!("{}:{}", &self.server, remote_port);
         let mut retry   = 0;
 
@@ -157,7 +157,7 @@ impl Client {
 
     /// Sends packet to RADIUS server and returns a response
     pub async fn send_and_receive_packet(&self, packet: &mut RadiusPacket) -> Result<Vec<u8>, RadiusError> {
-        let remote_port = self.host.get_port(packet.get_code()).ok_or_else(|| RadiusError::MalformedPacket { error: String::from("There is no port match for packet code") })?;
+        let remote_port = self.host.port(packet.code()).ok_or_else(|| RadiusError::MalformedPacket { error: String::from("There is no port match for packet code") })?;
         let remote      = format!("{}:{}", &self.server, remote_port);
         let mut retry   = 0;
 
@@ -189,17 +189,17 @@ impl Client {
 
     /// Verifies that reply packet's ID and authenticator are a match
     pub fn verify_reply(&self, request: &RadiusPacket, reply: &[u8]) -> Result<(), RadiusError> {
-        if request.get_id() != reply[1] {
+        if request.id() != reply[1] {
             return Err( RadiusError::ValidationError { error: String::from("Packet identifier mismatch") } )
         };
 
         let mut md5_hasher = Md5::new();
         let mut hash       = [0; 16];
 
-        md5_hasher.input(&reply[0..4]);                 // Append reply type code, reply ID and reply length
-        md5_hasher.input(&request.get_authenticator()); // Append request authenticator
-        md5_hasher.input(&reply[20..]);                 // Append rest of the reply
-        md5_hasher.input(&self.secret.as_bytes());      // Append secret
+        md5_hasher.input(&reply[0..4]);             // Append reply type code, reply ID and reply length
+        md5_hasher.input(&request.authenticator()); // Append request authenticator
+        md5_hasher.input(&reply[20..]);             // Append rest of the reply
+        md5_hasher.input(&self.secret.as_bytes());  // Append secret
 
         md5_hasher.result(&mut hash);
 
@@ -236,7 +236,7 @@ mod tests {
 
         let attributes = vec![client.create_attribute_by_name("User-Name", String::from("testing").into_bytes()).unwrap()];
 
-        match client.get_radius_attr_original_string_value(&attributes[0]) {
+        match client.radius_attr_original_string_value(&attributes[0]) {
             Ok(value) => assert_eq!(String::from("testing"), value),
             _         => assert!(false)
         }
@@ -250,7 +250,7 @@ mod tests {
         let invalid_string = vec![215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
         let attributes     = vec![client.create_attribute_by_name("User-Name", invalid_string).unwrap()];
 
-        match client.get_radius_attr_original_string_value(&attributes[0]) {
+        match client.radius_attr_original_string_value(&attributes[0]) {
             Ok(_)      => assert!(false),
             Err(error) => assert_eq!(String::from("Radius packet attribute is malformed"), error.to_string())
         }
@@ -263,7 +263,7 @@ mod tests {
 
         let attributes = vec![client.create_attribute_by_name("NAS-Port-Id", integer_to_bytes(0)).unwrap()];
 
-        match client.get_radius_attr_original_integer_value(&attributes[0]) {
+        match client.radius_attr_original_integer_value(&attributes[0]) {
             Ok(value) => assert_eq!(0, value),
             _         => assert!(false)
         }
@@ -277,7 +277,7 @@ mod tests {
         let invalid_integer = vec![215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
         let attributes      = vec![client.create_attribute_by_name("NAS-Port-Id", invalid_integer).unwrap()];
 
-        match client.get_radius_attr_original_integer_value(&attributes[0]) {
+        match client.radius_attr_original_integer_value(&attributes[0]) {
             Ok(_)      => assert!(false),
             Err(error) => assert_eq!(String::from("Radius packet attribute is malformed"), error.to_string())
         }

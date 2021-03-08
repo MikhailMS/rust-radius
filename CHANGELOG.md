@@ -6,12 +6,13 @@ This time round it was decided to add support for async via `async-std` (it look
 ## What's new
 * Add `async-std` as alternative to `mio`
 * There are now Async RADIUS Client & Server implementations
-* Add a few more rust versions to Actions pipeline (crate compiles on `1.43.0+` and `nightly` versions)
+* Add a few more rust versions to Actions pipeline (crate compiles on `1.43.0+` for **async version**, and `1.42.0+` for **sync version** and `nightly` versions)
 
 ## What's removed or deprecated
 
 ## What's changed
 * Breaking change - **client** module has been renamed into **clients**
+* Breaking change - **get** prefix was removed for all functions where it was used before ([C-GETTER Rust convention](https://rust-lang.github.io/api-guidelines/naming.html#c-getter))
 
 
 =============
