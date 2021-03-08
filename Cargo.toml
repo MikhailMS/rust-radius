@@ -36,8 +36,8 @@ rand        = "0.7.3"
 rust-crypto = "0.2.36"
 thiserror   = "1.0.23"
 
-[dev-dependencies]
-async-std = "1.9.0"
+# [dev-dependencies]
+# async-std = "1.9.0"
 
 [[example]]
 name = "simple_radius_server"
