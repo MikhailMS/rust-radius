@@ -21,32 +21,32 @@ jobs:
         os:   [ubuntu-latest]
     steps:
 
-    - name: [OLD] Checkout
+    - name: OLD -- Checkout
       uses: actions/checkout@v2
 
-    - name: [OLD] Install rust
+    - name: OLD -- Install rust
       uses: actions-rs/toolchain@v1
       with:
         toolchain: ${{ matrix.rust }}
         profile:   minimal
         override:  true
 
-    - name: [OLD] Install cargo-make
+    - name: OLD -- Install cargo-make
       uses: actions-rs/cargo@v1
       with:
         command: install
         args:    --debug cargo-make
         
-    - name: [OLD] Build
+    - name: OLD -- Build
       run: cargo build --verbose
 
-    - name: [OLD] Start simple RADIUS server
+    - name: OLD -- Start simple RADIUS server
       run: cargo run --example simple_radius_server &
 
-    - name: [OLD] Run tests
+    - name: OLD -- Run tests
       run: cargo test --verbose
 
-    - name: [OLD] Run CI
+    - name: OLD -- Run CI
       if:   matrix.rust != 'nightly'
       uses: actions-rs/cargo@v1
       with:
@@ -64,47 +64,47 @@ jobs:
         os:   [ubuntu-latest]
     steps:
 
-    - name: [NEW] Checkout
+    - name: NEW -- Checkout
       uses: actions/checkout@v2
 
-    - name: [NEW] Install rust
+    - name: NEW -- Install rust
       uses: actions-rs/toolchain@v1
       with:
         toolchain: ${{ matrix.rust }}
         profile:   minimal
         override:  true
 
-    - name: [NEW] Install cargo-make
+    - name: NEW -- Install cargo-make
       uses: actions-rs/cargo@v1
       with:
         command: install
         args:    --debug cargo-make
         
     # Tarpaulin only compiles on rust version 1.45.0+ (and I only run it on nightly rust)
-    - name: [NEW] Install tarpaulin
+    - name: NEW -- Install tarpaulin
       if:   matrix.rust == 'nightly'
       uses: actions-rs/cargo@v1
       with:
         command: install
         args:    --debug cargo-tarpaulin
 
-    - name: [NEW] Build
+    - name: NEW -- Build
       run: cargo build --verbose
 
-    - name: [NEW] Start simple RADIUS server
+    - name: NEW -- Start simple RADIUS server
       run: cargo run --example simple_radius_server &
 
-    - name: [NEW] Run tests
+    - name: NEW -- Run tests
       run: cargo test --verbose
 
-    - name: [NEW] Run CI
+    - name: NEW -- Run CI
       if:   matrix.rust != 'nightly'
       uses: actions-rs/cargo@v1
       with:
         command: make
         args:    ci-flow
 
-    - name: [NEW] Run CI (Allow Failures)
+    - name: NEW -- Run CI (Allow Failures)
       if:                matrix.rust == 'nightly'
       continue-on-error: true
       uses:              actions-rs/cargo@v1
@@ -112,7 +112,7 @@ jobs:
         command: make
         args:    ci-flow
 
-    - name: [NEW] Generate code coverage
+    - name: NEW -- Generate code coverage
       if:  matrix.rust == 'nightly'
       run: |
         cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out Json
