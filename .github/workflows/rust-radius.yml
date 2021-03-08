@@ -11,7 +11,49 @@ env:
   CLICOLOR_FORCE: 1
 
 jobs:
-  ci:
+  old_rust_ci_test:
+    name:     CI testing
+    runs-on:  ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [1.42.0]
+        os:   [ubuntu-latest]
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Install rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ matrix.rust }}
+        profile:   minimal
+        override:  true
+
+    - name: Install cargo-make
+      uses: actions-rs/cargo@v1
+      with:
+        command: install
+        args:    --debug cargo-make
+        
+    - name: Build
+      run: cargo build --verbose
+
+    - name: Start simple RADIUS server
+      run: cargo run --example simple_radius_server &
+
+    - name: Run tests
+      run: cargo test --verbose
+
+    - name: Run CI
+      if:   matrix.rust != 'nightly'
+      uses: actions-rs/cargo@v1
+      with:
+        command: make
+        args:    --makefile 
+
+  new_ci_test:
     name:     CI testing
     runs-on:  ${{ matrix.os }}
     strategy:
