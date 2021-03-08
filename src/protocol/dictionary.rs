@@ -36,15 +36,15 @@ pub struct DictionaryAttribute {
 }
 
 impl DictionaryAttribute {
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.name
     }
 
-    pub fn get_code(&self) -> &str {
+    pub fn code(&self) -> &str {
         &self.code
     }
 
-    pub fn get_code_type(&self) -> &Option<SupportedAttributeTypes> {
+    pub fn code_type(&self) -> &Option<SupportedAttributeTypes> {
         &self.code_type
     }
 }
@@ -60,15 +60,15 @@ pub struct DictionaryValue {
 }
 
 impl DictionaryValue {
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.value_name
     }
 
-    pub fn get_attribute_name(&self) -> &str {
+    pub fn attribute_name(&self) -> &str {
         &self.attribute_name
     }
 
-    pub fn get_value(&self) -> &str {
+    pub fn value(&self) -> &str {
         &self.value
     }
 }
@@ -126,17 +126,17 @@ impl Dictionary {
     }
 
     /// Returns parsed DictionaryAttributes
-    pub fn get_attributes(&self) -> &[DictionaryAttribute] {
+    pub fn attributes(&self) -> &[DictionaryAttribute] {
         &self.attributes
     }
 
     /// Returns parsed DictionaryValues
-    pub fn get_values(&self) -> &[DictionaryValue] {
+    pub fn values(&self) -> &[DictionaryValue] {
         &self.values
     }
 
     /// Returns parsed DictionaryVendors
-    pub fn get_vendors(&self) -> &[DictionaryVendor] {
+    pub fn vendors(&self) -> &[DictionaryVendor] {
         &self.vendors
     }
 }

@@ -33,7 +33,7 @@ impl Host{
     }
 
     /// Returns port of RADIUS server, that receives given type of RADIUS message/packet
-    pub fn get_port(&self, code: &TypeCode) -> Option<u16> {
+    pub fn port(&self, code: &TypeCode) -> Option<u16> {
         match code {
             TypeCode::AccessRequest     => Some(self.auth_port),
             TypeCode::AccountingRequest => Some(self.acct_port),
@@ -43,23 +43,23 @@ impl Host{
     }
 
     /// Returns host's dictionary instance
-    pub fn get_dictionary(&self) -> &Dictionary {
+    pub fn dictionary(&self) -> &Dictionary {
         &self.dictionary
     }
 
-    /// Returns VALUE from dictionary with given attribute * value names
-    pub fn get_dictionary_value_by_attr_and_value_name(&self, attr_name: &str, value_name: &str) -> Option<&DictionaryValue> {
-        self.dictionary.get_values().iter().find(|&value| value.get_name() == value_name && value.get_attribute_name() == attr_name)
+    /// Returns VALUE from dictionary with given attribute & value name
+    pub fn dictionary_value_by_attr_and_value_name(&self, attr_name: &str, value_name: &str) -> Option<&DictionaryValue> {
+        self.dictionary.values().iter().find(|&value| value.name() == value_name && value.attribute_name() == attr_name)
     }
 
     /// Returns ATTRIBUTE from dictionary with given id
-    pub fn get_dictionary_attribute_by_id(&self, packet_attr_id: u8) -> Option<&DictionaryAttribute> {
-        self.dictionary.get_attributes().iter().find(|&attr| attr.get_code() == packet_attr_id.to_string())
+    pub fn dictionary_attribute_by_id(&self, packet_attr_id: u8) -> Option<&DictionaryAttribute> {
+        self.dictionary.attributes().iter().find(|&attr| attr.code() == packet_attr_id.to_string())
     }
 
     /// Returns ATTRIBUTE from dictionary with given name
-    pub fn get_dictionary_attribute_by_name(&self, packet_attr_name: &str) -> Option<&DictionaryAttribute> {
-        self.dictionary.get_attributes().iter().find(|&attr| attr.get_name() == packet_attr_name)
+    pub fn dictionary_attribute_by_name(&self, packet_attr_name: &str) -> Option<&DictionaryAttribute> {
+        self.dictionary.attributes().iter().find(|&attr| attr.name() == packet_attr_name)
     }
 
     /// Initialises RadiusPacket from bytes
@@ -75,9 +75,9 @@ impl Host{
         let ignore_attribute = "Message-Authenticator";
         let _packet_tmp      = RadiusPacket::initialise_packet_from_bytes(&self.dictionary, &packet)?;
 
-        for packet_attr in _packet_tmp.get_attributes().iter().filter(|&attr| attr.get_name() != ignore_attribute) {
-            let _dict_attr           = self.get_dictionary_attribute_by_id(packet_attr.get_id()).unwrap();
-            let _dict_attr_data_type = _dict_attr.get_code_type();
+        for packet_attr in _packet_tmp.attributes().iter().filter(|&attr| attr.name() != ignore_attribute) {
+            let _dict_attr           = self.dictionary_attribute_by_id(packet_attr.id()).unwrap();
+            let _dict_attr_data_type = _dict_attr.code_type();
 
             match packet_attr.verify_original_value(_dict_attr_data_type) {
                 Err(err) => return Err( RadiusError::ValidationError {error: err.to_string()} ),
@@ -90,7 +90,7 @@ impl Host{
     /// Verifies Message-Authenticator value
     pub fn verify_message_authenticator(&self, secret: &str, packet: &[u8]) -> Result<(), RadiusError> {
         let _packet_tmp     = RadiusPacket::initialise_packet_from_bytes(&self.dictionary, &packet)?;
-        let packet_msg_auth = _packet_tmp.get_message_authenticator()?;
+        let packet_msg_auth = _packet_tmp.message_authenticator()?;
 
         let mut hash = Hmac::new(Md5::new(), secret.as_bytes());
         hash.input(&packet);
@@ -114,11 +114,11 @@ mod tests {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
         let host       = Host::initialise_host(1812, 1813, 3799, dictionary);
 
-        let dict_value = host.get_dictionary_value_by_attr_and_value_name("Service-Type", "Login-User").unwrap();
+        let dict_value = host.dictionary_value_by_attr_and_value_name("Service-Type", "Login-User").unwrap();
 
-        assert_eq!("Service-Type", dict_value.get_attribute_name());
-        assert_eq!("Login-User",   dict_value.get_name());
-        assert_eq!("1",            dict_value.get_value());
+        assert_eq!("Service-Type", dict_value.attribute_name());
+        assert_eq!("Login-User",   dict_value.name());
+        assert_eq!("1",            dict_value.value());
     }
 
     #[test]
@@ -126,7 +126,7 @@ mod tests {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
         let host       = Host::initialise_host(1812, 1813, 3799, dictionary);
 
-        let dict_value = host.get_dictionary_value_by_attr_and_value_name("Service-Type", "Lin-User");
+        let dict_value = host.dictionary_value_by_attr_and_value_name("Service-Type", "Lin-User");
         assert_eq!(None, dict_value);
     }
 
@@ -135,11 +135,11 @@ mod tests {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
         let host       = Host::initialise_host(1812, 1813, 3799, dictionary);
 
-        let dict_attr = host.get_dictionary_attribute_by_id(80).unwrap();
+        let dict_attr = host.dictionary_attribute_by_id(80).unwrap();
 
-        assert_eq!("Message-Authenticator",                    dict_attr.get_name());
-        assert_eq!("80",                                       dict_attr.get_code());
-        assert_eq!(&Some(SupportedAttributeTypes::AsciiString), dict_attr.get_code_type());
+        assert_eq!("Message-Authenticator",                    dict_attr.name());
+        assert_eq!("80",                                       dict_attr.code());
+        assert_eq!(&Some(SupportedAttributeTypes::AsciiString), dict_attr.code_type());
     }
 
     #[test]
@@ -147,7 +147,7 @@ mod tests {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
         let host       = Host::initialise_host(1812, 1813, 3799, dictionary);
 
-        let dict_attr = host.get_dictionary_attribute_by_id(255);
+        let dict_attr = host.dictionary_attribute_by_id(255);
         assert_eq!(None, dict_attr);
     }
 

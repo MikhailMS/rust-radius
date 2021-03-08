@@ -78,9 +78,9 @@ impl Server {
         let socket_poll = Poll::new()?;
         let host        = Host::initialise_host(auth_port, acct_port, coa_port, dictionary);
 
-        let auth_port = host.get_port(&TypeCode::AccessRequest).ok_or_else(|| RadiusError::SocketInvalidConnection { error: String::from("There is no port match for AccessRequest") })?;
-        let acct_port = host.get_port(&TypeCode::AccountingRequest).ok_or_else(|| RadiusError::SocketInvalidConnection { error: String::from("There is no port match for AccountingRequest") })?;
-        let coa_port  = host.get_port(&TypeCode::CoARequest).ok_or_else(|| RadiusError::SocketInvalidConnection { error: String::from("There is no port match for CoARequest") })?;
+        let auth_port = host.port(&TypeCode::AccessRequest).ok_or_else(|| RadiusError::SocketInvalidConnection { error: String::from("There is no port match for AccessRequest") })?;
+        let acct_port = host.port(&TypeCode::AccountingRequest).ok_or_else(|| RadiusError::SocketInvalidConnection { error: String::from("There is no port match for AccountingRequest") })?;
+        let coa_port  = host.port(&TypeCode::CoARequest).ok_or_else(|| RadiusError::SocketInvalidConnection { error: String::from("There is no port match for CoARequest") })?;
 
         let auth_bind_addr = format!("{}:{}", server, auth_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
         let acct_bind_addr = format!("{}:{}", server, acct_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
@@ -117,7 +117,7 @@ impl Server {
     }
 
     /// Returns allowed hosts list
-    pub fn get_allowed_hosts(&self) -> &[String] {
+    pub fn allowed_hosts(&self) -> &[String] {
         &self.allowed_hosts
     }
 
@@ -144,7 +144,7 @@ impl Server {
     }
 
     /// Returns HashMap with packet handler functions
-    pub fn get_request_handlers(&self) -> &HashMap<RadiusMsgType, fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, RadiusError>> {
+    pub fn request_handlers(&self) -> &HashMap<RadiusMsgType, fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, RadiusError>> {
         &self.handlers
     }
 
@@ -291,7 +291,7 @@ impl Server {
     /// Server would try to build RadiusPacket from raw bytes, and if it succeeds then packet is
     /// valid, otherwise would return RadiusError
     pub fn verify_request(&self, request: &[u8]) -> Result<(), RadiusError> {
-        match RadiusPacket::initialise_packet_from_bytes(&self.host.get_dictionary(), request) {
+        match RadiusPacket::initialise_packet_from_bytes(&self.host.dictionary(), request) {
             Err(err) => Err(err),
             _        => Ok(())
         }
@@ -337,14 +337,14 @@ mod tests {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
         let mut server = Server::initialise_server(1810, 1809, 3790, dictionary, String::from("0.0.0.0"), String::from("secret"), 1, 2).unwrap();
 
-        assert_eq!(server.get_allowed_hosts().len(), 0);
+        assert_eq!(server.allowed_hosts().len(), 0);
 
         server.add_allowed_hosts(String::from("127.0.0.1"));
-        assert_eq!(server.get_allowed_hosts().len(), 1);
+        assert_eq!(server.allowed_hosts().len(), 1);
 
-        assert_eq!(server.get_request_handlers().len(), 0);
+        assert_eq!(server.request_handlers().len(), 0);
 
         server.add_request_handler(RadiusMsgType::COA, handle_coa_request).unwrap();
-        assert_eq!(server.get_request_handlers().len(), 1);
+        assert_eq!(server.request_handlers().len(), 1);
     }
 }
