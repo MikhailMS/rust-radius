@@ -1,3 +1,8 @@
+//! Various helper functions, that are used by RADIUS Client & Server to encode/decode information
+//! inside RADIUS packet
+//! They are also available to crate users to prepare data before it is packed into RADIUS packet
+
+
 use crypto::digest::Digest;
 use crypto::md5::Md5;
 
@@ -14,7 +19,7 @@ use crate::protocol::error::RadiusError;
 pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, RadiusError> {
     let parsed_ipv6: Vec<&str> = ipv6.split("/").collect();
     let mut bytes: Vec<u8>     = Vec::with_capacity(18);
-    let ipv6_address           = Ipv6Addr::from_str(parsed_ipv6[0]).map_err(|error| RadiusError::MalformedIpAddr { error: error.to_string() })?;
+    let ipv6_address           = Ipv6Addr::from_str(parsed_ipv6[0]).map_err(|error| RadiusError::MalformedIpAddrError { error: error.to_string() })?;
 
     if parsed_ipv6.len() == 2 {
         bytes.append( &mut u16_to_be_bytes(parsed_ipv6[1].parse::<u16>().unwrap()).to_vec() )
@@ -59,7 +64,7 @@ pub fn bytes_to_ipv6_string(ipv6: &[u8]) -> Result<String, RadiusError> {
 /// Should be used for any Attribute of type ipaddr to ensure value is encoded correctly
 pub fn ipv4_string_to_bytes(ipv4: &str) -> Result<Vec<u8>, RadiusError> {
     if ipv4.contains("/") {
-        return Err( RadiusError::MalformedIpAddr { error: format!("Subnets are not supported for IPv4: {}", ipv4) } )
+        return Err( RadiusError::MalformedIpAddrError { error: format!("Subnets are not supported for IPv4: {}", ipv4) } )
     }
 
     let mut bytes: Vec<u8> = Vec::with_capacity(4);
@@ -73,7 +78,7 @@ pub fn ipv4_string_to_bytes(ipv4: &str) -> Result<Vec<u8>, RadiusError> {
 /// Converts IPv4 bytes into IPv4 string
 pub fn bytes_to_ipv4_string(ipv4: &[u8]) -> Result<String, RadiusError> {
     if ipv4.len() != 4 {
-        return Err( RadiusError::MalformedIpAddr { error: format!("Malformed IPv4: {:?}", ipv4) } )
+        return Err( RadiusError::MalformedIpAddrError { error: format!("Malformed IPv4: {:?}", ipv4) } )
     }
 
     let ipv4_string: Vec<String> = ipv4.iter().map(|group| group.to_string()).collect();

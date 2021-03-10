@@ -34,7 +34,7 @@ Rationale behind this project:
 ## TODO
 - [x] Maybe it is worth adding [async_std](https://github.com/async-rs/async-std) for RADIUS Client?                      **Part of prob_add_async_std feature**
 - [ ] Maybe it is worth adding [async_std](https://github.com/async-rs/async-std) for RADIUS Server?                      **Part of prob_add_async_std feature**
-- [ ] Read up on [Rust API Guidelines](https://rust-lang.github.io/api-guidelines)                                        **Part of prob_add_async_std feature**
+- [-] Read up on [Rust API Guidelines](https://rust-lang.github.io/api-guidelines) and implement whatever possible        **Part of prob_add_async_std feature**
 - [x] If `async_std` is to be added, ensure it is disabled by default and requires cargo feature option to become enabled **Part of prob_add_async_std feature**
 - [ ] Protocol
   - [ ] dictionary

@@ -1,14 +1,17 @@
 name: RustRadius
 
+
 on:
   push:
     branches: [ master, development, feature/* ]
   pull_request:
     branches: [ master ]
 
+
 env:
   CARGO_TERM_COLOR: always
   CLICOLOR_FORCE: 1
+
 
 jobs:
   old_rust_ci_test:
@@ -18,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         rust: [1.42.0]
-        os:   [ubuntu-latest]
+        os:   [ubuntu-18.04]
     steps:
 
     - name: OLD -- Checkout
@@ -61,7 +64,7 @@ jobs:
       fail-fast: false
       matrix:
         rust: [1.43.0, 1.44.0, 1.45.0, 1.46.0, 1.47.0, 1.48.0, 1.49.0, stable, nightly]
-        os:   [ubuntu-latest]
+        os:   [ubuntu-18.04]
     steps:
 
     - name: NEW -- Checkout

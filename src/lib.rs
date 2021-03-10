@@ -1,5 +1,13 @@
+//! Pure Rust implementation of RADIUS Protocol/Client/Server
+//!
+//! If you want to see how to built RADIUS Server, a good starting point is to look inside `example/`
+//! If you want to see how to build RADIUS Client, a good starting point is to look inside `tests/`
+
+
 #![deny(
-    // missing_docs, // TODO
+    missing_crate_level_docs,
+    missing_doc_code_examples,
+    missing_docs,
     rust_2018_idioms,
     unused_imports,
     dead_code
