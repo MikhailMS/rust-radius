@@ -1,3 +1,6 @@
+//! RADIUS Packet implementation
+
+
 use super::dictionary::{ Dictionary, SupportedAttributeTypes };
 use super::error::RadiusError;
 use crate::tools::{ bytes_to_integer, bytes_to_timestamp, bytes_to_ipv4_string, bytes_to_ipv6_string };
@@ -42,6 +45,7 @@ pub enum TypeCode {
 }
 
 impl TypeCode {
+    /// Convert integer(u8) value into corresponding TypeCode enum
     pub fn from_u8(code: u8) -> Result<TypeCode, RadiusError> {
         match code {
             1u8  => Ok(TypeCode::AccessRequest),
@@ -58,10 +62,11 @@ impl TypeCode {
             43u8 => Ok(TypeCode::CoARequest ),
             44u8 => Ok(TypeCode::CoAACK),
             45u8 => Ok(TypeCode::CoANAK),
-            _ => Err( RadiusError::UnsupportedTypeCode { error: format!("Unknown RADIUS code: {}", code) }),
+            _ => Err( RadiusError::UnsupportedTypeCodeError { error: format!("Unknown RADIUS code: {}", code) }),
         }
     }
 
+    /// Convert TypeCode enum value into corresponding integer(u8)
     pub fn to_u8(&self) -> u8 {
         match self {
             TypeCode::AccessRequest      => 1u8,
@@ -148,25 +153,25 @@ impl RadiusAttribute {
             Some(SupportedAttributeTypes::AsciiString) => {
                 match String::from_utf8(self.value().to_vec()) {
                     Ok(_) => Ok(()),
-                    _     => Err( RadiusError::MalformedAttribute {error: String::from("invalid ASCII bytes")} )
+                    _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid ASCII bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::IPv4Addr)    => {
                 match bytes_to_ipv4_string(self.value()) {
                     Ok(_) => Ok(()),
-                    _     => Err( RadiusError::MalformedAttribute {error: String::from("invalid IPv4 bytes")} )
+                    _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv4 bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::IPv6Addr)    => {
                 match bytes_to_ipv6_string(self.value()) {
                     Ok(_) => Ok(()),
-                    _     => Err( RadiusError::MalformedAttribute {error: String::from("invalid IPv6 bytes")} )
+                    _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv6 bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::IPv6Prefix)  => {
                 match bytes_to_ipv6_string(self.value()) {
                     Ok(_) => Ok(()),
-                    _     => Err( RadiusError::MalformedAttribute {error: String::from("invalid IPv6 bytes")} )
+                    _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv6 bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::Integer)     => {
@@ -175,7 +180,7 @@ impl RadiusAttribute {
                         bytes_to_integer(value);
                         Ok(())
                     },
-                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid Integer bytes")} )
+                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Integer bytes")} )
                 }
             } ,
             Some(SupportedAttributeTypes::Date)        => {
@@ -184,10 +189,10 @@ impl RadiusAttribute {
                         bytes_to_timestamp(value);
                         Ok(())
                     },
-                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid Date bytes")} )
+                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Date bytes")} )
                 }
             },
-            _                                          => Err( RadiusError::MalformedAttribute {error: String::from("unsupported attribute code type")} )
+            _                                          => Err( RadiusError::MalformedAttributeError {error: String::from("unsupported attribute code type")} )
         }
     }
 
@@ -198,28 +203,28 @@ impl RadiusAttribute {
             Some(SupportedAttributeTypes::AsciiString) => {
                 match String::from_utf8(self.value().to_vec()) {
                     Ok(value) => Ok(value),
-                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid ASCII bytes")} )
+                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid ASCII bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::IPv4Addr)    => {
                 match bytes_to_ipv4_string(self.value()) {
                     Ok(value) => Ok(value),
-                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid IPv4 bytes")} )
+                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv4 bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::IPv6Addr)    => {
                 match bytes_to_ipv6_string(self.value()) {
                     Ok(value) => Ok(value),
-                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid IPv6 bytes")} )
+                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv6 bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::IPv6Prefix)  => {
                 match bytes_to_ipv6_string(self.value()) {
                     Ok(value) => Ok(value),
-                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid IPv6 bytes")} )
+                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv6 bytes")} )
                 }
             },
-            _                                          => Err( RadiusError::MalformedAttribute {error: String::from("not a String data type")} )
+            _                                          => Err( RadiusError::MalformedAttributeError {error: String::from("not a String data type")} )
         }
     }
 
@@ -230,16 +235,16 @@ impl RadiusAttribute {
             Some(SupportedAttributeTypes::Integer) => {
                 match self.value().try_into() {
                     Ok(value) => Ok(bytes_to_integer(value) as u64),
-                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid Integer bytes")} )
+                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Integer bytes")} )
                 }
             } ,
             Some(SupportedAttributeTypes::Date)    => {
                 match self.value().try_into() {
                     Ok(value) => Ok(bytes_to_timestamp(value) as u64),
-                    _         => Err( RadiusError::MalformedAttribute {error: String::from("invalid Date bytes")} )
+                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Date bytes")} )
                 }
             },
-            _                                      => Err( RadiusError::MalformedAttribute {error: String::from("not an Integer data type")} )
+            _                                      => Err( RadiusError::MalformedAttributeError {error: String::from("not an Integer data type")} )
         }
     }
 
@@ -297,7 +302,7 @@ impl RadiusPacket {
                     attributes.push(attr);
                     last_index += attr_length;
                 },
-                _          => return Err( RadiusError::MalformedPacket {error:format!("attribute with ID: {} is not found in dictionary", attr_id)} )
+                _          => return Err( RadiusError::MalformedPacketError {error:format!("attribute with ID: {} is not found in dictionary", attr_id)} )
             }
         }
 
@@ -328,7 +333,7 @@ impl RadiusPacket {
                 attr.override_value(new_message_authenticator);
                 Ok(())
             },
-            _          => Err( RadiusError::MalformedPacket {error:String::from("Message-Authenticator attribute not found in packet")} )
+            _          => Err( RadiusError::MalformedPacketError {error:String::from("Message-Authenticator attribute not found in packet")} )
         }
     }
 
@@ -338,7 +343,7 @@ impl RadiusPacket {
             Some(attr) => {
                 Ok(attr.value())
             },
-            _          => Err( RadiusError::MalformedPacket {error: String::from("Message-Authenticator attribute not found in packet")} )
+            _          => Err( RadiusError::MalformedPacketError {error: String::from("Message-Authenticator attribute not found in packet")} )
         }
     }
 

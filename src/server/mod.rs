@@ -78,9 +78,9 @@ impl Server {
         let socket_poll = Poll::new()?;
         let host        = Host::initialise_host(auth_port, acct_port, coa_port, dictionary);
 
-        let auth_port = host.port(&TypeCode::AccessRequest).ok_or_else(|| RadiusError::SocketInvalidConnection { error: String::from("There is no port match for AccessRequest") })?;
-        let acct_port = host.port(&TypeCode::AccountingRequest).ok_or_else(|| RadiusError::SocketInvalidConnection { error: String::from("There is no port match for AccountingRequest") })?;
-        let coa_port  = host.port(&TypeCode::CoARequest).ok_or_else(|| RadiusError::SocketInvalidConnection { error: String::from("There is no port match for CoARequest") })?;
+        let auth_port = host.port(&TypeCode::AccessRequest).ok_or_else(|| RadiusError::SocketInvalidConnectionError { error: String::from("There is no port match for AccessRequest") })?;
+        let acct_port = host.port(&TypeCode::AccountingRequest).ok_or_else(|| RadiusError::SocketInvalidConnectionError { error: String::from("There is no port match for AccountingRequest") })?;
+        let coa_port  = host.port(&TypeCode::CoARequest).ok_or_else(|| RadiusError::SocketInvalidConnectionError { error: String::from("There is no port match for CoARequest") })?;
 
         let auth_bind_addr = format!("{}:{}", server, auth_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
         let acct_bind_addr = format!("{}:{}", server, acct_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;

@@ -1,3 +1,10 @@
+//! RADIUS Client implementation
+//!
+//! Note: every time you call any of `send*_packet()` functions, such call would create and bind to
+//! new socket. If such behavoiur is not what you are looking for, then try to switch to
+//! MutexClient, which has no such issue
+
+
 use crate::protocol::dictionary::Dictionary;
 use crate::protocol::error::RadiusError;
 use crate::protocol::host::Host;
@@ -16,10 +23,6 @@ use std::time::Duration;
 
 #[derive(Debug)]
 /// Represents RADIUS client instance
-///
-/// Note: every time you call any of `send*_packet()` functions, such call would create and bind to
-/// new socket. If such behavoiur is not what you are looking for, then try to switch to
-/// MutexClient, which has no such issue
 pub struct Client {
     host:           Host,
     server:         String,
@@ -68,13 +71,16 @@ impl Client {
     /// ```
     /// use radius_rust::clients::client::Client;
     /// use radius_rust::protocol::dictionary::Dictionary;
+    /// use radius_rust::protocol::error::RadiusError;
     /// use radius_rust::protocol::radius_packet::TypeCode;
     ///
-    /// fn main() {
-    ///     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-    ///     let mut client = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+    /// fn main() -> Result<(), RadiusError> {
+    ///     let dictionary = Dictionary::from_file("./dict_examples/integration_dict")?;
+    ///     let mut client = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2)?;
     ///
     ///     client.create_attribute_by_name("User-Name", String::from("testing").into_bytes());
+    ///
+    ///     Ok(())
     /// }
     /// ```
     pub fn create_attribute_by_name(&self, attribute_name: &str, value: Vec<u8>) -> Result<RadiusAttribute, RadiusError> {
@@ -87,13 +93,16 @@ impl Client {
     /// ```
     /// use radius_rust::clients::client::Client;
     /// use radius_rust::protocol::dictionary::Dictionary;
+    /// use radius_rust::protocol::error::RadiusError;
     /// use radius_rust::protocol::radius_packet::TypeCode;
     ///
-    /// fn main() {
-    ///     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-    ///     let mut client = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+    /// fn main() -> Result<(), RadiusError> {
+    ///     let dictionary = Dictionary::from_file("./dict_examples/integration_dict")?;
+    ///     let mut client = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2)?;
     ///
     ///     client.create_attribute_by_id(1, String::from("testing").into_bytes());
+    ///
+    ///     Ok(())
     /// }
     /// ```
     pub fn create_attribute_by_id(&self, attribute_id: u8, value: Vec<u8>) -> Result<RadiusAttribute, RadiusError> {
@@ -113,14 +122,14 @@ impl Client {
     /// Gets the original value as a String if the RadiusAttribute respresents dictionary attribute
     /// that has type: string, ipaddr, ipv6addr or ipv6prefix
     pub fn radius_attr_original_string_value(&self, attribute: &RadiusAttribute) -> Result<String, RadiusError> {
-        let dict_attr = self.host.dictionary_attribute_by_id(attribute.id()).ok_or_else(|| RadiusError::MalformedAttribute {error: format!("No attribute with ID: {} found in dictionary", attribute.id())} )?;
+        let dict_attr = self.host.dictionary_attribute_by_id(attribute.id()).ok_or_else(|| RadiusError::MalformedAttributeError {error: format!("No attribute with ID: {} found in dictionary", attribute.id())} )?;
         attribute.original_string_value(dict_attr.code_type())
     }
 
     /// Gets the original value as a String if the RadiusAttribute respresents dictionary attribute
     /// that has type:integer or date
     pub fn radius_attr_original_integer_value(&self, attribute: &RadiusAttribute) -> Result<u64, RadiusError> {
-        let dict_attr = self.host.dictionary_attribute_by_id(attribute.id()).ok_or_else(|| RadiusError::MalformedAttribute {error: format!("No attribute with ID: {} found in dictionary", attribute.id())} )?;
+        let dict_attr = self.host.dictionary_attribute_by_id(attribute.id()).ok_or_else(|| RadiusError::MalformedAttributeError {error: format!("No attribute with ID: {} found in dictionary", attribute.id())} )?;
         attribute.original_integer_value(dict_attr.code_type())
     }
 
@@ -131,7 +140,7 @@ impl Client {
 
     /// Sends packet to RADIUS server but does not return a response
     pub fn send_packet(&self, packet: &mut RadiusPacket) -> Result<(), RadiusError> {
-        let remote_port = self.host.port(packet.code()).ok_or_else(|| RadiusError::MalformedPacket { error: String::from("There is no port match for packet code") })?;
+        let remote_port = self.host.port(packet.code()).ok_or_else(|| RadiusError::MalformedPacketError { error: String::from("There is no port match for packet code") })?;
         let remote      = format!("{}:{}", &self.server, remote_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
         let timeout     = Duration::from_secs(self.timeout as u64);
         let mut events  = Events::with_capacity(1024);
@@ -164,7 +173,7 @@ impl Client {
                             return Ok(());
                         }
                     },
-                    _ => return Err( RadiusError::SocketInvalidConnection { error: String::from("Received data from invalid Token") } ),
+                    _ => return Err( RadiusError::SocketInvalidConnectionError { error: String::from("Received data from invalid Token") } ),
                 }
             }
             retry += 1;
@@ -174,7 +183,7 @@ impl Client {
 
     /// Sends packet to RADIUS server and returns a response
     pub fn send_and_receive_packet(&self, packet: &mut RadiusPacket) -> Result<Vec<u8>, RadiusError> {
-        let remote_port = self.host.port(packet.code()).ok_or_else(|| RadiusError::MalformedPacket { error: String::from("There is no port match for packet code") })?;
+        let remote_port = self.host.port(packet.code()).ok_or_else(|| RadiusError::MalformedPacketError { error: String::from("There is no port match for packet code") })?;
         let remote      = format!("{}:{}", &self.server, remote_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
         let timeout     = Duration::from_secs(self.timeout as u64);
         let mut events  = Events::with_capacity(1024);
@@ -208,7 +217,7 @@ impl Client {
                             return Ok(response[0..amount].to_vec());
                         }
                     },
-                    _ => return Err( RadiusError::SocketInvalidConnection { error: String::from("Received data from invalid Token") } ),
+                    _ => return Err( RadiusError::SocketInvalidConnectionError { error: String::from("Received data from invalid Token") } ),
                 }
             }
 

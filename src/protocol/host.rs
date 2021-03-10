@@ -1,3 +1,6 @@
+//! Shared base for RADIUS Client & Server implementations
+
+
 use super::dictionary::{ Dictionary, DictionaryAttribute, DictionaryValue };
 use super::radius_packet::{ RadiusPacket, RadiusAttribute, TypeCode };
 use super::error::RadiusError;
@@ -24,12 +27,12 @@ impl Host{
 
     /// Creates RadiusAttribute with given name (name is checked against Dictionary)
     pub fn create_attribute_by_name(&self, attribute_name: &str, value: Vec<u8>) -> Result<RadiusAttribute, RadiusError> {
-        RadiusAttribute::create_by_name(&self.dictionary, attribute_name, value).ok_or(RadiusError::MalformedAttribute { error: format!("Failed to create: {:?} attribute. Check if attribute exists in provided dictionary file", attribute_name) })
+        RadiusAttribute::create_by_name(&self.dictionary, attribute_name, value).ok_or(RadiusError::MalformedAttributeError { error: format!("Failed to create: {:?} attribute. Check if attribute exists in provided dictionary file", attribute_name) })
     }
 
     /// Creates RadiusAttribute with given id (id is checked against Dictionary)
     pub fn create_attribute_by_id(&self, attribute_id: u8, value: Vec<u8>) -> Result<RadiusAttribute, RadiusError> {
-        RadiusAttribute::create_by_id(&self.dictionary, attribute_id, value).ok_or(RadiusError::MalformedAttribute { error: format!("Failed to create: attribute with ID {}. Check if attribute exists in provided dictionary file", attribute_id) })
+        RadiusAttribute::create_by_id(&self.dictionary, attribute_id, value).ok_or(RadiusError::MalformedAttributeError { error: format!("Failed to create: attribute with ID {}. Check if attribute exists in provided dictionary file", attribute_id) })
     }
 
     /// Returns port of RADIUS server, that receives given type of RADIUS message/packet
