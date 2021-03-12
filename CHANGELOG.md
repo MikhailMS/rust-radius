@@ -5,14 +5,19 @@ This time round it was decided to add support for async via `async-std` (it look
 
 ## What's new
 * Add `async-std` as alternative to `mio`
-* There are now Async RADIUS Client & Server implementations
-* Add a few more rust versions to Actions pipeline (crate compiles on `1.43.0+` for **async version**, and `1.42.0+` for **sync version** and `nightly` versions)
+* There is now Async RADIUS Client implementation
+* There is now Async RADIUS Server implementation (work still in progress, imo)
+* Add new error - **IncorrrectSourceIpError**, which is thrown in Async RADIUS Server in case when RADIUS Client host is not in *allowed_hosts*
+* Add a few more rust versions to Actions pipeline (crate compiles on `1.43.0+` for **async version**, and `1.42.0+` for **sync version**)
 
 ## What's removed or deprecated
 
 ## What's changed
 * Breaking change - **client** module has been renamed into **clients**
+* Breaking change - **server** module has been renamed into **servers**
+* Breaking change - **RadiusMsgType** code as been moved from **servers** module into **radius_packet** module
 * Breaking change - **get** prefix was removed for all functions where it was used before ([C-GETTER Rust convention](https://rust-lang.github.io/api-guidelines/naming.html#c-getter))
+* All RADIUS defined errors now have *Error* suffix, ie **MalformedPacketError**
 
 
 =============

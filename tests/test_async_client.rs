@@ -89,7 +89,9 @@ fn test_async_client_acct_request() {
                 println!("{:?}", error);
                 assert!(false)
             },
-            _ => {
+            Ok(packet) => {
+                println!("{:?}", &acct_packet);
+                println!("{:?}", &packet);
                 assert!(true)
             }
         }

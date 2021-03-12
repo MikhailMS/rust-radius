@@ -10,26 +10,26 @@ use thiserror::Error;
 pub enum RadiusError {
     /// Error happens, when Radius Packet fails validation
     #[error("Verification failed for incoming Radius packet")]
-    ValidationError         { 
-        /// Error message with error definition
+    ValidationError         {
+        /// Error definition received from crate
         error: String
     },
     /// Error happens, when packet has been badly constructed or got corrupted
     #[error("Radius packet is malformed")]
     MalformedPacketError    {
-        /// Error message with error definition
+        /// Error definition received from crate
         error: String
     },
     /// Error happens, when attribute has been badly constructed or got corrupted
     #[error("Radius packet attribute is malformed")]
     MalformedAttributeError {
-        /// Error message with error definition
+        /// Error definition received from crate
         error: String
     },
     /// Error happens, when IPv6 Address was badly added to Radius Packet or got corrupted
     #[error("Provided IPv6 address is malformed")]
     MalformedIpAddrError    {
-        /// Error message with error definition
+        /// Error definition received from crate
         error: String
     },
     /// Error happens, when there is some sort of connection error between sockets, or socket
@@ -39,7 +39,7 @@ pub enum RadiusError {
     /// Error won't happen, but represents the case when socket gets message from unknwon source
     #[error("Invalid socket connection")]
     SocketInvalidConnectionError {
-        /// Error message with error definition
+        /// Error definition received from crate
         error: String
     },
     /// Error happens, when socket cannot parse given hostname/port
@@ -48,19 +48,25 @@ pub enum RadiusError {
     /// Error happens, when dictionary file cannot be parsed
     #[error("Dictionary is malformed or inaccessible")]
     MalformedDictionaryError     {
-        /// Error message with error definition
+        /// Error definition received from crate
         error: std::io::Error
     },
     /// Error happens, when wrong RADIUS Code is supplied
     #[error("Supplied RADIUS Code is not supported by this library")]
     UnsupportedTypeCodeError     {
-        /// Error message with error definition
+        /// Error definition received from crate
         error: String
     },
     /// Error happens, when MutexClient cannot acquire the lock on socket_poll
     #[error("MutexClient is not able to acquire the lock on socket_poll")]
     MutexLockFailureError        {
-        /// Error message with error definition
+        /// Error definition received from crate
+        error: String
+    },
+    /// Error happens, when RADIUS Server gets a request from non-allowed server
+    #[error("RADIUS Server is not allowed to accept packet from source IP")]
+    IncorrrectSourceIpError      {
+        /// Error definition received from crate
         error: String
     }
 }
