@@ -4,6 +4,7 @@
 //! ```bash
 //! cargo run --example simple_async_radius_server 
 //! ```
+#![cfg(all(feature = "async-radius"))]
 
 
 use radius_rust::protocol::dictionary::Dictionary;
