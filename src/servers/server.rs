@@ -1,10 +1,10 @@
 //! RADIUS Server implementation
 
 
-use super::protocol::host::Host;
-use super::protocol::radius_packet::{ RadiusPacket, RadiusAttribute, TypeCode };
-use super::protocol::dictionary::Dictionary;
-use super::protocol::error::RadiusError;
+use crate::protocol::host::Host;
+use crate::protocol::radius_packet::{ RadiusAttribute, RadiusMsgType, RadiusPacket, TypeCode };
+use crate::protocol::dictionary::Dictionary;
+use crate::protocol::error::RadiusError;
 
 use crypto::digest::Digest;
 use crypto::md5::Md5;
@@ -19,28 +19,6 @@ use std::io::{Error, ErrorKind};
 const AUTH_SOCKET: Token = Token(1);
 const ACCT_SOCKET: Token = Token(2);
 const COA_SOCKET:  Token = Token(3);
-
-
-#[derive(PartialEq, Eq, Hash)]
-/// Allowed types of RADIUS messages/packets
-pub enum RadiusMsgType {
-    /// Authentication packet
-    AUTH,
-    /// Accounting packet
-    ACCT,
-    /// Change of Authorisation packet
-    COA
-}
-
-impl fmt::Display for RadiusMsgType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            RadiusMsgType::AUTH => f.write_str("Auth"),
-            RadiusMsgType::ACCT => f.write_str("Acct"),
-            RadiusMsgType::COA  => f.write_str("CoA"),
-        }
-    }
-}
 
 
 /// Represents RADIUS server instance
@@ -348,3 +326,4 @@ mod tests {
         assert_eq!(server.request_handlers().len(), 1);
     }
 }
+

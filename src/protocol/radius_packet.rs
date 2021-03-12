@@ -8,6 +8,32 @@ use crate::tools::{ bytes_to_integer, bytes_to_timestamp, bytes_to_ipv4_string, 
 use rand::Rng;
 
 use std::convert::TryInto;
+use std::fmt;
+
+
+#[derive(PartialEq, Eq, Hash)]
+/// Allowed types of RADIUS messages/packets
+///
+/// Mainly used in RADIUS Server implementation to distinguish between sockets and functions, that should
+/// process RADIUS packets
+pub enum RadiusMsgType {
+    /// Authentication packet
+    AUTH,
+    /// Accounting packet
+    ACCT,
+    /// Change of Authorisation packet
+    COA
+}
+
+impl fmt::Display for RadiusMsgType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            RadiusMsgType::AUTH => f.write_str("Auth"),
+            RadiusMsgType::ACCT => f.write_str("Acct"),
+            RadiusMsgType::COA  => f.write_str("CoA"),
+        }
+    }
+}
 
 
 #[derive(Debug, Clone, PartialEq)]

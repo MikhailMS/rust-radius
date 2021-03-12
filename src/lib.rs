@@ -19,7 +19,11 @@ pub use clients::{ client, mutex_client };
 #[cfg(all(feature = "async-radius"))]
 pub use clients::async_client;
 
-pub mod server;
+pub mod servers;
+pub use servers::server;
+#[cfg(all(feature = "async-radius"))]
+pub use servers::async_server;
+
 pub mod protocol;
 pub mod tools;
 
