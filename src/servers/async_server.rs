@@ -247,7 +247,9 @@ mod tests {
     fn test_add_allowed_hosts_and_add_request_handler() {
         task::block_on(async {
             let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-            let mut server = AsyncServer::initialise_server(1811u16, 1812u16, 3791u16, dictionary, String::from("0.0.0.0"), String::from("secret"), 1u16, 2u16).await.unwrap();
+            // Underlying Socket is clever, 0.0.0.0:0 would be resolved to any interface on any
+            // free port
+            let mut server = AsyncServer::initialise_server(0u16, 0u16, 0u16, dictionary, String::from("0.0.0.0"), String::from("secret"), 1u16, 2u16).await.unwrap();
 
             assert_eq!(server.allowed_hosts().len(), 0);
 

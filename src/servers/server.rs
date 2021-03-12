@@ -313,7 +313,9 @@ mod tests {
     #[test]
     fn test_add_allowed_hosts_and_add_request_handler() {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let mut server = Server::initialise_server(1810, 1809, 3790, dictionary, String::from("0.0.0.0"), String::from("secret"), 1, 2).unwrap();
+        // Underlying Socket is clever, 0.0.0.0:0 would be resolved to any interface on any
+        // free port
+        let mut server = Server::initialise_server(0, 0, 0, dictionary, String::from("0.0.0.0"), String::from("secret"), 1, 2).unwrap();
 
         assert_eq!(server.allowed_hosts().len(), 0);
 
