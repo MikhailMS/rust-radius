@@ -26,6 +26,23 @@ Rationale behind this project:
 5. Profit - now there is one, so I can try to push Rust internally in my team ^_^
 
 
+## Installation
+```
+[dependencies]
+radius-rust = "0.2.1"
+
+OR
+
+[dependencies]
+radius-rust = { git = "https://github.com/MikhailMS/rust-radius" }
+
+OR if you need Async RADIUS Client/Server
+
+[dependencies]
+radius-rust = { version = "0.2.1", features = ["async-radius"] }
+```
+
+
 ## Tests
 1. `cargo run --example simple_radius_server &` or you can spin up any other RADIUS server of your choice
 2. `cargo test --verbose`
