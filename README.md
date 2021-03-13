@@ -95,10 +95,10 @@ test test_async_coa_client_wo_response_against_server  ... bench:     169,961 ns
 ## Notes
 1. Main core functionality is completed, but there is a chance that I've missed something here and there because it is not needed for my projects yet. If this is the case, **raise an issue and I'll see what could be done to get it resolved**
 2. Minimum required version of Rust:
-  1. `1.43.0` if you want to use `async-radius` feature
-  2. `1.42.0` if you want to use `default`      feature
+    1. `1.43.0` if you want to use `async-radius` feature
+    2. `1.42.0` if you want to use `default`      feature
 3. Big thanks to [pyrad](https://github.com/pyradius/pyrad) and [radius-rust-client](https://github.com/athonet-open/rust-radius-client) projects, which helped me to start this project
 4. Value of **Message-Authenticator** RadiusAttribute won't be validated, because in RADIUS dictionary it has **string** type, however it is not valid ASCII string (**Message-Authenticator** is a HMAC-MD5 hash)
 5. **Benchmarks** are
-  1. Run locally on *Mac Mini (2018, RAM: 32 GB 2667 MHz DDR4, CPU: 3.2 GHz Intel Core i7)*
-  2. Present here only as a comparison between different RADIUS Client/Server implementations, that crate offers (basically just for myself to see if it worth adding features like async and etc)
+    1. Run locally on *Mac Mini (2018, RAM: 32 GB 2667 MHz DDR4, CPU: 3.2 GHz Intel Core i7)*
+    2. Present here only as a comparison between different RADIUS Client/Server implementations, that crate offers (basically just for myself to see if it worth adding features like async and etc)

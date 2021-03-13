@@ -8,7 +8,7 @@ use crate::protocol::error::RadiusError;
 
 use crypto::digest::Digest;
 use crypto::md5::Md5;
-use log::{ debug, warn };
+use log::{ debug, info, warn };
 use async_std::net::UdpSocket;
 use std::collections::HashMap;
 use std::fmt;
@@ -54,9 +54,13 @@ impl AsyncServer {
         let acct_bind_addr = format!("{}:{}", server, acct_port);
         let coa_bind_addr  = format!("{}:{}", server, coa_port);
 
-        let auth_server = UdpSocket::bind(auth_bind_addr).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
-        let acct_server = UdpSocket::bind(acct_bind_addr).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
-        let coa_server  = UdpSocket::bind(coa_bind_addr).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
+        let auth_server = UdpSocket::bind(&auth_bind_addr).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
+        let acct_server = UdpSocket::bind(&acct_bind_addr).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
+        let coa_server  = UdpSocket::bind(&coa_bind_addr).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
+
+        info!("Authentication accepts RADIUS packets on {}", &auth_bind_addr);
+        info!("Accounting accepts RADIUS packet on {}", &acct_bind_addr);
+        info!("CoA accepts RADIUS packets on {}", &coa_bind_addr);
 
         Ok(
             AsyncServer {

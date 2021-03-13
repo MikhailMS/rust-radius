@@ -17,6 +17,9 @@ use radius_rust::protocol::error::RadiusError;
 use radius_rust::protocol::radius_packet::{ RadiusMsgType, TypeCode };
 use radius_rust::tools::{ ipv6_string_to_bytes, ipv4_string_to_bytes, integer_to_bytes };
 
+use simple_logger::SimpleLogger;
+use log::LevelFilter;
+
 #[cfg(all(feature = "async-radius"))]
 use async_std::task;
 #[cfg(all(feature = "async-radius"))]
@@ -75,6 +78,8 @@ fn handle_coa_request(server: &Server, request: &mut [u8]) -> Result<Vec<u8>, Ra
 
 #[cfg(all(feature = "async-radius"))]
 fn main() -> Result<(), RadiusError> {
+    SimpleLogger::new().with_level(LevelFilter::Trace).init().unwrap();
+
     task::block_on(async {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict")?;
         let mut server = Server::initialise_server(1812u16, 1813u16, 3799u16, dictionary, String::from("127.0.0.1"), String::from("secret"), 1u16, 2u16).await?;
@@ -92,6 +97,8 @@ fn main() -> Result<(), RadiusError> {
 
 #[cfg(all(not(feature = "async-radius")))]
 fn main() -> Result<(), RadiusError> {
+    SimpleLogger::new().with_level(LevelFilter::Debug).init().unwrap();
+
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict")?;
     let mut server = Server::initialise_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2)?;
 

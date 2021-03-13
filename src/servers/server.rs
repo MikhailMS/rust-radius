@@ -8,7 +8,7 @@ use crate::protocol::error::RadiusError;
 
 use crypto::digest::Digest;
 use crypto::md5::Md5;
-use log::{ debug, warn };
+use log::{ debug, error, info, warn };
 use mio::{ Events, Interest, Poll, Token };
 use mio::net::UdpSocket;
 use std::collections::HashMap;
@@ -67,6 +67,10 @@ impl Server {
         let mut auth_server = UdpSocket::bind(auth_bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
         let mut acct_server = UdpSocket::bind(acct_bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
         let mut coa_server  = UdpSocket::bind(coa_bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
+
+        info!("Authentication accepts RADIUS packets on {}", format!("{}:{}", &server, &auth_port));
+        info!("Accounting accepts RADIUS packet on {}", format!("{}:{}", &server, &acct_port));
+        info!("CoA accepts RADIUS packets on {}", format!("{}:{}", server, &coa_port));
 
         socket_poll.registry().register(&mut auth_server, AUTH_SOCKET, Interest::READABLE)?;
         socket_poll.registry().register(&mut acct_server, ACCT_SOCKET, Interest::READABLE)?;
@@ -183,35 +187,39 @@ impl Server {
             for event in events.iter() {
                 match event.token() {
                     AUTH_SOCKET => loop {
-                        debug!("Received AUTH request");
                         let mut request = [0; 4096];
-                        
+
                         match self.auth_socket.recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
+                                debug!("Received AUTH packet from {}, of size {}", &source_address, &packet_size);
+
                                 if self.host_allowed(&source_address) {
                                     let handle_auth_request = self.handlers.get(&RadiusMsgType::AUTH).expect("Auth handler is not defined!");
                                     let response            = handle_auth_request(&self, &mut request[..packet_size])?;
                                     self.auth_socket.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
-                                    warn!("{:?} is not listed as allowed", &source_address);
+                                    warn!("{:?} is not listed as allowed host", &source_address);
                                     break;
                                 }
                             },
                             Err(error) if error.kind() == ErrorKind::WouldBlock => {
+                                error!("There was an error while reading AUTH packet");
                                 break;
                             },
                             Err(error) => {
+                                error!("There was an error while reading AUTH packet");
                                 return Err( RadiusError::SocketConnectionError(error) );
                             }
                         }
                     },
                     ACCT_SOCKET => loop {
-                        debug!("Received ACCT request");
                         let mut request = [0; 4096];
-                        
+
                         match self.acct_socket.recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
+                                debug!("Received ACCT packet from {}, of size {}", &source_address, &packet_size);
+
                                 if self.host_allowed(&source_address) {
                                     let handle_acct_request = self.handlers.get(&RadiusMsgType::ACCT).expect("Acct handler is not defined!");
                                     let response            = handle_acct_request(&self, &mut request[..packet_size])?;
@@ -219,24 +227,27 @@ impl Server {
                                     self.acct_socket.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
-                                    warn!("{:?} is not listed as allowed", &source_address);
+                                    warn!("{:?} is not listed as allowed host", &source_address);
                                     break;
                                 }
                             },
                             Err(error) if error.kind() == ErrorKind::WouldBlock => {
+                                error!("There was an error while reading AUTH packet");
                                 break;
                             },
                             Err(error) => {
+                                error!("There was an error while reading AUTH packet");
                                 return Err( RadiusError::SocketConnectionError(error) );
                             }
                         }
                     },
                     COA_SOCKET  => loop {
-                        debug!("Received CoA  request");
                         let mut request = [0; 4096];
-                        
+
                         match self.coa_socket.recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
+                                debug!("Received CoA packet from {}, of size {}", &source_address, &packet_size);
+
                                 if self.host_allowed(&source_address) {
                                     let handle_coa_request = self.handlers.get(&RadiusMsgType::COA).expect("CoA handler is not defined!");
                                     let response           = handle_coa_request(&self, &mut request[..packet_size])?;
@@ -249,14 +260,17 @@ impl Server {
                                 }
                             },
                             Err(error) if error.kind() == ErrorKind::WouldBlock => {
+                                error!("There was an error while reading AUTH packet");
                                 break;
                             },
                             Err(error) => {
+                                error!("There was an error while reading AUTH packet");
                                 return Err( RadiusError::SocketConnectionError(error) );
                             }
                         }
                     },
                     _ => {
+                        warn!("Non-supported UDP request: {:?}", event);
                         return Err( RadiusError::SocketConnectionError(Error::new(ErrorKind::Other, format!("Non-supported UDP request: {:?}", event))) );
                     }
                 }
