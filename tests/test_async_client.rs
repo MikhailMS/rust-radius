@@ -47,7 +47,9 @@ fn test_async_client_auth_request() {
                 println!("{:?}", error);
                 assert!(false)
             },
-            _ => {
+            Ok(packet) => {
+                println!("{:?}", &auth_packet);
+                println!("{:?}", &packet);
                 assert!(true)
             }
         }
@@ -126,7 +128,9 @@ fn test_async_client_coa_request() {
                 println!("{:?}", error);
                 assert!(false)
             },
-            _ => {
+            Ok(packet) => {
+                println!("{:?}", &coa_packet);
+                println!("{:?}", &packet);
                 assert!(true)
             }
         }

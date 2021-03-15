@@ -31,15 +31,15 @@ Rationale behind this project:
 [dependencies]
 radius-rust = "0.2.1"
 
-OR
-
-[dependencies]
-radius-rust = { git = "https://github.com/MikhailMS/rust-radius" }
-
 OR if you need Async RADIUS Client/Server
 
 [dependencies]
 radius-rust = { version = "0.2.1", features = ["async-radius"] }
+
+OR
+
+[dependencies]
+radius-rust = { git = "https://github.com/MikhailMS/rust-radius" }
 ```
 
 
@@ -51,7 +51,7 @@ radius-rust = { version = "0.2.1", features = ["async-radius"] }
 ## TODO
 - [x] Maybe it is worth adding [async_std](https://github.com/async-rs/async-std) for RADIUS Client?                      **Part of prob_add_async_std feature**
 - [x] Maybe it is worth adding [async_std](https://github.com/async-rs/async-std) for RADIUS Server?                      **Part of prob_add_async_std feature**
-- [-] Read up on [Rust API Guidelines](https://rust-lang.github.io/api-guidelines) and implement whatever possible        **Part of prob_add_async_std feature**
+- [ ] Read up on [Rust API Guidelines](https://rust-lang.github.io/api-guidelines) and implement whatever possible        **Part of prob_add_async_std feature**
 - [x] If `async_std` is to be added, ensure it is disabled by default and requires cargo feature option to become enabled **Part of prob_add_async_std feature**
 - [ ] Review RADIUS client implementations (in case I can improve Socket binding, because atm socket binds on each call to **send_*()** function)
   - [ ] RADIUS Client       implementation
@@ -63,7 +63,7 @@ radius-rust = { version = "0.2.1", features = ["async-radius"] }
     - [x] parse dictionary from file
     - [ ] parse dictionary from string
 - [ ] Review the code to ensure there are no unnecessary allocations, redundant code and etc:
-  - [ ] redesign `run_server()` function (if that's possible)
+  - [ ] redesign `run_server()` function for RADIUS Server (if that's possible)
   - [ ] check that it is well written
 
 
