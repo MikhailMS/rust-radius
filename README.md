@@ -53,18 +53,24 @@ radius-rust = { git = "https://github.com/MikhailMS/rust-radius" }
 - [x] Maybe it is worth adding [async_std](https://github.com/async-rs/async-std) for RADIUS Server?                      **Part of prob_add_async_std feature**
 - [ ] Read up on [Rust API Guidelines](https://rust-lang.github.io/api-guidelines) and implement whatever possible        **Part of prob_add_async_std feature**
 - [x] If `async_std` is to be added, ensure it is disabled by default and requires cargo feature option to become enabled **Part of prob_add_async_std feature**
-- [ ] Review RADIUS client implementations (in case I can improve Socket binding, because atm socket binds on each call to **send_*()** function)
-  - [ ] RADIUS Client       implementation
-  - [ ] Async RADIUS Client implementation
+- [ ] Review RADIUS code to ensure:
+  - [ ] RADIUS Sync Server has builder pattern for creation (possibly this way we can make it more dynamic, ie can only have single socket if others aren't required)
+  - [ ] RADIUS Async Server is similar to Sync Server in a way that it also has only core functionality defined, rest goes into `AsyncServer` trait
+  - [ ] RADIUS Client has builder pattern for creation (possibly this way we can make it more dynamic, ie can only have single socket if others aren't required)
+  - [ ] RADIUS Sync Client is similar to Sync Server in a way that it also has only core functionality defined, rest goes into `SyncClient` trait
+  - [ ] RADIUS Async Client is similar to Sync Server in a way that it also has only core functionality defined, rest goes into `AsyncClient` trait
+  - [ ] Review RADIUS client implementations (in case I can improve Socket binding, because atm socket binds on each call to **send_*()** function)
+    - [ ] RADIUS Client       implementation
+    - [ ] Async RADIUS Client implementation
+- [ ] Review the code to ensure there are no unnecessary allocations, redundant code and etc:
+  - [ ] redesign `run_server()` function for RADIUS Server (if that's possible) (looks like would be a part of refactoring to enable traits)
+  - [ ] check that it is well written (fingers crossed for a code review)
 - [ ] Protocol
   - [ ] dictionary
     - [x] dictionary attribute struct
     - [x] dictionary struct
     - [x] parse dictionary from file
     - [ ] parse dictionary from string
-- [ ] Review the code to ensure there are no unnecessary allocations, redundant code and etc:
-  - [ ] redesign `run_server()` function for RADIUS Server (if that's possible)
-  - [ ] check that it is well written
 
 
 ## Benchmarks
