@@ -8,12 +8,11 @@ use crate::protocol::error::RadiusError;
 
 use crypto::digest::Digest;
 use crypto::md5::Md5;
-use log::{ debug, error, info, warn };
-use mio::{ Events, Interest, Poll, Token };
+use log::info;
+use mio::{ Interest, Poll, Token };
 use mio::net::UdpSocket;
 use std::collections::HashMap;
 use std::fmt;
-use std::io::{Error, ErrorKind};
 
 
 const AUTH_SOCKET: Token = Token(1);
@@ -30,8 +29,17 @@ pub struct Server {
     retries:       u16,
     timeout:       u16,
     socket_poll:   Poll,
+    // Field is only used if SyncServer is fully implemented, so compiler would complain
+    // otherwise
+    #[allow(dead_code)]
     auth_socket:   UdpSocket,
+    // Field is only used if SyncServer is fully implemented, so compiler would complain
+    // otherwise
+    #[allow(dead_code)]
     acct_socket:   UdpSocket,
+    // Field is only used if SyncServer is fully implemented, so compiler would complain
+    // otherwise
+    #[allow(dead_code)]
     coa_socket:    UdpSocket,
     handlers:      HashMap<RadiusMsgType, fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, RadiusError>>
 }
@@ -68,13 +76,13 @@ impl Server {
         let mut acct_server = UdpSocket::bind(acct_bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
         let mut coa_server  = UdpSocket::bind(coa_bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
 
-        info!("Authentication accepts RADIUS packets on {}", format!("{}:{}", &server, &auth_port));
-        info!("Accounting accepts RADIUS packet on {}", format!("{}:{}", &server, &acct_port));
-        info!("CoA accepts RADIUS packets on {}", format!("{}:{}", server, &coa_port));
-
         socket_poll.registry().register(&mut auth_server, AUTH_SOCKET, Interest::READABLE)?;
         socket_poll.registry().register(&mut acct_server, ACCT_SOCKET, Interest::READABLE)?;
         socket_poll.registry().register(&mut coa_server,  COA_SOCKET,  Interest::READABLE)?;
+
+        info!("Authentication is initialised to accepts RADIUS packets on {}", &auth_server.local_addr()?);
+        info!("Accounting is initialised to accepts RADIUS packet on {}",      &acct_server.local_addr()?);
+        info!("CoA is initialised to accepts RADIUS packets on {}",            &coa_server.local_addr()?);
 
         Ok(
             Server {
@@ -175,109 +183,6 @@ impl Server {
         authenticator.to_vec()
     }
 
-    /// Main function, that starts and keeps server running
-    ///
-    /// For example see `examples/simple_radius_server.rs`
-    pub fn run_server(&mut self) -> Result<(), RadiusError> {
-        let mut events = Events::with_capacity(1024);
-        
-        loop {
-            self.socket_poll.poll(&mut events, None)?;
-
-            for event in events.iter() {
-                match event.token() {
-                    AUTH_SOCKET => loop {
-                        let mut request = [0; 4096];
-
-                        match self.auth_socket.recv_from(&mut request) {
-                            Ok((packet_size, source_address)) => {
-                                debug!("Received AUTH packet from {}, of size {}", &source_address, &packet_size);
-
-                                if self.host_allowed(&source_address) {
-                                    let handle_auth_request = self.handlers.get(&RadiusMsgType::AUTH).expect("Auth handler is not defined!");
-                                    let response            = handle_auth_request(&self, &mut request[..packet_size])?;
-                                    self.auth_socket.send_to(&response.as_slice(), source_address)?;
-                                    break;
-                                } else {
-                                    warn!("{:?} is not listed as allowed host", &source_address);
-                                    break;
-                                }
-                            },
-                            Err(error) if error.kind() == ErrorKind::WouldBlock => {
-                                error!("There was an error while reading AUTH packet");
-                                break;
-                            },
-                            Err(error) => {
-                                error!("There was an error while reading AUTH packet");
-                                return Err( RadiusError::SocketConnectionError(error) );
-                            }
-                        }
-                    },
-                    ACCT_SOCKET => loop {
-                        let mut request = [0; 4096];
-
-                        match self.acct_socket.recv_from(&mut request) {
-                            Ok((packet_size, source_address)) => {
-                                debug!("Received ACCT packet from {}, of size {}", &source_address, &packet_size);
-
-                                if self.host_allowed(&source_address) {
-                                    let handle_acct_request = self.handlers.get(&RadiusMsgType::ACCT).expect("Acct handler is not defined!");
-                                    let response            = handle_acct_request(&self, &mut request[..packet_size])?;
-                                    
-                                    self.acct_socket.send_to(&response.as_slice(), source_address)?;
-                                    break;
-                                } else {
-                                    warn!("{:?} is not listed as allowed host", &source_address);
-                                    break;
-                                }
-                            },
-                            Err(error) if error.kind() == ErrorKind::WouldBlock => {
-                                error!("There was an error while reading AUTH packet");
-                                break;
-                            },
-                            Err(error) => {
-                                error!("There was an error while reading AUTH packet");
-                                return Err( RadiusError::SocketConnectionError(error) );
-                            }
-                        }
-                    },
-                    COA_SOCKET  => loop {
-                        let mut request = [0; 4096];
-
-                        match self.coa_socket.recv_from(&mut request) {
-                            Ok((packet_size, source_address)) => {
-                                debug!("Received CoA packet from {}, of size {}", &source_address, &packet_size);
-
-                                if self.host_allowed(&source_address) {
-                                    let handle_coa_request = self.handlers.get(&RadiusMsgType::COA).expect("CoA handler is not defined!");
-                                    let response           = handle_coa_request(&self, &mut request[..packet_size])?;
-                                    
-                                    self.coa_socket.send_to(&response.as_slice(), source_address)?;
-                                    break;
-                                } else {
-                                    warn!("{:?} is not listed as allowed", &source_address);
-                                    break;
-                                }
-                            },
-                            Err(error) if error.kind() == ErrorKind::WouldBlock => {
-                                error!("There was an error while reading AUTH packet");
-                                break;
-                            },
-                            Err(error) => {
-                                error!("There was an error while reading AUTH packet");
-                                return Err( RadiusError::SocketConnectionError(error) );
-                            }
-                        }
-                    },
-                    _ => {
-                        warn!("Non-supported UDP request: {:?}", event);
-                        return Err( RadiusError::SocketConnectionError(Error::new(ErrorKind::Other, format!("Non-supported UDP request: {:?}", event))) );
-                    }
-                }
-            }
-        }
-    }
-
     /// Verifies incoming RADIUS packet:
     ///
     /// Server would try to build RadiusPacket from raw bytes, and if it succeeds then packet is
@@ -304,6 +209,9 @@ impl Server {
         self.host.initialise_packet_from_bytes(request)
     }
 
+    // Function is only used if SyncServer is fully implemented, so compiler would complain
+    // otherwise
+    #[allow(dead_code)]
     fn host_allowed(&self, remote_host: &std::net::SocketAddr) -> bool {
         let remote_host_name            = remote_host.to_string();
         let remote_host_name: Vec<&str> = remote_host_name.split(":").collect();
@@ -313,33 +221,37 @@ impl Server {
 }
 
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// This trait is to be implemented by user, if they are planning to resolve AUTH, ACCT or CoA
+/// RADIUS requests
+pub trait SyncServer {
+    /// Main function, that starts and keeps server running
+    ///
+    /// For example see `examples/simple_radius_server.rs`
+    fn run(&mut self) -> Result<(), RadiusError>;
 
-    fn handle_coa_request(server: &Server, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
-        let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
-
-        let mut reply_packet = server.create_reply_packet(TypeCode::CoAACK, attributes, request);
-        Ok(reply_packet.to_bytes())
+    /// Function is responsible for resolving AUTH RADIUS requests
+    ///
+    /// For example see `examples/simple_radius_server.rs`
+    fn handle_auth_requests(&self, _request: &mut [u8])->Result<Vec<u8>, RadiusError> {
+        todo!();
     }
-
-    #[test]
-    fn test_add_allowed_hosts_and_add_request_handler() {
-        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        // Underlying Socket is clever, 0.0.0.0:0 would be resolved to any interface on any
-        // free port
-        let mut server = Server::initialise_server(0, 0, 0, dictionary, String::from("0.0.0.0"), String::from("secret"), 1, 2).unwrap();
-
-        assert_eq!(server.allowed_hosts().len(), 0);
-
-        server.add_allowed_hosts(String::from("127.0.0.1"));
-        assert_eq!(server.allowed_hosts().len(), 1);
-
-        assert_eq!(server.request_handlers().len(), 0);
-
-        server.add_request_handler(RadiusMsgType::COA, handle_coa_request).unwrap();
-        assert_eq!(server.request_handlers().len(), 1);
+    /// Function is responsible for resolving ACCT RADIUS requests
+    ///
+    /// For example see `examples/simple_radius_server.rs`
+    fn handle_acct_requests(&self, _request: &mut [u8])->Result<Vec<u8>, RadiusError> {
+        todo!();
     }
+    /// Function is responsible for resolving CoA RADIUS requests
+    ///
+    /// For example see `examples/simple_radius_server.rs`
+    fn handle_coa_requests(&self, _request: &mut [u8])->Result<Vec<u8>, RadiusError> {
+        todo!();
+    }
+    // =======
 }
 
+
+/// Main function, that starts and keeps server running
+pub fn run_server<T: SyncServer>(server: &mut T) -> Result<(), RadiusError> {
+    server.run()
+}
