@@ -44,7 +44,7 @@ jobs:
       run: cargo build --verbose
 
     - name: OLD -- Start simple RADIUS server
-      run: cargo run --example simple_radius_server &
+      run: cargo run --example sync_radius_server &
 
     - name: OLD -- Run tests
       run: cargo test --verbose
@@ -95,7 +95,7 @@ jobs:
       run: cargo build --verbose
 
     - name: NEW -- Start simple RADIUS server
-      run: cargo run --example simple_radius_server &
+      run: cargo run --example sync_radius_server &
 
     - name: NEW -- Run tests
       run: cargo test --verbose
