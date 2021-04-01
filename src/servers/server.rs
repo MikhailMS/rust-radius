@@ -2,7 +2,7 @@
 
 
 use crate::protocol::host::Host;
-use crate::protocol::radius_packet::{ RadiusAttribute, RadiusMsgType, RadiusPacket, TypeCode };
+use crate::protocol::radius_packet::{ RadiusAttribute, RadiusPacket, TypeCode };
 use crate::protocol::dictionary::Dictionary;
 use crate::protocol::error::RadiusError;
 
@@ -11,13 +11,7 @@ use crypto::md5::Md5;
 use log::info;
 use mio::{ Interest, Poll, Token };
 use mio::net::UdpSocket;
-use std::collections::HashMap;
 use std::fmt;
-
-
-const AUTH_SOCKET: Token = Token(1);
-const ACCT_SOCKET: Token = Token(2);
-const COA_SOCKET:  Token = Token(3);
 
 
 /// Represents RADIUS server instance
@@ -41,7 +35,7 @@ pub struct Server {
     // otherwise
     #[allow(dead_code)]
     coa_socket:    UdpSocket,
-    handlers:      HashMap<RadiusMsgType, fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, RadiusError>>
+    // handlers:      HashMap<RadiusMsgType, fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, RadiusError>>
 }
 
 impl fmt::Debug for Server {
@@ -59,6 +53,15 @@ impl fmt::Debug for Server {
 }
 
 impl Server {
+
+    /// Exists to allow mapping between AUTH socket and AUTH requests processing
+    pub const AUTH_SOCKET: Token = Token(1);
+    /// Exists to allow mapping between ACCT socket and ACCT requests processing
+    pub const ACCT_SOCKET: Token = Token(2);
+    /// Exists to allow mapping between CoA socket and CoA requests processing
+    pub const COA_SOCKET:  Token = Token(3);
+
+
     /// Initialises RADIUS server instance
     pub fn initialise_server(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<Server, RadiusError> {
         let socket_poll = Poll::new()?;
@@ -76,9 +79,9 @@ impl Server {
         let mut acct_server = UdpSocket::bind(acct_bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
         let mut coa_server  = UdpSocket::bind(coa_bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
 
-        socket_poll.registry().register(&mut auth_server, AUTH_SOCKET, Interest::READABLE)?;
-        socket_poll.registry().register(&mut acct_server, ACCT_SOCKET, Interest::READABLE)?;
-        socket_poll.registry().register(&mut coa_server,  COA_SOCKET,  Interest::READABLE)?;
+        socket_poll.registry().register(&mut auth_server, Server::AUTH_SOCKET, Interest::READABLE)?;
+        socket_poll.registry().register(&mut acct_server, Server::ACCT_SOCKET, Interest::READABLE)?;
+        socket_poll.registry().register(&mut coa_server,  Server::COA_SOCKET,  Interest::READABLE)?;
 
         info!("Authentication is initialised to accepts RADIUS packets on {}", &auth_server.local_addr()?);
         info!("Accounting is initialised to accepts RADIUS packet on {}",      &acct_server.local_addr()?);
@@ -96,10 +99,13 @@ impl Server {
                 auth_socket:   auth_server,
                 acct_socket:   acct_server,
                 coa_socket:    coa_server,
-                handlers:      HashMap::with_capacity(3)
             }
         )
     }
+
+    // pub fn register_sockets(&self) -> Result<(), RadiusError> {
+
+    // }
 
     /// Adds client host address to allowed hosts list
     pub fn add_allowed_hosts(&mut self, host_addr: String) {
@@ -111,32 +117,49 @@ impl Server {
         &self.allowed_hosts
     }
 
+    /// Returns socket poll
+    pub fn socket_poll(&mut self) -> &mut Poll {
+        &mut self.socket_poll
+    }
+    /// Returns auth socket
+    pub fn auth_socket(&self) -> &UdpSocket {
+        &self.auth_socket
+    }
+    /// Returns acct socket
+    pub fn acct_socket(&self) -> &UdpSocket {
+        &self.acct_socket
+    }
+    /// Returns coa socket
+    pub fn coa_socket(&self) -> &UdpSocket {
+        &self.coa_socket
+    }
+
     /// Adds packet handller function to server instance
     ///
     /// Note: server can only have 3 handlers, 1 for each Radius message/packet type
     ///
     /// For example refer to `examples/simple_radius_server.rs`
-    pub fn add_request_handler(&mut self, handler_type: RadiusMsgType, handler_function: fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, RadiusError>) -> Result<(), RadiusError> {
-        match handler_type {
-            RadiusMsgType::AUTH => {
-                self.handlers.insert(handler_type, handler_function);
-                Ok(())
-            },
-            RadiusMsgType::ACCT => {
-                self.handlers.insert(handler_type, handler_function);
-                Ok(())
-            },
-            RadiusMsgType::COA  => {
-                self.handlers.insert(handler_type, handler_function);
-                Ok(())
-            }
-        }
-    }
+    // pub fn add_request_handler(&mut self, handler_type: RadiusMsgType, handler_function: fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, RadiusError>) -> Result<(), RadiusError> {
+    //     match handler_type {
+    //         RadiusMsgType::AUTH => {
+    //             self.handlers.insert(handler_type, handler_function);
+    //             Ok(())
+    //         },
+    //         RadiusMsgType::ACCT => {
+    //             self.handlers.insert(handler_type, handler_function);
+    //             Ok(())
+    //         },
+    //         RadiusMsgType::COA  => {
+    //             self.handlers.insert(handler_type, handler_function);
+    //             Ok(())
+    //         }
+    //     }
+    // }
 
-    /// Returns HashMap with packet handler functions
-    pub fn request_handlers(&self) -> &HashMap<RadiusMsgType, fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, RadiusError>> {
-        &self.handlers
-    }
+    // /// Returns HashMap with packet handler functions
+    // pub fn request_handlers(&self) -> &HashMap<RadiusMsgType, fn(server: &Server,request: &mut [u8])->Result<Vec<u8>, RadiusError>> {
+    //     &self.handlers
+    // }
 
     /// Creates RADIUS packet attribute by name, that is defined in dictionary file
     ///
@@ -212,7 +235,9 @@ impl Server {
     // Function is only used if SyncServer is fully implemented, so compiler would complain
     // otherwise
     #[allow(dead_code)]
-    fn host_allowed(&self, remote_host: &std::net::SocketAddr) -> bool {
+    /// Checks if host from where Server received RADIUS request is allowed host, meaning RADIUS
+    /// Server can process such request
+    pub fn host_allowed(&self, remote_host: &std::net::SocketAddr) -> bool {
         let remote_host_name            = remote_host.to_string();
         let remote_host_name: Vec<&str> = remote_host_name.split(":").collect();
 
@@ -229,22 +254,22 @@ pub trait SyncServer {
     /// For example see `examples/simple_radius_server.rs`
     fn run(&mut self) -> Result<(), RadiusError>;
 
-    /// Function is responsible for resolving AUTH RADIUS requests
+    /// Function is responsible for resolving AUTH RADIUS request
     ///
     /// For example see `examples/simple_radius_server.rs`
-    fn handle_auth_requests(&self, _request: &mut [u8])->Result<Vec<u8>, RadiusError> {
+    fn handle_auth_request(&self, _request: &mut [u8])->Result<Vec<u8>, RadiusError> {
         todo!();
     }
-    /// Function is responsible for resolving ACCT RADIUS requests
+    /// Function is responsible for resolving ACCT RADIUS request
     ///
     /// For example see `examples/simple_radius_server.rs`
-    fn handle_acct_requests(&self, _request: &mut [u8])->Result<Vec<u8>, RadiusError> {
+    fn handle_acct_request(&self, _request: &mut [u8])->Result<Vec<u8>, RadiusError> {
         todo!();
     }
-    /// Function is responsible for resolving CoA RADIUS requests
+    /// Function is responsible for resolving CoA RADIUS request
     ///
     /// For example see `examples/simple_radius_server.rs`
-    fn handle_coa_requests(&self, _request: &mut [u8])->Result<Vec<u8>, RadiusError> {
+    fn handle_coa_request(&self, _request: &mut [u8])->Result<Vec<u8>, RadiusError> {
         todo!();
     }
     // =======
@@ -254,4 +279,32 @@ pub trait SyncServer {
 /// Main function, that starts and keeps server running
 pub fn run_server<T: SyncServer>(server: &mut T) -> Result<(), RadiusError> {
     server.run()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // fn handle_coa_request(server: &Server, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
+    //     let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
+
+    //     let mut reply_packet = server.create_reply_packet(TypeCode::CoAACK, attributes, request);
+    //     Ok(reply_packet.to_bytes())
+    // }
+
+    #[test]
+    fn test_add_allowed_hosts_and_add_request_handler() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let mut server = Server::initialise_server(1810, 1809, 3790, dictionary, String::from("0.0.0.0"), String::from("secret"), 1, 2).unwrap();
+
+        assert_eq!(server.allowed_hosts().len(), 0);
+
+        server.add_allowed_hosts(String::from("127.0.0.1"));
+        assert_eq!(server.allowed_hosts().len(), 1);
+
+        // assert_eq!(server.get_request_handlers().len(), 0);
+
+        // server.add_request_handler(RadiusMsgType::COA, handle_coa_request).unwrap();
+        // assert_eq!(server.get_request_handlers().len(), 1);
+    }
 }

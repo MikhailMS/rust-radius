@@ -17,6 +17,7 @@ This time round it was decided to add support for async via `async-std` (it look
 * Breaking change - **server** module has been renamed into **servers**
 * Breaking change - **RadiusMsgType** code as been moved from **servers** module into **radius_packet** module
 * Breaking change - **get** prefix was removed for all functions where it was used before ([C-GETTER Rust convention](https://rust-lang.github.io/api-guidelines/naming.html#c-getter))
+* Breaking change - **client** & **server** implementations now require related traits to be implemented. For more information have a look into `examples/`
 * All RADIUS defined errors now have *Error* suffix, ie **MalformedPacketError**
 
 

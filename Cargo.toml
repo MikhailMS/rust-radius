@@ -39,7 +39,10 @@ thiserror   = "1.0.23"
 
 [dev-dependencies]
 simple_logger = { version = "1.11.0", default-features = false }
-# async-std = "1.9.0"
 
 [[example]]
-name = "simple_radius_server"
+name = "sync_radius_server"
+
+[[example]]
+name              = "async_radius_server"
+required-features = ["async-radius"]
