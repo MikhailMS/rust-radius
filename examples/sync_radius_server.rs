@@ -8,8 +8,8 @@
 
 use radius_rust::protocol::dictionary::Dictionary;
 use radius_rust::protocol::error::RadiusError;
-use radius_rust::protocol::radius_packet::TypeCode;
-use radius_rust::servers::server::{ Server, SyncServer, run_server };
+use radius_rust::protocol::radius_packet::{ RadiusMsgType, TypeCode };
+use radius_rust::servers::sync_server::{ Server, ServerTrait, run_server };
 use radius_rust::tools::{ ipv6_string_to_bytes, ipv4_string_to_bytes, integer_to_bytes };
 
 use log::{ debug, warn, LevelFilter };
@@ -22,20 +22,30 @@ struct CustomServer {
 }
 
 impl CustomServer {
-    fn initialise_server(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<CustomServer, RadiusError> {
-        let server = Server::initialise_server(auth_port, acct_port, coa_port, dictionary, server, secret, retries, timeout)?;
+    fn initialise_server(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16, allowed_hosts: Vec<String>) -> Result<CustomServer, RadiusError> {
+        let server = Server::with_dictionary(dictionary)?
+            .set_server(server)
+            .set_secret(secret)
+            .add_protocol_port(RadiusMsgType::AUTH, auth_port)?
+            .add_protocol_port(RadiusMsgType::ACCT, acct_port)?
+            .add_protocol_port(RadiusMsgType::COA,  coa_port)?
+            .set_allowed_hosts(allowed_hosts)
+            .set_retries(retries)
+            .set_timeout(timeout)
+            .build_server()?;
         Ok(
             CustomServer { base_server: server }
         )
     }
 }
 
-impl SyncServer for CustomServer {
+impl ServerTrait for CustomServer {
     // Define general behaviour of RADIUS Server
     fn run(&mut self) -> Result<(), RadiusError> {
         let mut events = Events::with_capacity(1024);
         
         loop {
+            // We use unwrap() here, because it is guaranteed to return UdpSocket
             self.base_server.socket_poll().poll(&mut events, None)?;
 
             for event in events.iter() {
@@ -44,11 +54,12 @@ impl SyncServer for CustomServer {
                         debug!("Received AUTH request");
                         let mut request = [0; 4096];
                         
-                        match self.base_server.auth_socket().recv_from(&mut request) {
+                        // We use unwrap() here, because it is guaranteed to return UdpSocket
+                        match self.base_server.sockets().get(&RadiusMsgType::AUTH).unwrap().recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
                                 if self.base_server.host_allowed(&source_address) {
                                     let response = self.handle_auth_request(&mut request[..packet_size])?;
-                                    self.base_server.auth_socket().send_to(&response.as_slice(), source_address)?;
+                                    self.base_server.sockets().get(&RadiusMsgType::AUTH).unwrap().send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
                                     warn!("{:?} is not listed as allowed", &source_address);
@@ -67,11 +78,12 @@ impl SyncServer for CustomServer {
                         debug!("Received ACCT request");
                         let mut request = [0; 4096];
                         
-                        match self.base_server.acct_socket().recv_from(&mut request) {
+                        // We use unwrap() here, because it is guaranteed to return UdpSocket
+                        match self.base_server.sockets().get(&RadiusMsgType::ACCT).unwrap().recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
                                 if self.base_server.host_allowed(&source_address) {
                                     let response = self.handle_acct_request(&mut request[..packet_size])?;
-                                    self.base_server.acct_socket().send_to(&response.as_slice(), source_address)?;
+                                    self.base_server.sockets().get(&RadiusMsgType::ACCT).unwrap().send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
                                     warn!("{:?} is not listed as allowed", &source_address);
@@ -90,11 +102,12 @@ impl SyncServer for CustomServer {
                         debug!("Received CoA  request");
                         let mut request = [0; 4096];
                         
-                        match self.base_server.coa_socket().recv_from(&mut request) {
+                        // We use unwrap() here, because it is guaranteed to return UdpSocket
+                        match self.base_server.sockets().get(&RadiusMsgType::COA).unwrap().recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
                                 if self.base_server.host_allowed(&source_address) {
                                     let response = self.handle_coa_request(&mut request[..packet_size])?;
-                                    self.base_server.coa_socket().send_to(&response.as_slice(), source_address)?;
+                                    self.base_server.sockets().get(&RadiusMsgType::COA).unwrap().send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
                                     warn!("{:?} is not listed as allowed", &source_address);
@@ -166,9 +179,7 @@ fn main() -> Result<(), RadiusError> {
     debug!("RADIUS Server started");
 
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict")?;
-    let mut server = CustomServer::initialise_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2)?;
-
-    server.base_server.add_allowed_hosts(String::from("127.0.0.1"));
+    let mut server = CustomServer::initialise_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2, vec![String::from("127.0.0.1")])?;
 
     run_server(&mut server)
 }
