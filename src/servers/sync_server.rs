@@ -1,19 +1,22 @@
-//! Async RADIUS Server implementation
+//! RADIUS Sync Server implementation
 
 
-use crate::protocol::dictionary::Dictionary;
-use crate::protocol::error::RadiusError;
 use crate::protocol::host::Host;
 use crate::protocol::radius_packet::{ RadiusAttribute, RadiusMsgType, RadiusPacket, TypeCode };
+use crate::protocol::dictionary::Dictionary;
+use crate::protocol::error::RadiusError;
 
-use async_trait::async_trait;
 use crypto::digest::Digest;
 use crypto::md5::Md5;
+use log::info;
+use mio::net::UdpSocket;
+use mio::{ Interest, Poll, Token };
+use std::cell::{ RefCell, RefMut };
 use std::collections::HashMap;
 use std::fmt;
 
 
-/// Represents RADIUS async server instance
+/// Represents RADIUS sync server instance
 pub struct Server {
     host:          Host,
     allowed_hosts: Vec<String>,
@@ -21,7 +24,8 @@ pub struct Server {
     secret:        String,
     retries:       u16,
     timeout:       u16,
-    socket_ports:  HashMap<RadiusMsgType, u16>,
+    socket_poll:   RefCell<Poll>,
+    sockets:       HashMap<RadiusMsgType, UdpSocket>
 }
 
 impl fmt::Debug for Server {
@@ -30,29 +34,39 @@ impl fmt::Debug for Server {
          .field("host",          &self.host)
          .field("allowed_hosts", &self.allowed_hosts)
          .field("server",        &self.server)
-         .field("secret",        &self.secret)
+         .field("secret",        &self.server)
          .field("retries",       &self.retries)
          .field("timeout",       &self.timeout)
+         .field("socket_poll",   &self.socket_poll)
          .finish()
     }
 }
 
 impl Server {
+    /// Exists to allow mapping between AUTH socket and AUTH requests processing
+    pub const AUTH_SOCKET: Token = Token(1);
+    /// Exists to allow mapping between ACCT socket and ACCT requests processing
+    pub const ACCT_SOCKET: Token = Token(2);
+    /// Exists to allow mapping between CoA socket and CoA requests processing
+    pub const COA_SOCKET:  Token = Token(3);
+
     // === Builder for Async Server ===
     /// Initialize Server instance
-    /// To be called **first** when creating RADIUS AsyncServer instance
-    pub fn with_dictionary(dictionary: Dictionary) -> Server {
+    /// To be called **first** when creating RADIUS Sync Server instance
+    pub fn with_dictionary(dictionary: Dictionary) -> Result<Server, RadiusError> {
         let host = Host::with_dictionary(dictionary);
+        let poll = Poll::new()?;
 
-        Server {
+        Ok(Server {
             host:          host,
             allowed_hosts: Vec::new(),
             server:        String::from(""),
             secret:        String::from(""),
             retries:       1,
             timeout:       2,
-            socket_ports:  HashMap::with_capacity(3)
-        }
+            socket_poll:   RefCell::new(poll),
+            sockets:       HashMap::with_capacity(3)
+        })
     }
 
     /// *Required*
@@ -93,9 +107,30 @@ impl Server {
     /// *Required*
     /// Sets ports, to which server would be bind depending on the RADIUS Message Type (AUTH, ACCT
     /// or CoA)
-    pub fn add_protocol_port(mut self, protocol: RadiusMsgType, port: u16) -> Server {
-        self.socket_ports.insert(protocol, port);
-        self
+    pub fn add_protocol_port(mut self, protocol: RadiusMsgType, port: u16) -> Result<Server, RadiusError> {
+        let bind_addr = format!("{}:{}", self.server, port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
+        match protocol {
+            RadiusMsgType::AUTH => {
+                let mut socket = UdpSocket::bind(bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
+                info!("Authentication is initialised to accepts RADIUS packets on {}", &socket.local_addr()?);
+                self.socket_poll.borrow().registry().register(&mut socket, Server::AUTH_SOCKET, Interest::READABLE)?;
+                self.sockets.insert(protocol, socket);
+            },
+            RadiusMsgType::ACCT => {
+                let mut socket = UdpSocket::bind(bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
+                info!("Accounting is initialised to accepts RADIUS packets on {}", &socket.local_addr()?);
+                self.socket_poll.borrow().registry().register(&mut socket, Server::ACCT_SOCKET, Interest::READABLE)?;
+                self.sockets.insert(protocol, socket);
+            },
+            RadiusMsgType::COA => {
+                let mut socket = UdpSocket::bind(bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
+                info!("CoA is initialised to accepts RADIUS packets on {}", &socket.local_addr()?);
+                self.socket_poll.borrow().registry().register(&mut socket, Server::COA_SOCKET, Interest::READABLE)?;
+                self.sockets.insert(protocol, socket);
+            }
+        }
+
+        Ok(self)
     }
 
     /// *Required*
@@ -110,9 +145,14 @@ impl Server {
         &self.allowed_hosts
     }
 
+    /// Returns socket poll
+    pub fn socket_poll(&mut self) -> RefMut<'_, Poll> {
+        self.socket_poll.borrow_mut()
+    }
+
     /// Returns sockets
-    pub fn sockets(&self) -> &HashMap<RadiusMsgType, u16> {
-        &self.socket_ports
+    pub fn sockets(&self) -> &HashMap<RadiusMsgType, UdpSocket> {
+        &self.sockets
     }
 
     /// Creates RADIUS packet attribute by name, that is defined in dictionary file
@@ -197,37 +237,54 @@ impl Server {
 }
 
 
-#[async_trait]
 /// This trait is to be implemented by user, if they are planning to resolve AUTH, ACCT or CoA
 /// RADIUS requests
 pub trait ServerTrait {
     /// Main function, that starts and keeps server running
     ///
-    /// For example see `examples/async_radius_server.rs`
-    async fn run(&mut self) -> Result<(), RadiusError>;
+    /// For example see `examples/sync_radius_server.rs`
+    fn run(&mut self) -> Result<(), RadiusError>;
 
     /// Function is responsible for resolving AUTH RADIUS request
     ///
-    /// For example see `examples/async_radius_server.rs`
-    async fn handle_auth_request(&self, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
+    /// For example see `examples/sync_radius_server.rs`
+    fn handle_auth_request(&self, request: &mut [u8])->Result<Vec<u8>, RadiusError> {
         Ok(request.to_vec())
     }
-    /// Function is responsible for resolving AUTH RADIUS request
+    /// Function is responsible for resolving ACCT RADIUS request
     ///
-    /// For example see `examples/async_radius_server.rs`
-    async fn handle_acct_request(&self, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
+    /// For example see `examples/sync_radius_server.rs`
+    fn handle_acct_request(&self, request: &mut [u8])->Result<Vec<u8>, RadiusError> {
         Ok(request.to_vec())
     }
-    /// Function is responsible for resolving AUTH RADIUS request
+    /// Function is responsible for resolving CoA RADIUS request
     ///
-    /// For example see `examples/async_radius_server.rs`
-    async fn handle_coa_request(&self, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
+    /// For example see `examples/sync_radius_server.rs`
+    fn handle_coa_request(&self, request: &mut [u8])->Result<Vec<u8>, RadiusError> {
         Ok(request.to_vec())
     }
 }
 
+
 /// Main function, that starts and keeps server running
-pub async fn run_server<T: ServerTrait>(server: &mut T) -> Result<(), RadiusError> {
-    server.run().await?;
-    Ok(())
+pub fn run_server<T: ServerTrait>(server: &mut T) -> Result<(), RadiusError> {
+    server.run()
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add_allowed_hosts_and_add_request_handler() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let server     = Server::with_dictionary(dictionary).unwrap()
+            .set_server(String::from("0.0.0.0"))
+            .set_secret(String::from("secret"))
+            .set_allowed_hosts(vec![String::from("127.0.0.1")])
+            .build_server().unwrap();
+
+        assert_eq!(server.allowed_hosts().len(), 1);
+    }
 }

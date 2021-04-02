@@ -21,9 +21,20 @@ pub struct Host {
 
 impl Host{
     /// Initialises host instance
+    pub fn with_dictionary(dictionary: Dictionary) -> Host {
+        Host {
+            auth_port:  0,
+            acct_port:  0,
+            coa_port:   0,
+            dictionary: dictionary
+        }
+    }
+    
+    /// Initialises host instance
     pub fn initialise_host(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary) -> Host {
         Host { auth_port, acct_port, coa_port, dictionary }
     }
+
 
     /// Creates RadiusAttribute with given name (name is checked against Dictionary)
     pub fn create_attribute_by_name(&self, attribute_name: &str, value: Vec<u8>) -> Result<RadiusAttribute, RadiusError> {
