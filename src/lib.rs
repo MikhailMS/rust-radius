@@ -20,7 +20,7 @@ pub use clients::{ client, mutex_client };
 pub use clients::async_client;
 
 pub mod servers;
-pub use servers::server;
+pub use servers::sync_server;
 #[cfg(all(feature = "async-radius"))]
 pub use servers::async_server;
 
