@@ -7,6 +7,7 @@ use crate::protocol::host::Host;
 use crate::protocol::radius_packet::{ RadiusAttribute, RadiusMsgType, RadiusPacket, TypeCode };
 
 use async_trait::async_trait;
+use async_std::net::UdpSocket;
 use crypto::digest::Digest;
 use crypto::md5::Md5;
 use std::collections::HashMap;
@@ -106,12 +107,16 @@ impl Server {
     // ===================
 
     /// Returns allowed hosts list
+    pub fn server(&self) -> &str {
+        &self.server
+    }
+    /// Returns allowed hosts list
     pub fn allowed_hosts(&self) -> &[String] {
         &self.allowed_hosts
     }
 
     /// Returns sockets
-    pub fn sockets(&self) -> &HashMap<RadiusMsgType, u16> {
+    pub fn socket_ports(&self) -> &HashMap<RadiusMsgType, u16> {
         &self.socket_ports
     }
 
@@ -209,20 +214,20 @@ pub trait ServerTrait {
     /// Function is responsible for resolving AUTH RADIUS request
     ///
     /// For example see `examples/async_radius_server.rs`
-    async fn handle_auth_request(&self, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
-        Ok(request.to_vec())
+    async fn handle_auth_request(&self, _socket: UdpSocket) -> Result<(), RadiusError> {
+        Ok(())
     }
     /// Function is responsible for resolving AUTH RADIUS request
     ///
     /// For example see `examples/async_radius_server.rs`
-    async fn handle_acct_request(&self, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
-        Ok(request.to_vec())
+    async fn handle_acct_request(&self, _socket: UdpSocket) -> Result<(), RadiusError> {
+        Ok(())
     }
     /// Function is responsible for resolving AUTH RADIUS request
     ///
     /// For example see `examples/async_radius_server.rs`
-    async fn handle_coa_request(&self, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
-        Ok(request.to_vec())
+    async fn handle_coa_request(&self, _socket: UdpSocket) -> Result<(), RadiusError> {
+        Ok(())
     }
 }
 
