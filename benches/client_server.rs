@@ -17,7 +17,6 @@ fn test_auth_client_wo_response_against_server(b: &mut Bencher) {
     let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10").unwrap();
     let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100").unwrap();
 
-
     let attributes = vec![
         client.create_attribute_by_name("User-Name",          String::from("testing").into_bytes()).unwrap(),
         client.create_attribute_by_name("NAS-IP-Address",     nas_ip_addr_bytes).unwrap(),
@@ -28,7 +27,7 @@ fn test_auth_client_wo_response_against_server(b: &mut Bencher) {
         client.create_attribute_by_name("Calling-Station-Id", String::from("00-01-24-80-B3-9C").into_bytes()).unwrap(),
         client.create_attribute_by_name("Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
     ];
-    
+
     let mut auth_packet = client.create_auth_packet(attributes);
 
     b.iter(|| client.send_packet(&mut auth_packet))
@@ -42,7 +41,6 @@ fn test_auth_client_w_response_against_server(b: &mut Bencher) {
     let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10").unwrap();
     let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100").unwrap();
 
-
     let attributes = vec![
         client.create_attribute_by_name("User-Name",          String::from("testing").into_bytes()).unwrap(),
         client.create_attribute_by_name("NAS-IP-Address",     nas_ip_addr_bytes).unwrap(),
@@ -53,7 +51,7 @@ fn test_auth_client_w_response_against_server(b: &mut Bencher) {
         client.create_attribute_by_name("Calling-Station-Id", String::from("00-01-24-80-B3-9C").into_bytes()).unwrap(),
         client.create_attribute_by_name("Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
     ];
-    
+
     let mut auth_packet = client.create_auth_packet(attributes);
 
     b.iter(|| client.send_and_receive_packet(&mut auth_packet))
@@ -80,7 +78,7 @@ fn test_acct_client_wo_response_against_server(b: &mut Bencher) {
         client.create_attribute_by_name("Calling-Station-Id", String::from("00-01-24-80-B3-9C").into_bytes()).unwrap(),
         client.create_attribute_by_name("Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
     ];
-    
+
     let mut acct_packet = client.create_acct_packet(attributes);
 
     b.iter(|| client.send_packet(&mut acct_packet))
@@ -104,7 +102,7 @@ fn test_acct_client_w_response_against_server(b: &mut Bencher) {
         client.create_attribute_by_name("Calling-Station-Id", String::from("00-01-24-80-B3-9C").into_bytes()).unwrap(),
         client.create_attribute_by_name("Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
     ];
-    
+
     let mut acct_packet = client.create_acct_packet(attributes);
 
     b.iter(|| client.send_and_receive_packet(&mut acct_packet))
@@ -131,7 +129,7 @@ fn test_coa_client_wo_response_against_server(b: &mut Bencher) {
         client.create_attribute_by_name("Calling-Station-Id", String::from("00-01-24-80-B3-9C").into_bytes()).unwrap(),
         client.create_attribute_by_name("Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
     ];
-    
+
     let mut coa_packet = client.create_coa_packet(attributes);
 
     b.iter(|| client.send_packet(&mut coa_packet))
@@ -145,7 +143,6 @@ fn test_coa_client_w_response_against_server(b: &mut Bencher) {
     let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10").unwrap();
     let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100").unwrap();
 
-
     let attributes = vec![
         client.create_attribute_by_name("User-Name",          String::from("testing").into_bytes()).unwrap(),
         client.create_attribute_by_name("NAS-IP-Address",     nas_ip_addr_bytes).unwrap(),
@@ -156,7 +153,7 @@ fn test_coa_client_w_response_against_server(b: &mut Bencher) {
         client.create_attribute_by_name("Calling-Station-Id", String::from("00-01-24-80-B3-9C").into_bytes()).unwrap(),
         client.create_attribute_by_name("Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
     ];
-    
+
     let mut coa_packet = client.create_coa_packet(attributes);
 
     b.iter(|| client.send_and_receive_packet(&mut coa_packet))
