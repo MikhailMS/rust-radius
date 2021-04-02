@@ -63,7 +63,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [1.43.0, 1.44.0, 1.45.0, 1.46.0, 1.47.0, 1.48.0, 1.49.0, 1.50, stable, nightly]
+        rust: [1.43.0, 1.44.0, 1.45.0, 1.46.0, 1.47.0, 1.48.0, 1.49.0, 1.50.0, stable, nightly]
         os:   [ubuntu-18.04]
     steps:
 
