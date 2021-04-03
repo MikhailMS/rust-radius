@@ -1,14 +1,39 @@
 //! RADIUS Client implementation
 //!
-//! async_client - as name suggests it is an async version of RADIUS Client that is built on top of async-std
-//! client       - simple version of RADIUS Client that is build on top of mio
-//! mutex_client - a bit mmore complex version of RADIUS Client that is built on top of mio 
-//!
-//! Difference between client & mutex_client - mutex_client binds to socket at the initialization,
-//! while client binds on each call to send* functions
+//! client - generic version of RADIUS Client, that could be used to build Async or Sync Client
+
+use crate::protocol::radius_packet::RadiusPacket;
+use crate::protocol::error::RadiusError;
 
 
 #[cfg(all(feature = "async-radius"))]
-pub mod async_client;
+use async_trait::async_trait;
+#[cfg(all(feature = "async-radius"))]
+#[async_trait]
+/// This trait is to be implemented by user, if they are planning to resolve AUTH, ACCT or CoA
+/// RADIUS requests for Async RADIUS Client
+pub trait AsyncClientTrait {
+    /// Responsible for sending packets off to RADIUS Server ignoring any response received
+    async fn send_packet(&self, _packet: &mut RadiusPacket) -> Result<(), RadiusError> {
+        todo!()
+    }
+    /// Responsible for sending packets off to RADIUS Server returning response
+    async fn send_and_receive_packet(&self, _packet: &mut RadiusPacket) -> Result<Vec<u8>, RadiusError> {
+        todo!()
+    }
+}
+
+/// This trait is to be implemented by user, if they are planning to resolve AUTH, ACCT or CoA
+/// RADIUS requests for Async RADIUS Client
+pub trait SyncClientTrait {
+    /// Responsible for sending packets off to RADIUS Server ignoring any response received
+    fn send_packet(&mut self, _packet: &mut RadiusPacket) -> Result<(), RadiusError> {
+        todo!()
+    }
+    /// Responsible for sending packets off to RADIUS Server returning response
+    fn send_and_receive_packet(&mut self, _packet: &mut RadiusPacket) -> Result<Vec<u8>, RadiusError> {
+        todo!()
+    }
+}
+
 pub mod client;
-pub mod mutex_client;

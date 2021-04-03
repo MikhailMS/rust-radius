@@ -15,9 +15,9 @@
 
 
 pub mod clients;
-pub use clients::{ client, mutex_client };
+pub use clients::{ client::Client, SyncClientTrait };
 #[cfg(all(feature = "async-radius"))]
-pub use clients::async_client;
+pub use clients::AsyncClientTrait;
 
 pub mod servers;
 pub use servers::sync_server;
