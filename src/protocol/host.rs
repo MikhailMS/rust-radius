@@ -2,12 +2,12 @@
 
 
 use super::dictionary::{ Dictionary, DictionaryAttribute, DictionaryValue };
-use super::radius_packet::{ RadiusPacket, RadiusAttribute, TypeCode };
 use super::error::RadiusError;
+use super::radius_packet::{ RadiusAttribute, RadiusMsgType, RadiusPacket, TypeCode };
 
-use crypto::md5::Md5;
-use crypto::mac::Mac;
 use crypto::hmac::Hmac;
+use crypto::mac::Mac;
+use crypto::md5::Md5;
 
 
 #[derive(Debug)]
@@ -20,7 +20,7 @@ pub struct Host {
 }
 
 impl Host{
-    /// Initialises host instance
+    /// Initialises host instance only with Dictionary (ports should be set through *set_port()*)
     pub fn with_dictionary(dictionary: Dictionary) -> Host {
         Host {
             auth_port:  0,
@@ -29,8 +29,17 @@ impl Host{
             dictionary: dictionary
         }
     }
+
+    /// Sets remote port, that responsible for specific RADIUS Message Type
+    pub fn set_port(&mut self, msg_type: RadiusMsgType, port: u16) {
+        match msg_type {
+            RadiusMsgType::AUTH => self.auth_port = port,
+            RadiusMsgType::ACCT => self.acct_port = port,
+            RadiusMsgType::COA  => self.coa_port  = port,
+        }
+    }
     
-    /// Initialises host instance
+    /// Initialises host instance with all required fields
     pub fn initialise_host(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary) -> Host {
         Host { auth_port, acct_port, coa_port, dictionary }
     }
