@@ -45,5 +45,13 @@ simple_logger = { version = "1.11.0", default-features = false }
 name = "sync_radius_server"
 
 [[example]]
+name = "sync_radius_client"
+
+[[example]]
 name              = "async_radius_server"
 required-features = ["async-radius"]
+
+[[example]]
+name              = "async_radius_client"
+required-features = ["async-radius"]
+
