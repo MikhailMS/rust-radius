@@ -118,4 +118,4 @@ jobs:
     - name: NEW -- Generate code coverage
       if:  matrix.rust == 'nightly'
       run: |
-        cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out Json
+        cargo tarpaulin --verbose --all-features --ignore-tests --tests --exclude-files mod.rs --workspace --timeout 120 --out Json
