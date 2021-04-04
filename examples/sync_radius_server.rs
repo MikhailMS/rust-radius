@@ -9,57 +9,94 @@
 use radius_rust::protocol::dictionary::Dictionary;
 use radius_rust::protocol::error::RadiusError;
 use radius_rust::protocol::radius_packet::{ RadiusMsgType, TypeCode };
-use radius_rust::servers::sync_server::{ Server, ServerTrait, run_server };
+use radius_rust::server::{ server::Server, SyncServerTrait };
 use radius_rust::tools::{ ipv6_string_to_bytes, ipv4_string_to_bytes, integer_to_bytes };
 
 use log::{ debug, warn, LevelFilter };
-use mio::Events;
+use mio::net::UdpSocket;
+use mio::{ Events, Interest, Poll, Token };
 use simple_logger::SimpleLogger;
 use std::io::{Error, ErrorKind};
 
 struct CustomServer {
-    base_server: Server
+    base_server: Server,
+    socket_poll: Poll,
+    auth_socket: UdpSocket,
+    acct_socket: UdpSocket,
+    coa_socket:  UdpSocket,
 }
 
 impl CustomServer {
+    /// Exists to allow mapping between AUTH socket and AUTH requests processing
+    pub const AUTH_SOCKET: Token = Token(1);
+    /// Exists to allow mapping between ACCT socket and ACCT requests processing
+    pub const ACCT_SOCKET: Token = Token(2);
+    /// Exists to allow mapping between CoA socket and CoA requests processing
+    pub const COA_SOCKET:  Token = Token(3);
+
     fn initialise_server(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16, allowed_hosts: Vec<String>) -> Result<CustomServer, RadiusError> {
-        let server = Server::with_dictionary(dictionary)?
+        let auth_bind_addr = format!("{}:{}", &server, auth_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
+        let acct_bind_addr = format!("{}:{}", &server, acct_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
+        let coa_bind_addr  = format!("{}:{}", &server, coa_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
+
+        let server = Server::with_dictionary(dictionary)
             .set_server(server)
             .set_secret(secret)
-            .add_protocol_port(RadiusMsgType::AUTH, auth_port)?
-            .add_protocol_port(RadiusMsgType::ACCT, acct_port)?
-            .add_protocol_port(RadiusMsgType::COA,  coa_port)?
             .set_allowed_hosts(allowed_hosts)
             .set_retries(retries)
             .set_timeout(timeout)
-            .build_server()?;
+            .set_port(RadiusMsgType::AUTH, auth_port)
+            .set_port(RadiusMsgType::ACCT, acct_port)
+            .set_port(RadiusMsgType::COA,  coa_port)
+            .build_server();
+
+        // Bind sockets
+        let socket_poll = Poll::new()?;
+
+        let mut auth_server = UdpSocket::bind(auth_bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
+        let mut acct_server = UdpSocket::bind(acct_bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
+        let mut coa_server  = UdpSocket::bind(coa_bind_addr).map_err(|error| RadiusError::SocketConnectionError(error))?;
+
+        socket_poll.registry().register(&mut auth_server, CustomServer::AUTH_SOCKET, Interest::READABLE)?;
+        socket_poll.registry().register(&mut acct_server, CustomServer::ACCT_SOCKET, Interest::READABLE)?;
+        socket_poll.registry().register(&mut coa_server,  CustomServer::COA_SOCKET,  Interest::READABLE)?;
+
+        debug!("Authentication is initialised to accepts RADIUS packets on {}", &auth_server.local_addr()?);
+        debug!("Accounting is initialised to accepts RADIUS packets on {}",     &acct_server.local_addr()?);
+        debug!("CoA is initialised to accepts RADIUS packets on {}",            &coa_server.local_addr()?);
+        // ============
+
         Ok(
-            CustomServer { base_server: server }
+            CustomServer {
+                base_server: server,
+                socket_poll: socket_poll,
+                auth_socket: auth_server,
+                acct_socket: acct_server,
+                coa_socket:  coa_server,
+            }
         )
     }
 }
 
-impl ServerTrait for CustomServer {
+impl SyncServerTrait for CustomServer {
     // Define general behaviour of RADIUS Server
     fn run(&mut self) -> Result<(), RadiusError> {
         let mut events = Events::with_capacity(1024);
         
         loop {
-            // We use unwrap() here, because it is guaranteed to return UdpSocket
-            self.base_server.socket_poll().poll(&mut events, None)?;
+            self.socket_poll.poll(&mut events, None)?;
 
             for event in events.iter() {
                 match event.token() {
-                    Server::AUTH_SOCKET => loop {
+                    CustomServer::AUTH_SOCKET => loop {
                         debug!("Received AUTH request");
                         let mut request = [0; 4096];
                         
-                        // We use unwrap() here, because it is guaranteed to return UdpSocket
-                        match self.base_server.sockets().get(&RadiusMsgType::AUTH).unwrap().recv_from(&mut request) {
+                        match self.auth_socket.recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
                                 if self.base_server.host_allowed(&source_address) {
                                     let response = self.handle_auth_request(&mut request[..packet_size])?;
-                                    self.base_server.sockets().get(&RadiusMsgType::AUTH).unwrap().send_to(&response.as_slice(), source_address)?;
+                                    self.auth_socket.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
                                     warn!("{:?} is not listed as allowed", &source_address);
@@ -74,16 +111,15 @@ impl ServerTrait for CustomServer {
                             }
                         }
                     },
-                    Server::ACCT_SOCKET => loop {
+                    CustomServer::ACCT_SOCKET => loop {
                         debug!("Received ACCT request");
                         let mut request = [0; 4096];
                         
-                        // We use unwrap() here, because it is guaranteed to return UdpSocket
-                        match self.base_server.sockets().get(&RadiusMsgType::ACCT).unwrap().recv_from(&mut request) {
+                        match self.acct_socket.recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
                                 if self.base_server.host_allowed(&source_address) {
                                     let response = self.handle_acct_request(&mut request[..packet_size])?;
-                                    self.base_server.sockets().get(&RadiusMsgType::ACCT).unwrap().send_to(&response.as_slice(), source_address)?;
+                                    self.acct_socket.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
                                     warn!("{:?} is not listed as allowed", &source_address);
@@ -98,16 +134,15 @@ impl ServerTrait for CustomServer {
                             }
                         }
                     },
-                    Server::COA_SOCKET  => loop {
+                    CustomServer::COA_SOCKET  => loop {
                         debug!("Received CoA  request");
                         let mut request = [0; 4096];
                         
-                        // We use unwrap() here, because it is guaranteed to return UdpSocket
-                        match self.base_server.sockets().get(&RadiusMsgType::COA).unwrap().recv_from(&mut request) {
+                        match self.coa_socket.recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
                                 if self.base_server.host_allowed(&source_address) {
                                     let response = self.handle_coa_request(&mut request[..packet_size])?;
-                                    self.base_server.sockets().get(&RadiusMsgType::COA).unwrap().send_to(&response.as_slice(), source_address)?;
+                                    self.coa_socket.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
                                     warn!("{:?} is not listed as allowed", &source_address);
@@ -181,5 +216,5 @@ fn main() -> Result<(), RadiusError> {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict")?;
     let mut server = CustomServer::initialise_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2, vec![String::from("127.0.0.1")])?;
 
-    run_server(&mut server)
+    server.run()
 }
