@@ -1,3 +1,6 @@
+//! RADIUS Dictionary implementation
+
+
 use std::fs::File;
 use std::io::{self, BufRead};
 
@@ -36,15 +39,18 @@ pub struct DictionaryAttribute {
 }
 
 impl DictionaryAttribute {
-    pub fn get_name(&self) -> &str {
+    /// Return name of the Attribute
+    pub fn name(&self) -> &str {
         &self.name
     }
 
-    pub fn get_code(&self) -> &str {
+    /// Return code of the Attribute
+    pub fn code(&self) -> &str {
         &self.code
     }
 
-    pub fn get_code_type(&self) -> &Option<SupportedAttributeTypes> {
+    /// Return code_type of the Attribute
+    pub fn code_type(&self) -> &Option<SupportedAttributeTypes> {
         &self.code_type
     }
 }
@@ -60,15 +66,18 @@ pub struct DictionaryValue {
 }
 
 impl DictionaryValue {
-    pub fn get_name(&self) -> &str {
+    /// Return name of the Value
+    pub fn name(&self) -> &str {
         &self.value_name
     }
 
-    pub fn get_attribute_name(&self) -> &str {
+    /// Return attribute_name of the Value
+    pub fn attribute_name(&self) -> &str {
         &self.attribute_name
     }
 
-    pub fn get_value(&self) -> &str {
+    /// Return value of the Value
+    pub fn value(&self) -> &str {
         &self.value
     }
 }
@@ -82,6 +91,8 @@ pub struct DictionaryVendor {
 }
 
 
+const COMMENT_PREFIX: &str = "#";
+
 #[derive(Debug, Default, PartialEq)]
 /// Represents RADIUS dictionary
 pub struct Dictionary {
@@ -93,7 +104,7 @@ pub struct Dictionary {
 #[allow(unused)]
 impl Dictionary {
     /// Creates Dictionary from a string
-    pub fn from_str(dictionary_str: &str) -> Dictionary {
+    pub fn from_str(dictionary_str: &str) -> Result<Dictionary, RadiusError> {
         todo!()
     }
 
@@ -105,11 +116,11 @@ impl Dictionary {
         let mut vendor_name: String                   = String::new();
         let comment_prefix:  String                   = String::from("#");
 
-        let reader = io::BufReader::new(File::open(file_path).map_err(|error| RadiusError::MalformedDictionary { error })?);
+        let reader = io::BufReader::new(File::open(file_path).map_err(|error| RadiusError::MalformedDictionaryError { error })?);
         let lines  = reader.lines()
             .filter_map(Result::ok)
             .filter(|line| !line.is_empty())
-            .filter(|line| !line.contains(&comment_prefix));
+            .filter(|line| !line.contains(&COMMENT_PREFIX));
 
         for line in lines {
             let parsed_line: Vec<&str> = line.split(" ").filter(|&item| !item.is_empty()).collect();
@@ -126,17 +137,17 @@ impl Dictionary {
     }
 
     /// Returns parsed DictionaryAttributes
-    pub fn get_attributes(&self) -> &[DictionaryAttribute] {
+    pub fn attributes(&self) -> &[DictionaryAttribute] {
         &self.attributes
     }
 
     /// Returns parsed DictionaryValues
-    pub fn get_values(&self) -> &[DictionaryValue] {
+    pub fn values(&self) -> &[DictionaryValue] {
         &self.values
     }
 
     /// Returns parsed DictionaryVendors
-    pub fn get_vendors(&self) -> &[DictionaryVendor] {
+    pub fn vendors(&self) -> &[DictionaryVendor] {
         &self.vendors
     }
 }

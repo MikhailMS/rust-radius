@@ -26,25 +26,87 @@ Rationale behind this project:
 5. Profit - now there is one, so I can try to push Rust internally in my team ^_^
 
 
+## Installation
+```
+[dependencies]
+radius-rust = "0.2.1"
+
+OR if you need Async RADIUS Client/Server
+
+[dependencies]
+radius-rust = { version = "0.2.1", features = ["async-radius"] }
+
+OR
+
+[dependencies]
+radius-rust = { git = "https://github.com/MikhailMS/rust-radius" }
+```
+
+
 ## Tests
-1. `cargo run --example simple_radius_server &` or you can spin up any other RADIUS server of your choice
+1. `cargo run --example sync_radius_server &` or you can spin up any other RADIUS server of your choice
 2. `cargo test --verbose`
+2. `cargo test --all-features --verbose`
 
 
 ## TODO
+- [ ] Read up on [Rust API Guidelines](https://rust-lang.github.io/api-guidelines) and implement whatever possible        **Part of prob_add_async_std feature**
+- [ ] Review the code to ensure there are no unnecessary allocations, redundant code and etc:
+  - [ ] check that it is well written (fingers crossed for a code review)
 - [ ] Protocol
   - [ ] dictionary
     - [x] dictionary attribute struct
     - [x] dictionary struct
     - [x] parse dictionary from file
     - [ ] parse dictionary from string
-- [ ] review the code to ensure there are no unnecessary allocations, redundant code and etc:
-  - [ ] redesign `run_server()` function (if that's possible)
-  - [ ] check that it is well written
+
+
+## Benchmarks
+1. RADIUS Client       against RADIUS Server
+```
+test test_acct_client_w_response_against_server  ... bench:     164,113 ns/iter (+/- 147,270)
+test test_acct_client_wo_response_against_server ... bench:     151,562 ns/iter (+/- 75,603)
+test test_auth_client_w_response_against_server  ... bench:     321,856 ns/iter (+/- 62,515)
+test test_auth_client_wo_response_against_server ... bench:     154,482 ns/iter (+/- 37,838)
+test test_coa_client_w_response_against_server   ... bench:     290,571 ns/iter (+/- 77,585)
+test test_coa_client_wo_response_against_server  ... bench:     406,400 ns/iter (+/- 78,116)
+```
+2. Async RADIUS Client against RADIUS Server
+```
+test test_async_acct_client_w_response_against_server  ... bench:     114,350 ns/iter (+/- 38,509)
+test test_async_acct_client_wo_response_against_server ... bench:     227,224 ns/iter (+/- 165,856)
+test test_async_auth_client_w_response_against_server  ... bench:     192,181 ns/iter (+/- 54,271)
+test test_async_auth_client_wo_response_against_server ... bench:     178,511 ns/iter (+/- 73,771)
+test test_async_coa_client_w_response_against_server   ... bench:     314,094 ns/iter (+/- 138,657)
+test test_async_coa_client_wo_response_against_server  ... bench:     169,961 ns/iter (+/- 42,073)
+```
+3. RADIUS Client       against Async RADIUS Server
+```
+test test_acct_client_w_response_against_server  ... bench:     160,825 ns/iter (+/- 150,161)
+test test_acct_client_wo_response_against_server ... bench:     191,860 ns/iter (+/- 107,560)
+test test_auth_client_w_response_against_server  ... bench:     264,304 ns/iter (+/- 95,916)
+test test_auth_client_wo_response_against_server ... bench:     375,074 ns/iter (+/- 290,859)
+test test_coa_client_w_response_against_server   ... bench:     145,777 ns/iter (+/- 48,479)
+test test_coa_client_wo_response_against_server  ... bench:     129,334 ns/iter (+/- 199,541)
+```
+4. Async RADIUS Client against Async RADIUS Server
+```
+test test_async_acct_client_w_response_against_server  ... bench:     170,924 ns/iter (+/- 52,124)
+test test_async_acct_client_wo_response_against_server ... bench:     174,176 ns/iter (+/- 34,635)
+test test_async_auth_client_w_response_against_server  ... bench:     190,587 ns/iter (+/- 182,324)
+test test_async_auth_client_wo_response_against_server ... bench:     303,673 ns/iter (+/- 153,938)
+test test_async_coa_client_w_response_against_server   ... bench:     182,854 ns/iter (+/- 62,060)
+test test_async_coa_client_wo_response_against_server  ... bench:     189,745 ns/iter (+/- 56,784)
+```
 
 
 ## Notes
 1. Main core functionality is completed, but there is a chance that I've missed something here and there because it is not needed for my projects yet. If this is the case, **raise an issue and I'll see what could be done to get it resolved**
-2. Minimum required version of Rust - `1.45.0`
+2. Minimum required version of Rust:
+    1. `1.43.0` if you want to use `async-radius` feature
+    2. `1.42.0` if you want to use `default`      feature
 3. Big thanks to [pyrad](https://github.com/pyradius/pyrad) and [radius-rust-client](https://github.com/athonet-open/rust-radius-client) projects, which helped me to start this project
 4. Value of **Message-Authenticator** RadiusAttribute won't be validated, because in RADIUS dictionary it has **string** type, however it is not valid ASCII string (**Message-Authenticator** is a HMAC-MD5 hash)
+5. **Benchmarks** are
+    1. Run locally on *Mac Mini (2018, RAM: 32 GB 2667 MHz DDR4, CPU: 3.2 GHz Intel Core i7)*
+    2. Present here only as a comparison between different RADIUS Client/Server implementations, that crate offers (basically just for myself to see if it worth adding features like async and etc)

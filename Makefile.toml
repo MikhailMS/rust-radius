@@ -1,0 +1,7 @@
+[tasks.build]
+command = "cargo"
+args    = ["build", "--verbose"]
+
+[tasks.test]
+command = "cargo"
+args    = ["test", "--verbose"]
