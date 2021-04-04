@@ -54,20 +54,20 @@ impl Client {
     }
 
     /// *Optional*
-    /// Sets socket retries
+    /// Sets socket retries, otherwise you would have a default value of 1
     pub fn set_retries(mut self, retries: u16) -> Client {
         self.retries = retries;
         self
     }
 
     /// *Optional*
-    /// Sets socket timeout
+    /// Sets socket timeout, otherwise you would have a default value of 2
     pub fn set_timeout(mut self, timeout: u16) -> Client {
         self.timeout = timeout;
         self
     }
 
-    /// *Optional*
+    /// *Required/Optional*
     /// Sets remote port, that responsible for specific RADIUS Message Type
     pub fn set_port(mut self, msg_type: RadiusMsgType, port: u16) -> Client {
         self.host.set_port(msg_type, port);
@@ -80,7 +80,6 @@ impl Client {
         self
     }
     // ===================
-    //
 
     /// Returns port of RADIUS server, that receives given type of RADIUS message/packet
     pub fn port(&self, code: &TypeCode) -> Option<u16> {
