@@ -1,7 +1,7 @@
 //! Pure Rust implementation of RADIUS Protocol/Client/Server
 //!
-//! If you want to see how to built RADIUS Server, a good starting point is to look inside `example/`
-//! If you want to see how to build RADIUS Client, a good starting point is to look inside `tests/`
+//! If you want to see how to built RADIUS Server, a good starting point is to look inside `examples/*_radius_server.rs`
+//! If you want to see how to build RADIUS Client, a good starting point is to look inside `examples/*_radius_client.rs`
 
 
 #![deny(
@@ -14,15 +14,15 @@
 )]
 
 
-pub mod clients;
-pub use clients::{ client::Client, SyncClientTrait };
+pub mod client;
+pub use client::{ client::Client, SyncClientTrait };
 #[cfg(all(feature = "async-radius"))]
-pub use clients::AsyncClientTrait;
+pub use client::AsyncClientTrait;
 
-pub mod servers;
-pub use servers::sync_server;
+pub mod server;
+pub use server::{ server::Server, SyncServerTrait };
 #[cfg(all(feature = "async-radius"))]
-pub use servers::async_server;
+pub use server::AsyncServerTrait;
 
 pub mod protocol;
 pub mod tools;
