@@ -6,7 +6,7 @@
 //! ```
 
 
-use radius_rust::clients::{ client::Client, SyncClientTrait };
+use radius_rust::client::{ client::Client, SyncClientTrait };
 use radius_rust::protocol::dictionary::Dictionary;
 use radius_rust::protocol::error::RadiusError;
 use radius_rust::protocol::radius_packet::{ RadiusPacket, RadiusMsgType };
