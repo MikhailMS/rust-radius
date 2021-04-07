@@ -1,16 +1,107 @@
+#![cfg(all(feature = "async-radius"))]
 #![feature(test)]
 
 extern crate test;
 use test::Bencher;
 
-use radius_rust::clients::mutex_client::Client;
+use radius_rust::client::{ client::Client, AsyncClientTrait };
 use radius_rust::protocol::dictionary::Dictionary;
-use radius_rust::tools::{ integer_to_bytes, ipv4_string_to_bytes};
+use radius_rust::protocol::error::RadiusError;
+use radius_rust::protocol::radius_packet::{ RadiusPacket, RadiusMsgType };
+use radius_rust::tools::{ ipv4_string_to_bytes, integer_to_bytes };
+
+use async_std::net::UdpSocket;
+use async_std::task;
+use async_trait::async_trait;
+use log::{ debug, LevelFilter };
+use simple_logger::SimpleLogger;
+use std::io::{Error, ErrorKind};
+
+
+struct ClientWrapper {
+    base_client: Client,
+    socket:      UdpSocket
+}
+
+impl ClientWrapper {
+    async fn initialise_client(auth_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<ClientWrapper, RadiusError> {
+        // Bind socket
+        let socket = UdpSocket::bind("0.0.0.0:0").await.map_err(|error| RadiusError::SocketConnectionError(error))?;
+        // --------------------
+        
+       let client = Client::with_dictionary(dictionary)
+            .set_server(server)
+            .set_secret(secret)
+            .set_retries(retries)
+            .set_timeout(timeout)
+            .set_port(RadiusMsgType::AUTH, auth_port)
+            .build_client();
+
+        Ok(ClientWrapper {
+            base_client: client,
+            socket:      socket
+        })
+    }
+}
+
+#[async_trait]
+impl AsyncClientTrait for ClientWrapper {
+    async fn send_packet(&self, packet: &mut RadiusPacket) -> Result<(), RadiusError> {
+        let remote_port = self.base_client.port(packet.code()).ok_or_else(|| RadiusError::MalformedPacketError { error: String::from("There is no port match for packet code") })?;
+        let remote      = format!("{}:{}", &self.base_client.server(), remote_port);
+        let mut retry   = 0;
+
+        loop {
+            if retry >= self.base_client.retries() {
+                break;
+            }
+
+            debug!("Sending: {:?}", &packet.to_bytes());
+            self.socket.send_to(&packet.to_bytes(), &remote).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
+
+            let mut response = [0; 4096];
+            let (amount, _)  = self.socket.recv_from(&mut response).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
+
+            if amount > 0 {
+                debug!("Received reply: {:?}", &response[0..amount]);
+                return Ok(())
+            }
+
+            retry += 1;
+        }
+        Err( RadiusError::SocketConnectionError(Error::new(ErrorKind::TimedOut, "")) )
+    }
+
+    async fn send_and_receive_packet(&self, packet: &mut RadiusPacket) -> Result<Vec<u8>, RadiusError> {
+        let remote_port = self.base_client.port(packet.code()).ok_or_else(|| RadiusError::MalformedPacketError { error: String::from("There is no port match for packet code") })?;
+        let remote      = format!("{}:{}", &self.base_client.server(), remote_port);
+        let mut retry   = 0;
+
+        loop {
+            if retry >= self.base_client.retries() {
+                break;
+            }
+            self.socket.send_to(&packet.to_bytes(), &remote).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
+
+            let mut response = [0; 4096];
+            let (amount, _)  = self.socket.recv_from(&mut response).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
+
+            if amount > 0 {
+                debug!("Received reply: {:?}", &response[0..amount]);
+                return Ok(response[0..amount].to_vec());
+            }
+
+            retry += 1;
+        }
+
+        Err( RadiusError::SocketConnectionError(Error::new(ErrorKind::TimedOut, "")) )
+    }
+}
 
 
 // === AUTH benches ===
 #[bench]
-fn test_mutex_auth_client_wo_response_against_server(b: &mut Bencher) {
+fn test_async_auth_client_wo_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let client     = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
@@ -30,11 +121,13 @@ fn test_mutex_auth_client_wo_response_against_server(b: &mut Bencher) {
 
     let mut auth_packet = client.create_auth_packet(attributes);
 
-    b.iter(|| client.send_packet(&mut auth_packet))
+    b.iter(|| task::block_on(async {
+        client.send_packet(&mut auth_packet).await
+    }) )
 }
 
 #[bench]
-fn test_mutex_auth_client_w_response_against_server(b: &mut Bencher) {
+fn test_async_auth_client_w_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let client     = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
@@ -54,14 +147,16 @@ fn test_mutex_auth_client_w_response_against_server(b: &mut Bencher) {
 
     let mut auth_packet = client.create_auth_packet(attributes);
 
-    b.iter(|| client.send_and_receive_packet(&mut auth_packet))
+    b.iter(|| task::block_on(async {
+        client.send_and_receive_packet(&mut auth_packet).await
+    }) )
 }
 // ====================
 
 
 // === ACCT benches ===
 #[bench]
-fn test_mutex_acct_client_wo_response_against_server(b: &mut Bencher) {
+fn test_async_acct_client_wo_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let client     = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
@@ -81,11 +176,13 @@ fn test_mutex_acct_client_wo_response_against_server(b: &mut Bencher) {
 
     let mut acct_packet = client.create_acct_packet(attributes);
 
-    b.iter(|| client.send_packet(&mut acct_packet))
+    b.iter(|| task::block_on(async {
+        client.send_packet(&mut acct_packet).await
+    }) )
 }
 
 #[bench]
-fn test_mutex_acct_client_w_response_against_server(b: &mut Bencher) {
+fn test_async_acct_client_w_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let client     = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
@@ -105,14 +202,16 @@ fn test_mutex_acct_client_w_response_against_server(b: &mut Bencher) {
 
     let mut acct_packet = client.create_acct_packet(attributes);
 
-    b.iter(|| client.send_and_receive_packet(&mut acct_packet))
+    b.iter(|| task::block_on(async {
+        client.send_and_receive_packet(&mut acct_packet).await
+    }) )
 }
 // ====================
 
 
 // === CoA benches  ===
 #[bench]
-fn test_mutex_coa_client_wo_response_against_server(b: &mut Bencher) {
+fn test_async_coa_client_wo_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let client     = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
@@ -132,11 +231,13 @@ fn test_mutex_coa_client_wo_response_against_server(b: &mut Bencher) {
 
     let mut coa_packet = client.create_coa_packet(attributes);
 
-    b.iter(|| client.send_packet(&mut coa_packet))
+    b.iter(|| task::block_on(async {
+        client.send_packet(&mut coa_packet).await
+    }) )
 }
 
 #[bench]
-fn test_mutex_coa_client_w_response_against_server(b: &mut Bencher) {
+fn test_async_coa_client_w_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let client     = Client::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
@@ -156,6 +257,8 @@ fn test_mutex_coa_client_w_response_against_server(b: &mut Bencher) {
 
     let mut coa_packet = client.create_coa_packet(attributes);
 
-    b.iter(|| client.send_and_receive_packet(&mut coa_packet))
+    b.iter(|| task::block_on(async {
+        client.send_and_receive_packet(&mut coa_packet).await
+    }) )
 }
 // ====================
