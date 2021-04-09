@@ -24,21 +24,23 @@ version       = "0.2.1"
 
 [features]
 # Default doesn\t include anythin - keep it simple
-default      = []
-# In case one needs to use async RADIUS Server/Client
-async-radius = [ "async-std", "async-trait", "futures" ]
+default        = []
+# In case one plans to create Async RADIUS Client/Server
+async-radius   = ["async-trait"]
+# In case one plans to run Async examples
+async-examples = [ "async-trait", "async-std", "futures" ]
 
 [dependencies]
 async-std   = { version = "1.9.0",  optional = true }
 async-trait = { version = "0.1.48", optional = true }
 futures     = { version = "0.3.13", optional = true }
 log         = "0.4.14"
-mio         = { version = "0.7.7", features = ["os-poll", "udp"] }
 rand        = "0.7.3"
 rust-crypto = "0.2.36"
 thiserror   = "1.0.23"
 
 [dev-dependencies]
+mio           = { version = "0.7.7", features = ["os-poll", "udp"] }
 simple_logger = { version = "1.11.0", default-features = false }
 
 [[example]]
@@ -49,9 +51,9 @@ name = "sync_radius_client"
 
 [[example]]
 name              = "async_radius_server"
-required-features = ["async-radius"]
+required-features = ["async-examples"]
 
 [[example]]
 name              = "async_radius_client"
-required-features = ["async-radius"]
+required-features = ["async-examples"]
 

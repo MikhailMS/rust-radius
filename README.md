@@ -29,17 +29,12 @@ Rationale behind this project:
 ## Installation
 ```
 [dependencies]
-radius-rust = "0.2.1"
+radius-rust = "0.3.0"
 
-OR if you need Async RADIUS Client/Server
-
-[dependencies]
-radius-rust = { version = "0.2.1", features = ["async-radius"] }
-
-OR
+OR if you are planning to build Async RADIUS Client/Server
 
 [dependencies]
-radius-rust = { git = "https://github.com/MikhailMS/rust-radius" }
+radius-rust = { version = "0.3.0", features = ["async-radius"] }
 ```
 
 
@@ -54,11 +49,7 @@ radius-rust = { git = "https://github.com/MikhailMS/rust-radius" }
 - [ ] Review the code to ensure there are no unnecessary allocations, redundant code and etc:
   - [ ] check that it is well written (fingers crossed for a code review)
 - [ ] Protocol
-  - [ ] dictionary
-    - [x] dictionary attribute struct
-    - [x] dictionary struct
-    - [x] parse dictionary from file
-    - [ ] parse dictionary from string
+  - [ ] parse dictionary from string
 
 
 ## Benchmarks
