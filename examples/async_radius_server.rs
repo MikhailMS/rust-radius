@@ -71,96 +71,107 @@ impl CustomServer {
 impl AsyncServerTrait for CustomServer {
     async fn run(&mut self) -> Result<(), RadiusError> {
 
-        // let auth_task = self.handle_auth_request(auth_server).fuse();
-        // let acct_task = self.handle_acct_request(acct_server).fuse();
-        // let coa_task  = self.handle_coa_request(coa_server).fuse();
+        let auth_task = self.handle_auth_request().fuse();
+        let acct_task = self.handle_acct_request().fuse();
+        let coa_task  = self.handle_coa_request().fuse();
 
-        // pin_mut!(auth_task, acct_task, coa_task);
+        pin_mut!(auth_task, acct_task, coa_task);
 
-        // select! {
-        //     _ = auth_task => {
-        //         Ok(())
-        //     },
-        //     _ = acct_task => {
-        //         Ok(())
-        //     },
-        //     _ = coa_task  => {
-        //         Ok(())
-        //     }
-        // }
-        let mut auth_req = [0u8; 1024];
-        let mut acct_req = [0u8; 1024];
-        let mut coa_req  = [0u8; 1024];
-
-        loop {
-            let (_, auth_addr) = self.auth_socket.recv_from(&mut auth_req).await?;
-            let (_, acct_addr) = self.acct_socket.recv_from(&mut acct_req).await?;
-            let (_, coa_addr)  = self.coa_socket.recv_from(&mut coa_req).await?;
-
-            // =================
-
-            let auth_response = self.handle_auth_request(&mut auth_req).await?;
-            let acct_response = self.handle_acct_request(&mut acct_req).await?;
-            let coa_response  = self.handle_coa_request(&mut coa_req).await?;
-
-            // =================
-
-            self.auth_socket.send_to(&auth_response, auth_addr).await?;
-            self.acct_socket.send_to(&acct_response, acct_addr).await?;
-            self.coa_socket.send_to(&coa_response, coa_addr).await?;
+        select! {
+            _ = auth_task => {
+                Ok(())
+            },
+            _ = acct_task => {
+                Ok(())
+            },
+            _ = coa_task  => {
+                Ok(())
+            }
         }
+
     }
 
     // Define your own RADIUS packet handlers
-    async fn handle_auth_request(&self, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
-        debug!("Handling AUTH request");
+    async fn handle_auth_request(&self) -> Result<(), RadiusError> {
+        loop {
+            debug!("Handling AUTH request");
 
-        // Effectively one can do anything here, but it is wise to keep it strictly about
-        //  building response RADIUS packet based on the incoming RADIUS packet
-        let ipv6_bytes = ipv6_string_to_bytes("fc66::1/64")?;
-        let ipv4_bytes = ipv4_string_to_bytes("192.168.0.1")?;
+            // Read RADIUS packet from socket
+            let mut request      = [0u8; 4096];
+            let (_, source_addr) = self.auth_socket.recv_from(&mut request).await.unwrap();
+            // ============================
 
-        let attributes = vec![
-            self.base_server.create_attribute_by_name("Service-Type",       integer_to_bytes(2))?,
-            self.base_server.create_attribute_by_name("Framed-IP-Address",  ipv4_bytes)?,
-            self.base_server.create_attribute_by_name("Framed-IPv6-Prefix", ipv6_bytes)?
-        ];
+            // Build response RADIUS packet
+            let ipv6_bytes = ipv6_string_to_bytes("fc66::1/64")?;
+            let ipv4_bytes = ipv4_string_to_bytes("192.168.0.1")?;
 
-        let mut reply_packet = self.base_server.create_reply_packet(TypeCode::AccessAccept, attributes, request);
-        Ok(reply_packet.to_bytes())
+            let attributes = vec![
+                self.base_server.create_attribute_by_name("Service-Type",       integer_to_bytes(2))?,
+                self.base_server.create_attribute_by_name("Framed-IP-Address",  ipv4_bytes)?,
+                self.base_server.create_attribute_by_name("Framed-IPv6-Prefix", ipv6_bytes)?
+            ];
+
+            let mut reply_packet = self.base_server.create_reply_packet(TypeCode::AccessAccept, attributes, &mut request);
+            // ============================
+
+            // Send RADIUS packet
+            self.auth_socket.send_to(&reply_packet.to_bytes(), &source_addr).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
+            // ============================
+        }
     }
-    async fn handle_acct_request(&self, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
-        debug!("Handling ACCT request");
-        // Effectively one can do anything here, but it is wise to keep it strictly about
-        //  building response RADIUS packet based on the incoming RADIUS packet
-        let ipv6_bytes        = ipv6_string_to_bytes("fc66::1/64")?;
-        let ipv4_bytes        = ipv4_string_to_bytes("192.168.0.1")?;
-        let nas_ip_addr_bytes = ipv4_string_to_bytes("192.168.1.10")?;
+    async fn handle_acct_request(&self) -> Result<(), RadiusError> {
+        loop {
+            debug!("Handling ACCT request");
 
-        let attributes = vec![
-            self.base_server.create_attribute_by_name("Service-Type",       integer_to_bytes(2))?,
-            self.base_server.create_attribute_by_name("Framed-IP-Address",  ipv4_bytes)?,
-            self.base_server.create_attribute_by_name("Framed-IPv6-Prefix", ipv6_bytes)?,
-            self.base_server.create_attribute_by_name("NAS-IP-Address",     nas_ip_addr_bytes)?
-        ];
+            // Read RADIUS packet from socket
+            let mut request      = [0u8; 4096];
+            let (_, source_addr) = self.acct_socket.recv_from(&mut request).await.unwrap();
+            // ============================
 
-        let mut reply_packet = self.base_server.create_reply_packet(TypeCode::AccountingResponse, attributes, request);
-        Ok(reply_packet.to_bytes())
+            // Build response RADIUS packet
+            let ipv6_bytes        = ipv6_string_to_bytes("fc66::1/64")?;
+            let ipv4_bytes        = ipv4_string_to_bytes("192.168.0.1")?;
+            let nas_ip_addr_bytes = ipv4_string_to_bytes("192.168.1.10")?;
+
+            let attributes = vec![
+                self.base_server.create_attribute_by_name("Service-Type",       integer_to_bytes(2))?,
+                self.base_server.create_attribute_by_name("Framed-IP-Address",  ipv4_bytes)?,
+                self.base_server.create_attribute_by_name("Framed-IPv6-Prefix", ipv6_bytes)?,
+                self.base_server.create_attribute_by_name("NAS-IP-Address",     nas_ip_addr_bytes)?
+            ];
+
+            let mut reply_packet = self.base_server.create_reply_packet(TypeCode::AccountingResponse, attributes, &mut request);
+            // ============================
+
+            // Send RADIUS packet
+            self.acct_socket.send_to(&reply_packet.to_bytes(), &source_addr).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
+            // ============================
+        }
     }
-    async fn handle_coa_request(&self, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
-        debug!("Handling CoA request");
-        // Effectively one can do anything here, but it is wise to keep it strictly about
-        //  building response RADIUS packet based on the incoming RADIUS packet
-        let state = String::from("testing").into_bytes();
+    async fn handle_coa_request(&self) -> Result<(), RadiusError> {
+        loop {
+            debug!("Handling CoA request");
 
-        let attributes = vec![
-            self.base_server.create_attribute_by_name("State", state)?
-        ];
+            // Read RADIUS packet from socket
+            let mut request      = [0u8; 4096];
+            let (_, source_addr) = self.coa_socket.recv_from(&mut request).await.unwrap();
+            // ============================
 
-        let mut reply_packet = self.base_server.create_reply_packet(TypeCode::CoAACK, attributes, request);
-        Ok(reply_packet.to_bytes())
+            // Build response RADIUS packet
+            let state = String::from("testing").into_bytes();
+
+            let attributes = vec![
+                self.base_server.create_attribute_by_name("State", state)?
+            ];
+            let mut reply_packet = self.base_server.create_reply_packet(TypeCode::CoAACK, attributes, &mut request);
+            // ============================
+
+            // Send RADIUS packet
+            self.coa_socket.send_to(&reply_packet.to_bytes(), &source_addr).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
+            // ============================
+        }
     }
-    // ======================
+    // ============================
 }
 
 
