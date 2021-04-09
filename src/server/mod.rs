@@ -24,20 +24,20 @@ pub trait AsyncServerTrait {
     /// Function is responsible for resolving AUTH RADIUS request
     ///
     /// For example see `examples/async_radius_server.rs`
-    async fn handle_auth_request(&self, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
-        Ok(request.to_vec())
+    async fn handle_auth_request(&self) -> Result<(), RadiusError> {
+        Ok(())
     }
     /// Function is responsible for resolving AUTH RADIUS request
     ///
     /// For example see `examples/async_radius_server.rs`
-    async fn handle_acct_request(&self, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
-        Ok(request.to_vec())
+    async fn handle_acct_request(&self) -> Result<(), RadiusError> {
+        Ok(())
     }
     /// Function is responsible for resolving AUTH RADIUS request
     ///
     /// For example see `examples/async_radius_server.rs`
-    async fn handle_coa_request(&self, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
-        Ok(request.to_vec())
+    async fn handle_coa_request(&self) -> Result<(), RadiusError> {
+        Ok(())
     }
 }
 

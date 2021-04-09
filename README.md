@@ -55,12 +55,12 @@ radius-rust = { version = "0.3.0", features = ["async-radius"] }
 ## Benchmarks
 1. RADIUS Client       against RADIUS Server
 ```
-test test_acct_client_w_response_against_server  ... bench:     106,383 ns/iter (+/- 4,014)
-test test_acct_client_wo_response_against_server ... bench:     106,075 ns/iter (+/- 10,151)
-test test_auth_client_w_response_against_server  ... bench:     100,156 ns/iter (+/- 5,719)
-test test_auth_client_wo_response_against_server ... bench:     100,470 ns/iter (+/- 4,690)
-test test_coa_client_w_response_against_server   ... bench:      79,086 ns/iter (+/- 37,158)
-test test_coa_client_wo_response_against_server  ... bench:      78,813 ns/iter (+/- 6,330)
+test test_acct_client_w_response_against_server        ... bench:     106,383 ns/iter (+/- 4,014)
+test test_acct_client_wo_response_against_server       ... bench:     106,075 ns/iter (+/- 10,151)
+test test_auth_client_w_response_against_server        ... bench:     100,156 ns/iter (+/- 5,719)
+test test_auth_client_wo_response_against_server       ... bench:     100,470 ns/iter (+/- 4,690)
+test test_coa_client_w_response_against_server         ... bench:      79,086 ns/iter (+/- 37,158)
+test test_coa_client_wo_response_against_server        ... bench:      78,813 ns/iter (+/- 6,330)
 ```
 2. Async RADIUS Client against RADIUS Server
 ```
@@ -73,21 +73,21 @@ test test_async_coa_client_wo_response_against_server  ... bench:      92,298 ns
 ```
 3. RADIUS Client       against Async RADIUS Server
 ```
-test test_acct_client_w_response_against_server  ... bench:     160,825 ns/iter (+/- 150,161)
-test test_acct_client_wo_response_against_server ... bench:     191,860 ns/iter (+/- 107,560)
-test test_auth_client_w_response_against_server  ... bench:     264,304 ns/iter (+/- 95,916)
-test test_auth_client_wo_response_against_server ... bench:     375,074 ns/iter (+/- 290,859)
-test test_coa_client_w_response_against_server   ... bench:     145,777 ns/iter (+/- 48,479)
-test test_coa_client_wo_response_against_server  ... bench:     129,334 ns/iter (+/- 199,541)
+test test_acct_client_w_response_against_server        ... bench:     116,303 ns/iter (+/- 22,485)
+test test_acct_client_wo_response_against_server       ... bench:     115,774 ns/iter (+/- 5,040)
+test test_auth_client_w_response_against_server        ... bench:     110,263 ns/iter (+/- 4,067)
+test test_auth_client_wo_response_against_server       ... bench:     109,771 ns/iter (+/- 3,831)
+test test_coa_client_w_response_against_server         ... bench:      87,650 ns/iter (+/- 25,813)
+test test_coa_client_wo_response_against_server        ... bench:      84,563 ns/iter (+/- 2,856)
 ```
 4. Async RADIUS Client against Async RADIUS Server
 ```
-test test_async_acct_client_w_response_against_server  ... bench:     170,924 ns/iter (+/- 52,124)
-test test_async_acct_client_wo_response_against_server ... bench:     174,176 ns/iter (+/- 34,635)
-test test_async_auth_client_w_response_against_server  ... bench:     190,587 ns/iter (+/- 182,324)
-test test_async_auth_client_wo_response_against_server ... bench:     303,673 ns/iter (+/- 153,938)
-test test_async_coa_client_w_response_against_server   ... bench:     182,854 ns/iter (+/- 62,060)
-test test_async_coa_client_wo_response_against_server  ... bench:     189,745 ns/iter (+/- 56,784)
+test test_async_acct_client_w_response_against_server  ... bench:     129,056 ns/iter (+/- 6,221)
+test test_async_acct_client_wo_response_against_server ... bench:     127,969 ns/iter (+/- 7,174)
+test test_async_auth_client_w_response_against_server  ... bench:     127,812 ns/iter (+/- 37,821)
+test test_async_auth_client_wo_response_against_server ... bench:     124,807 ns/iter (+/- 12,565)
+test test_async_coa_client_w_response_against_server   ... bench:      96,329 ns/iter (+/- 6,898)
+test test_async_coa_client_wo_response_against_server  ... bench:      97,011 ns/iter (+/- 10,322)
 ```
 
 
