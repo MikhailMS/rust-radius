@@ -73,12 +73,6 @@ impl Client {
         self.host.set_port(msg_type, port);
         self
     }
-
-    /// *Required*
-    /// Build Server instance
-    pub fn build_client(self) -> Client {
-        self
-    }
     // ===================
 
     /// Returns port of RADIUS server, that receives given type of RADIUS message/packet
@@ -194,5 +188,93 @@ impl Client {
     /// Verifies that reply packet's attributes have valid values
     pub fn verify_packet_attributes(&self, packet: &[u8]) -> Result<(), RadiusError> {
         self.host.verify_packet_attributes(&packet)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tools::integer_to_bytes;
+
+    #[test]
+    fn test_get_radius_attr_original_string_value() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let client     = Client::with_dictionary(dictionary)
+            .set_server(String::from("127.0.0.1"))
+            .set_secret(String::from("secret"))
+            .set_retries(1)
+            .set_timeout(2)
+            .set_port(RadiusMsgType::AUTH, 1812)
+            .set_port(RadiusMsgType::ACCT, 1813)
+            .set_port(RadiusMsgType::COA,  3799);
+
+        let attributes = vec![client.create_attribute_by_name("User-Name", String::from("testing").into_bytes()).unwrap()];
+
+        match client.radius_attr_original_string_value(&attributes[0]) {
+            Ok(value) => assert_eq!(String::from("testing"), value),
+            _         => assert!(false)
+        }
+    }
+
+    #[test]
+    fn test_get_radius_attr_original_string_value_error() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let client     = Client::with_dictionary(dictionary)
+            .set_server(String::from("127.0.0.1"))
+            .set_secret(String::from("secret"))
+            .set_retries(1)
+            .set_timeout(2)
+            .set_port(RadiusMsgType::AUTH, 1812)
+            .set_port(RadiusMsgType::ACCT, 1813)
+            .set_port(RadiusMsgType::COA,  3799);
+
+        let invalid_string = vec![215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
+        let attributes     = vec![client.create_attribute_by_name("User-Name", invalid_string).unwrap()];
+
+        match client.radius_attr_original_string_value(&attributes[0]) {
+            Ok(_)      => assert!(false),
+            Err(error) => assert_eq!(String::from("Radius packet attribute is malformed"), error.to_string())
+        }
+    }
+
+    #[test]
+    fn test_get_radius_attr_original_integer_value() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let client     = Client::with_dictionary(dictionary)
+            .set_server(String::from("127.0.0.1"))
+            .set_secret(String::from("secret"))
+            .set_retries(1)
+            .set_timeout(2)
+            .set_port(RadiusMsgType::AUTH, 1812)
+            .set_port(RadiusMsgType::ACCT, 1813)
+            .set_port(RadiusMsgType::COA,  3799);
+
+        let attributes = vec![client.create_attribute_by_name("NAS-Port-Id", integer_to_bytes(0)).unwrap()];
+
+        match client.radius_attr_original_integer_value(&attributes[0]) {
+            Ok(value) => assert_eq!(0, value),
+            _         => assert!(false)
+        }
+    }
+
+    #[test]
+    fn test_get_radius_attr_original_integer_value_error() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let client     = Client::with_dictionary(dictionary)
+            .set_server(String::from("127.0.0.1"))
+            .set_secret(String::from("secret"))
+            .set_retries(1)
+            .set_timeout(2)
+            .set_port(RadiusMsgType::AUTH, 1812)
+            .set_port(RadiusMsgType::ACCT, 1813)
+            .set_port(RadiusMsgType::COA,  3799);
+
+        let invalid_integer = vec![215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
+        let attributes      = vec![client.create_attribute_by_name("NAS-Port-Id", invalid_integer).unwrap()];
+
+        match client.radius_attr_original_integer_value(&attributes[0]) {
+            Ok(_)      => assert!(false),
+            Err(error) => assert_eq!(String::from("Radius packet attribute is malformed"), error.to_string())
+        }
     }
 }

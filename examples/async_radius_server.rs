@@ -53,8 +53,7 @@ impl CustomServer {
             .set_port(RadiusMsgType::COA,  coa_port)
             .set_allowed_hosts(allowed_hosts)
             .set_retries(retries)
-            .set_timeout(timeout)
-            .build_server();
+            .set_timeout(timeout);
 
         Ok(
             CustomServer {

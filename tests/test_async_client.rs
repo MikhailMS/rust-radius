@@ -32,8 +32,7 @@ impl ClientWrapper {
             .set_timeout(timeout)
             .set_port(RadiusMsgType::AUTH, auth_port)
             .set_port(RadiusMsgType::ACCT, acct_port)
-            .set_port(RadiusMsgType::COA,  coa_port)
-            .build_client();
+            .set_port(RadiusMsgType::COA,  coa_port);
 
         Ok(ClientWrapper {
             base_client: client,

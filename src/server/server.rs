@@ -79,12 +79,6 @@ impl Server {
         self.timeout = timeout;
         self
     }
-
-    /// *Required*
-    /// Build Server instance
-    pub fn build_server(self) -> Server {
-        self
-    }
     // ===================
 
     /// Returns port of RADIUS server, that receives given type of RADIUS message/packet
@@ -203,8 +197,7 @@ mod tests {
         let server     = Server::with_dictionary(dictionary)
             .set_server(String::from("0.0.0.0"))
             .set_secret(String::from("secret"))
-            .set_allowed_hosts(vec![String::from("127.0.0.1")])
-            .build_server();
+            .set_allowed_hosts(vec![String::from("127.0.0.1")]);
 
         assert_eq!(server.allowed_hosts().len(), 1);
     }
