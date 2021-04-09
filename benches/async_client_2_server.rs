@@ -13,8 +13,6 @@ use radius_rust::tools::{ ipv4_string_to_bytes, integer_to_bytes };
 use async_std::net::UdpSocket;
 use async_std::task;
 use async_trait::async_trait;
-use log::{ debug, LevelFilter };
-use simple_logger::SimpleLogger;
 use std::io::{Error, ErrorKind};
 
 
@@ -58,14 +56,12 @@ impl AsyncClientTrait for ClientWrapper {
                 break;
             }
 
-            debug!("Sending: {:?}", &packet.to_bytes());
             self.socket.send_to(&packet.to_bytes(), &remote).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
 
             let mut response = [0; 4096];
             let (amount, _)  = self.socket.recv_from(&mut response).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
 
             if amount > 0 {
-                debug!("Received reply: {:?}", &response[0..amount]);
                 return Ok(())
             }
 
@@ -89,7 +85,6 @@ impl AsyncClientTrait for ClientWrapper {
             let (amount, _)  = self.socket.recv_from(&mut response).await.map_err(|error| RadiusError::SocketConnectionError(error))?;
 
             if amount > 0 {
-                debug!("Received reply: {:?}", &response[0..amount]);
                 return Ok(response[0..amount].to_vec());
             }
 

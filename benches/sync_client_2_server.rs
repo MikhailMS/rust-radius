@@ -9,10 +9,8 @@ use radius_rust::protocol::error::RadiusError;
 use radius_rust::protocol::radius_packet::{ RadiusPacket, RadiusMsgType };
 use radius_rust::tools::{ ipv4_string_to_bytes, integer_to_bytes };
 
-use log::{ debug, LevelFilter };
 use mio::net::UdpSocket;
 use mio::{ Events, Interest, Poll, Token };
-use simple_logger::SimpleLogger;
 use std::io::{Error, ErrorKind};
 use std::time::Duration;
 
