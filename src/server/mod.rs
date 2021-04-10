@@ -1,10 +1,5 @@
-//! RADIUS Server implementation
-//!
-//! Server  - it is a RADIUS Generic Server implementation
-//! SyncServerTrait  - if you are planning to build Sync RADIUS Server, then you would need to
-//! implement this trait 
-//! AsyncServerTrait - if you are planning to build Async RADIUS Server, then you would need to
-//! implement this trait
+//! Module contains RADIUS Generic Server implementation and related traits definitions
+
 
 use crate::protocol::error::RadiusError;
 
@@ -14,7 +9,7 @@ use async_trait::async_trait;
 #[cfg(all(feature = "async-radius"))]
 #[async_trait]
 /// This trait is to be implemented by user, if they are planning to resolve AUTH, ACCT or CoA
-/// RADIUS requests
+/// RADIUS requests for Async RADIUS Server
 pub trait AsyncServerTrait {
     /// Main function, that starts and keeps server running
     ///
@@ -41,11 +36,8 @@ pub trait AsyncServerTrait {
     }
 }
 
-
-pub mod server;
-
 /// This trait is to be implemented by user, if they are planning to resolve AUTH, ACCT or CoA
-/// RADIUS requests
+/// RADIUS requests for Sync RADIUS Server
 pub trait SyncServerTrait {
     /// Main function, that starts and keeps server running
     ///
@@ -71,3 +63,5 @@ pub trait SyncServerTrait {
         Ok(request.to_vec())
     }
 }
+
+pub mod server;

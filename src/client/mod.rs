@@ -1,10 +1,5 @@
-//! RADIUS Client implementation
-//!
-//! Client           - generic version of RADIUS Client, that could be used to build Async or Sync Client
-//! SyncClientTrait  - if you are planning to build Sync RADIUS Client, then you would need to
-//! implement this trait 
-//! AsyncClientTrait - if you are planning to build Async RADIUS Client, then you would need to
-//! implement this trait
+//! Module contains RADIUS Client implementation and related traits definitions
+
 
 use crate::protocol::radius_packet::RadiusPacket;
 use crate::protocol::error::RadiusError;

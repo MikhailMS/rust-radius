@@ -57,16 +57,4 @@ pub enum RadiusError {
         /// Error definition received from crate
         error: String
     },
-    /// Error happens, when MutexClient cannot acquire the lock on socket_poll
-    #[error("MutexClient is not able to acquire the lock on socket_poll")]
-    MutexLockFailureError        {
-        /// Error definition received from crate
-        error: String
-    },
-    /// Error happens, when RADIUS Server gets a request from non-allowed server
-    #[error("RADIUS Server is not allowed to accept packet from source IP")]
-    IncorrrectSourceIpError      {
-        /// Error definition received from crate
-        error: String
-    }
 }

@@ -25,7 +25,8 @@ pub struct Client {
 
 impl Client {
     // === Builder for Client ===
-    /// Initialize Client instance
+    /// Initialise Client instance with dictionary (other fields would be set to default values)
+    ///
     /// To be called **first** when creating RADIUS Client instance
     pub fn with_dictionary(dictionary: Dictionary) -> Client {
         let host = Host::with_dictionary(dictionary);
@@ -39,38 +40,43 @@ impl Client {
         }
     }
 
-    /// *Required*
+    /// **Required**
+    ///
     /// Sets hostname to which server would try to bind
     pub fn set_server(mut self, server: String) -> Client {
         self.server = server;
         self
     }
 
-    /// *Required*
+    /// **Required**
+    ///
     /// Sets secret which is used to encode/decode RADIUS packet
     pub fn set_secret(mut self, secret: String) -> Client {
         self.secret = secret;
         self
     }
 
-    /// *Optional*
+    /// **Required/Optional**
+    ///
+    /// Sets remote port, that responsible for specific RADIUS Message Type
+    pub fn set_port(mut self, msg_type: RadiusMsgType, port: u16) -> Client {
+        self.host.set_port(msg_type, port);
+        self
+    }
+
+    /// **Optional**
+    ///
     /// Sets socket retries, otherwise you would have a default value of 1
     pub fn set_retries(mut self, retries: u16) -> Client {
         self.retries = retries;
         self
     }
 
-    /// *Optional*
+    /// **Optional**
+    ///
     /// Sets socket timeout, otherwise you would have a default value of 2
     pub fn set_timeout(mut self, timeout: u16) -> Client {
         self.timeout = timeout;
-        self
-    }
-
-    /// *Required/Optional*
-    /// Sets remote port, that responsible for specific RADIUS Message Type
-    pub fn set_port(mut self, msg_type: RadiusMsgType, port: u16) -> Client {
-        self.host.set_port(msg_type, port);
         self
     }
     // ===================
@@ -116,11 +122,49 @@ impl Client {
     }
 
     /// Creates RADIUS packet attribute by name, that is defined in dictionary file
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use radius_rust::client::client::Client;
+    /// use radius_rust::protocol::dictionary::Dictionary;
+    /// use radius_rust::protocol::radius_packet::TypeCode;
+    ///
+    /// fn main() {
+    ///     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+    ///     let client     = Client::with_dictionary(dictionary)
+    ///        .set_server(String::from("127.0.0.1"))
+    ///        .set_secret(String::from("secret"))
+    ///        .set_retries(1)
+    ///        .set_timeout(2);
+    ///
+    ///     client.create_attribute_by_name("User-Name", String::from("testing").into_bytes());
+    /// }
+    /// ```
     pub fn create_attribute_by_name(&self, attribute_name: &str, value: Vec<u8>) -> Result<RadiusAttribute, RadiusError> {
         self.host.create_attribute_by_name(attribute_name, value)
     }
 
     /// Creates RADIUS packet attribute by ID, that is defined in dictionary file
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use radius_rust::client::client::Client;
+    /// use radius_rust::protocol::dictionary::Dictionary;
+    /// use radius_rust::protocol::radius_packet::TypeCode;
+    ///
+    /// fn main() {
+    ///     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+    ///     let client     = Client::with_dictionary(dictionary)
+    ///        .set_server(String::from("127.0.0.1"))
+    ///        .set_secret(String::from("secret"))
+    ///        .set_retries(1)
+    ///        .set_timeout(2);
+    ///
+    ///     client.create_attribute_by_id(1, String::from("testing").into_bytes());
+    /// }
+    /// ```
     pub fn create_attribute_by_id(&self, attribute_id: u8, value: Vec<u8>) -> Result<RadiusAttribute, RadiusError> {
         self.host.create_attribute_by_id(attribute_id, value)
     }
@@ -135,15 +179,17 @@ impl Client {
         hash.result().code().to_vec()
     }
 
-    /// Gets the original value as a String if the RadiusAttribute respresents dictionary attribute
-    /// that has type: string, ipaddr, ipv6addr or ipv6prefix
+    /// Gets the original value as a String
+    ///
+    /// If the RadiusAttribute respresents dictionary attribute of type: string, ipaddr, ipv6addr or ipv6prefix
     pub fn radius_attr_original_string_value(&self, attribute: &RadiusAttribute) -> Result<String, RadiusError> {
         let dict_attr = self.host.dictionary_attribute_by_id(attribute.id()).ok_or_else(|| RadiusError::MalformedAttributeError {error: format!("No attribute with ID: {} found in dictionary", attribute.id())} )?;
         attribute.original_string_value(dict_attr.code_type())
     }
 
-    /// Gets the original value as a String if the RadiusAttribute respresents dictionary attribute
-    /// that has type:integer or date
+    /// Gets the original value as an Integer
+    ///
+    /// If the RadiusAttribute respresents dictionary attribute of type: integer or date
     pub fn radius_attr_original_integer_value(&self, attribute: &RadiusAttribute) -> Result<u64, RadiusError> {
         let dict_attr = self.host.dictionary_attribute_by_id(attribute.id()).ok_or_else(|| RadiusError::MalformedAttributeError {error: format!("No attribute with ID: {} found in dictionary", attribute.id())} )?;
         attribute.original_integer_value(dict_attr.code_type())
