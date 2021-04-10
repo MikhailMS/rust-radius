@@ -23,7 +23,8 @@ pub struct Server {
 
 impl Server {
     // === Builder for Server ===
-    /// Initialize Client instance
+    /// Initialise Server instance with dictionary (other fields would be set to default values)
+    ///
     /// To be called **first** when creating RADIUS Client instance
     pub fn with_dictionary(dictionary: Dictionary) -> Server {
         let host = Host::with_dictionary(dictionary);
@@ -38,42 +39,48 @@ impl Server {
         }
     }
 
-    /// *Required*
+    /// **Required**
+    ///
     /// Sets hostname to which server would try to bind
     pub fn set_server(mut self, server: String) -> Server {
         self.server = server;
         self
     }
 
-    /// *Required*
+    /// **Required**
+    ///
     /// Sets secret which is used to encode/decode RADIUS packet
     pub fn set_secret(mut self, secret: String) -> Server {
         self.secret = secret;
         self
     }
 
-    /// *Required*
+    /// **Required**
+    ///
     /// Sets allowed hosts, from where Server would be allowed to accept RADIUS requests
     pub fn set_allowed_hosts(mut self, allowed_hosts: Vec<String>) -> Server {
         self.allowed_hosts = allowed_hosts;
         self
     }
 
-    /// *Required/Optional*
+    /// **Required/Optional**
+    ///
     /// Sets remote port, that responsible for specific RADIUS Message Type
     pub fn set_port(mut self, msg_type: RadiusMsgType, port: u16) -> Server {
         self.host.set_port(msg_type, port);
         self
     }
 
-    /// *Optional*
+    /// **Optional**
+    ///
     /// Sets socket retries, otherwise you would have a default value of 1
     pub fn set_retries(mut self, retries: u16) -> Server {
         self.retries = retries;
         self
     }
 
-    /// *Optional*
+    /// **Optional**
+    ///
     /// Sets socket timeout, otherwise you would have a default value of 2
     pub fn set_timeout(mut self, timeout: u16) -> Server {
         self.timeout = timeout;
@@ -108,21 +115,21 @@ impl Server {
 
     /// Creates RADIUS packet attribute by name, that is defined in dictionary file
     ///
-    /// For example, see Client (these function are same)
+    /// For example, see [Client](crate::client::client::Client::create_attribute_by_name)
     pub fn create_attribute_by_name(&self, attribute_name: &str, value: Vec<u8>) -> Result<RadiusAttribute, RadiusError> {
         self.host.create_attribute_by_name(attribute_name, value)
     }
 
     /// Creates RADIUS packet attribute by id, that is defined in dictionary file
     ///
-    /// For example, see Client (these function are same)
+    /// For example, see [Client](crate::client::client::Client::create_attribute_by_id)
     pub fn create_attribute_by_id(&self, attribute_id: u8, value: Vec<u8>) -> Result<RadiusAttribute, RadiusError> {
         self.host.create_attribute_by_id(attribute_id, value)
     }
 
     /// Creates reply RADIUS packet
     ///
-    /// Similar to Client **create_packet()**, however also sets correct packet ID and authenticator
+    /// Similar to [Client's create_packet()](crate::client::client::Client::create_packet), however also sets correct packet ID and authenticator
     pub fn create_reply_packet(&self, reply_code: TypeCode, attributes: Vec<RadiusAttribute>, request: &mut [u8]) -> RadiusPacket {
         let mut reply_packet = RadiusPacket::initialise_packet(reply_code, attributes);
 
@@ -165,14 +172,15 @@ impl Server {
     /// Verifies RadiusAttributes's values of incoming RADIUS packet:
     ///
     /// Server would try to build RadiusPacket from raw bytes, and then it would try to restore
-    /// RadiusAttribute original value from bytes, based on the attribute data type (see SupportedAttributeTypes)
+    /// RadiusAttribute original value from bytes, based on the attribute data type, see [SupportedAttributeTypes](crate::protocol::dictionary::SupportedAttributeTypes)
     pub fn verify_request_attributes(&self, request: &[u8]) -> Result<(), RadiusError> {
         self.host.verify_packet_attributes(&request)
     }
 
     /// Initialises RadiusPacket from bytes
     ///
-    /// Unlike validate_request() returns new RadiusPacket (if valid), so user can get data out of it
+    /// Unlike [verify_request](Server::verify_request), on success this function would return
+    /// RadiusPacket
     pub fn initialise_packet_from_bytes(&self, request: &[u8]) -> Result<RadiusPacket, RadiusError> {
         self.host.initialise_packet_from_bytes(request)
     }

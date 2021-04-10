@@ -5,9 +5,11 @@ extern crate test;
 use test::Bencher;
 
 use radius_rust::client::{ client::Client, AsyncClientTrait };
-use radius_rust::protocol::dictionary::Dictionary;
-use radius_rust::protocol::error::RadiusError;
-use radius_rust::protocol::radius_packet::{ RadiusPacket, RadiusMsgType };
+use radius_rust::protocol::{
+    dictionary::Dictionary,
+    error::RadiusError,
+    radius_packet::{ RadiusPacket, RadiusMsgType }
+};
 use radius_rust::tools::{ ipv4_string_to_bytes, integer_to_bytes };
 
 use async_std::net::UdpSocket;
@@ -34,8 +36,7 @@ impl ClientWrapper {
             .set_timeout(timeout)
             .set_port(RadiusMsgType::AUTH, auth_port)
             .set_port(RadiusMsgType::ACCT, acct_port)
-            .set_port(RadiusMsgType::COA,  coa_port)
-            .build_client();
+            .set_port(RadiusMsgType::COA,  coa_port);
 
         Ok(ClientWrapper {
             base_client: client,

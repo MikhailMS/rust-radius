@@ -38,7 +38,8 @@ impl Host{
             RadiusMsgType::COA  => self.coa_port  = port,
         }
     }
-    
+
+    #[allow(dead_code)]
     /// Initialises host instance with all required fields
     pub fn initialise_host(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary) -> Host {
         Host { auth_port, acct_port, coa_port, dictionary }
@@ -70,6 +71,7 @@ impl Host{
         &self.dictionary
     }
 
+    #[allow(dead_code)]
     /// Returns VALUE from dictionary with given attribute & value name
     pub fn dictionary_value_by_attr_and_value_name(&self, attr_name: &str, value_name: &str) -> Option<&DictionaryValue> {
         self.dictionary.values().iter().find(|&value| value.name() == value_name && value.attribute_name() == attr_name)
@@ -80,6 +82,7 @@ impl Host{
         self.dictionary.attributes().iter().find(|&attr| attr.code() == packet_attr_id.to_string())
     }
 
+    #[allow(dead_code)]
     /// Returns ATTRIBUTE from dictionary with given name
     pub fn dictionary_attribute_by_name(&self, packet_attr_name: &str) -> Option<&DictionaryAttribute> {
         self.dictionary.attributes().iter().find(|&attr| attr.name() == packet_attr_name)

@@ -16,11 +16,11 @@ pub enum SupportedAttributeTypes {
     Integer,
     /// Rust's u64
     Date,
-    /// Rust's [u8;4]
+    /// Rust's \[u8;4\]
     IPv4Addr,
-    /// Rust's [u8;16]
+    /// Rust's \[u8;16\]
     IPv6Addr,
-    /// Rust's [u8;18]
+    /// Rust's \[u8;18\]
     IPv6Prefix
 }
 
@@ -156,6 +156,7 @@ fn assign_attribute_type(code_type: &str) -> Option<SupportedAttributeTypes> {
     match code_type {
         "string"     => Some(SupportedAttributeTypes::AsciiString),
         "integer"    => Some(SupportedAttributeTypes::Integer),
+        "date"       => Some(SupportedAttributeTypes::Date),
         "ipaddr"     => Some(SupportedAttributeTypes::IPv4Addr),
         "ipv6addr"   => Some(SupportedAttributeTypes::IPv6Addr),
         "ipv6prefix" => Some(SupportedAttributeTypes::IPv6Prefix),
