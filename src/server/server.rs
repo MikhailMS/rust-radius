@@ -25,7 +25,7 @@ impl Server {
     // === Builder for Server ===
     /// Initialise Server instance with dictionary (other fields would be set to default values)
     ///
-    /// To be called **first** when creating RADIUS Client instance
+    /// To be called **first** when creating RADIUS Server instance
     pub fn with_dictionary(dictionary: Dictionary) -> Server {
         let host = Host::with_dictionary(dictionary);
 
@@ -41,7 +41,7 @@ impl Server {
 
     /// **Required**
     ///
-    /// Sets hostname to which server would try to bind
+    /// Sets hostname to which server would bind
     pub fn set_server(mut self, server: String) -> Server {
         self.server = server;
         self

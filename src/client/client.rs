@@ -42,7 +42,7 @@ impl Client {
 
     /// **Required**
     ///
-    /// Sets hostname to which server would try to bind
+    /// Sets hostname to which client would attempt to send RADIUS packets
     pub fn set_server(mut self, server: String) -> Client {
         self.server = server;
         self
@@ -173,6 +173,7 @@ impl Client {
     ///
     /// Note: this function assumes that RadiusAttribute Message-Authenticator already exists in RadiusPacket 
     pub fn generate_message_hash(&self, packet: &mut RadiusPacket) -> Vec<u8> {
+        // Feels redundant, but let it be for now
         let mut hash = Hmac::new(Md5::new(), self.secret.as_bytes());
 
         hash.input(&packet.to_bytes());

@@ -20,7 +20,8 @@ pub struct Host {
 }
 
 impl Host{
-    /// Initialises host instance only with Dictionary (ports should be set through *set_port()*)
+    /// Initialises host instance only with Dictionary (ports should be set through *set_port()*,
+    /// otherwise default to 0)
     pub fn with_dictionary(dictionary: Dictionary) -> Host {
         Host {
             auth_port:  0,
