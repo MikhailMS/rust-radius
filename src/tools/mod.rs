@@ -15,7 +15,7 @@ use crate::protocol::error::RadiusError;
 
 /// Converts IPv6 Address string into vector of bytes
 ///
-/// Should be used for any Attribute of type ipv6addr or ipv6prefix to ensure value is encoded correctly
+/// Should be used for any Attribute of type **ipv6addr** or **ipv6prefix** to ensure value is encoded correctly
 pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, RadiusError> {
     let parsed_ipv6: Vec<&str> = ipv6.split("/").collect();
     let mut bytes: Vec<u8>     = Vec::with_capacity(18);
@@ -61,7 +61,7 @@ pub fn bytes_to_ipv6_string(ipv6: &[u8]) -> Result<String, RadiusError> {
 
 /// Converts IPv4 Address string into vector of bytes
 ///
-/// Should be used for any Attribute of type ipaddr to ensure value is encoded correctly
+/// Should be used for any Attribute of type **ipaddr** to ensure value is encoded correctly
 pub fn ipv4_string_to_bytes(ipv4: &str) -> Result<Vec<u8>, RadiusError> {
     if ipv4.contains("/") {
         return Err( RadiusError::MalformedIpAddrError { error: format!("Subnets are not supported for IPv4: {}", ipv4) } )
@@ -87,7 +87,7 @@ pub fn bytes_to_ipv4_string(ipv4: &[u8]) -> Result<String, RadiusError> {
 
 /// Converts u32 into vector of bytes
 ///
-/// Should be used for any Attribute of type integer to ensure value is encoded correctly
+/// Should be used for any Attribute of type **integer** to ensure value is encoded correctly
 pub fn integer_to_bytes(integer: u32) -> Vec<u8> {
     integer.to_be_bytes().to_vec()
 }
@@ -99,7 +99,7 @@ pub fn bytes_to_integer(integer: &[u8; 4]) -> u32 {
 
 /// Converts timestamp (u64) into vector of bytes
 ///
-/// Should be used for any Attribute of type date to ensure value is encoded correctly
+/// Should be used for any Attribute of type **date** to ensure value is encoded correctly
 pub fn timestamp_to_bytes(timestamp: u64) -> Vec<u8> {
     timestamp.to_be_bytes().to_vec()
 }
