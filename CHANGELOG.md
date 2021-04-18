@@ -1,5 +1,5 @@
 =============
-# v0.3.0 (Coming soon)
+# v0.3.0 (18 April 2021)
 
 I've decided to rewrite previous implementations of RADIUS Client and Server so they are now only have bare minimum in order to allow
 users to decide on the crates they want to use to get UdpSockets, async and runtimes
