@@ -124,38 +124,41 @@ pub fn encrypt_data(data: &str, authenticator: &[u8], secret: &[u8]) -> Vec<u8> 
     *
     * Step 3. Return result vector
     */
-    let mut prev_result = authenticator.to_vec();
-    let mut data_buffer = data.as_bytes().to_vec();
+    let data = data.as_bytes();
+    let mut hash = [0u8; 16];
 
-    let missing_length = data_buffer.len() % 16;
-    if missing_length != 0 {
-        data_buffer.append(&mut vec![0u8; 16 - missing_length]);
-    }
-    
-    let mut result = Vec::with_capacity(data_buffer.len());
-    
-    while !data_buffer.is_empty() {
-        let mut temp = secret.to_vec();
-        temp.append(&mut prev_result.to_vec());
+    // cast is safe, len() should never be bigger than 253 by the RADIUS standard
+    let padding = ((-(data.len() as isize)) & 15) as usize;
 
-        let mut md5  = Md5::new();
-        let mut hash = [0; 16];
-        md5.input(&temp);
+    let mut result = Vec::with_capacity(data.len() + padding);
+    result.extend_from_slice(data);
+    result.extend_from_slice(&hash[..padding]);
+
+    let mut prev = authenticator;
+    let mut current = result.as_mut_slice();
+
+    loop {
+        let mut md5 = Md5::new();
+        md5.input(secret);
+        md5.input(prev);
         md5.result(&mut hash);
 
-        for i in 0..16 {
-            result.push(hash[i] ^ data_buffer[i]);
+        for (d, h) in current.iter_mut().zip(hash.iter()) {
+            *d ^= *h
         }
 
-        prev_result = result[(result.len() - 16)..].to_vec();
-        data_buffer = data_buffer[16..].to_vec();
+        let (p, c) = current.split_at_mut(16);
+        prev = p;
+        current = c;
+        if current.len() == 0 { break }
     }
-    result   
+
+    result
 }
 
 /// Decrypts data since RADIUS packet is sent in plain text
 pub fn decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8> {
-    /* 
+    /*
      * To decrypt the data, we need to apply the same algorithm as in encrypt_data()
      * but with small change
      *
@@ -165,27 +168,26 @@ pub fn decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8>
      *   3. execute bitwise XOR between each of 16 elements of MD5 hash and data buffer and record it in results vector
      *
      */
-    let mut data_buffer = data.to_vec();
-    let mut result      = Vec::with_capacity(data_buffer.len());
-    let mut prev_result = authenticator.to_vec();
+    let mut result = Vec::with_capacity(data.len());
+    let mut prev_result = authenticator;
 
-    while !data_buffer.is_empty() {
-        let mut temp = secret.to_vec();
-        temp.append(&mut prev_result.to_vec());
-
-        let mut md5  = Md5::new();
-        let mut hash = [0; 16];
-        md5.input(&temp);
+    let mut hash = [0u8; 16];
+    for data_chunk in data.chunks_exact(16) {
+        let mut md5 = Md5::new();
+        md5.input(secret);
+        md5.input(prev_result);
         md5.result(&mut hash);
-        
-        for i in 0..16 {
-            result.push(hash[i] ^ data_buffer[i]);
-        }
 
-        prev_result = data_buffer[..16].to_vec();
-        data_buffer = data_buffer[16..].to_vec();
+
+        for (d, h) in data_chunk.iter().zip(hash.iter_mut()) {
+            *h ^= d
+        }
+        result.extend_from_slice(&hash);
+
+        prev_result = data_chunk;
     }
-    while result[result.len()-1] == 0 {
+
+    while result[result.len() - 1] == 0 {
         result.pop();
     }
     result
@@ -255,6 +257,15 @@ mod tests {
         let encrypted_bytes = encrypt_data("password", &authenticator, &secret.as_bytes());
 
         assert_eq!(encrypted_bytes, vec![135, 116, 155, 239, 226, 89, 90, 221, 62, 29, 218, 130, 102, 174, 191, 250]);
+
+        let encrypted_bytes_long = encrypt_data("a very long password, which will need multiple iterations", &&authenticator, &secret.as_bytes());
+        assert_eq!(
+            encrypted_bytes_long,
+            vec![150, 53, 158, 249, 231, 79, 8, 213, 81, 115, 189, 162, 22, 207, 204, 137, 193,
+            149, 82, 147, 72, 149, 79, 48, 187, 199, 194, 200, 246, 6, 186, 182, 220, 19, 227, 32,
+            26, 20, 9, 152, 63, 40, 41, 91, 212, 22, 158, 54, 91, 247, 151, 67, 250, 170, 105, 94,
+            20, 105, 120, 196, 237, 191, 99, 69]
+        );
     }
 
     #[test]
@@ -266,8 +277,16 @@ mod tests {
         let encrypted_data = vec![135, 116, 155, 239, 226, 89, 90, 221, 62, 29, 218, 130, 102, 174, 191, 250];
 
         let decrypted_data = decrypt_data(&encrypted_data, &authenticator, &secret.as_bytes());
-
         assert_eq!(expected_data.as_bytes().to_vec(), decrypted_data);
+
+        let expected_data_long = String::from("a very long password, which will need multiple iterations");
+        let encrypted_data_long = vec![150, 53, 158, 249, 231, 79, 8, 213, 81, 115, 189, 162, 22,
+        207, 204, 137, 193, 149, 82, 147, 72, 149, 79, 48, 187, 199, 194, 200, 246, 6, 186, 182,
+        220, 19, 227, 32, 26, 20, 9, 152, 63, 40, 41, 91, 212, 22, 158, 54, 91, 247, 151, 67, 250,
+        170, 105, 94, 20, 105, 120, 196, 237, 191, 99, 69];
+
+        let decrypted_data_long = decrypt_data(&encrypted_data_long, &authenticator, &secret.as_bytes());
+        assert_eq!(expected_data_long.as_bytes().to_vec(), decrypted_data_long);
     }
 
     #[test]
