@@ -1,4 +1,19 @@
 =============
+# v0.4.0 (Coming soon)
+
+
+## What's new
+* added a few more tests for **encrypt_data()** & **decrypt_data()** (thanks to Istvan91 !2)
+* added **salt_encrypt_data()** & **salt_decrypt_data()** functions to **tools/mod.rs** which are handling salting as described in RFC 2828 (thanks to Istvan91 !3)
+## What's removed or deprecated
+
+## What's changed
+* Breaking change - **encrypt_data()** in **tools/mod.rs** changed function signature, so **data** parameter is now of type **&[u8]** instead of **&str**. Was reported in #4 by Istvan91
+* **encrypt_data()** in **tools/mod.rs** got rewritten a bit to remove unneeded allocations (thanks to Istvan91 !2)
+* **decrypt_data()** in **tools/mod.rs** got rewritten a bit to remove unneeded allocations (thanks to Istvan91 !2)
+
+
+=============
 # v0.3.0 (18 April 2021)
 
 I've decided to rewrite previous implementations of RADIUS Client and Server so they are now only have bare minimum in order to allow

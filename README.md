@@ -52,6 +52,13 @@ radius-rust = { version = "0.3.0", features = ["async-radius"] }
   - [ ] parse dictionary from string
 
 
+## Contributing
+Would you love to contribute to this project? I'd really appreciate your input!
+
+1. Raise an issue, if you believe some functionality is missing, something is broken and etc
+2. Create a PR, if you already sorted out some issues yourself. **Please ensure** to submit PR to **development branch**
+
+
 ## Benchmarks
 1. RADIUS Client       against RADIUS Server
 ```
