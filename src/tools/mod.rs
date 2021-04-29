@@ -126,8 +126,13 @@ pub fn encrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8>
     */
     let mut hash = [0u8; 16];
 
-    // cast is safe, len() should never be bigger than 255 by the RADIUS standard
-    let padding = ((-(data.len() as isize)) & 15) as usize;
+    // Cast is safe, `len()` should never be bigger than 255 (according to the RADIUS standard)
+    // Explanation:
+    // (x % 16 == x & 15)* --> adding `-` gives us exact padding, otherwise we would have
+    // needed to do 16 - result_of_* to get padding
+    // Therefore -x & 15 removes an extra operation. Nice!
+    let padding = (-(data.len() as isize) & 15) as usize;
+    // ------------------------------
 
     let mut result = Vec::with_capacity(data.len() + padding);
     result.extend_from_slice(data);
@@ -143,7 +148,7 @@ pub fn encrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8>
         md5.result(&mut hash);
 
         for (_data, _hash) in current.iter_mut().zip(hash.iter()) {
-            *_data ^= *_hash
+            *_data ^= _hash
         }
 
         let (_prev, _current) = current.split_at_mut(16);
