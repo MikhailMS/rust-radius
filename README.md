@@ -44,14 +44,6 @@ radius-rust = { version = "0.3.0", features = ["async-radius"] }
 2. `cargo test --all-features --verbose`
 
 
-## TODO
-- [ ] Read up on [Rust API Guidelines](https://rust-lang.github.io/api-guidelines) and implement whatever possible
-- [ ] Review the code to ensure there are no unnecessary allocations, redundant code and etc:
-  - [ ] check that it is well written (fingers crossed for a code review)
-- [ ] Protocol
-  - [ ] parse dictionary from string
-
-
 ## Contributing
 Would you love to contribute to this project? I'd really appreciate your input!
 

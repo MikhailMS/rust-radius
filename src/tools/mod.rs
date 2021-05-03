@@ -138,27 +138,12 @@ pub fn encrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8>
     result.extend_from_slice(data);
     result.extend_from_slice(&hash[..padding]);
 
-    let mut prev_result = authenticator;
-    let mut current     = result.as_mut_slice();
+    let prev_result = authenticator;
+    let current     = result.as_mut_slice();
 
-    loop {
-        let mut md5 = Md5::new();
-        md5.input(secret);
-        md5.input(prev_result);
-        md5.result(&mut hash);
+    encrypt_helper(current, prev_result, &mut hash, secret);
 
-        for (_data, _hash) in current.iter_mut().zip(hash.iter()) {
-            *_data ^= _hash
-        }
-
-        let (_prev, _current) = current.split_at_mut(16);
-        prev_result           = _prev;
-        current               = _current;
-
-        if current.len() == 0 { break }
-    }
-
-    result   
+    result
 }
 
 /// Decrypts data since RADIUS packet is sent in plain text
@@ -222,24 +207,10 @@ pub fn salt_encrypt_data(data: &[u8], authenticator: &[u8], salt: &[u8], secret:
     salted_authenticator[..16].copy_from_slice(authenticator);
     salted_authenticator[16..].copy_from_slice(salt);
 
-    let mut prev_result = &salted_authenticator[..];
-    let mut current     = &mut result[2..];
+    let prev_result = &salted_authenticator[..];
+    let current     = &mut result[2..];
 
-    loop {
-        let mut md5 = Md5::new();
-        md5.input(secret);
-        md5.input(prev_result);
-        md5.result(&mut hash);
-
-        for (_data, _hash) in current.iter_mut().zip(hash.iter()) {
-            *_data ^= _hash
-        }
-
-        let (_prev, _current) = current.split_at_mut(16);
-        prev_result = _prev;
-        current     = _current;
-        if current.len() == 0 { break }
-    }
+    encrypt_helper(current, prev_result, &mut hash, secret);
 
     result
 }
@@ -294,6 +265,42 @@ pub fn salt_decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Re
 }
 
 // -----------------------------------------
+fn encrypt_helper<'a:'b, 'b>(mut data: &'a mut [u8], mut result: &'b [u8], mut hash: &mut[u8], secret: &[u8]) {
+    loop {
+        let mut md5 = Md5::new();
+        md5.input(secret);
+        md5.input(result);
+        md5.result(&mut hash);
+
+        for (_data, _hash) in data.iter_mut().zip(hash.iter()) {
+            *_data ^= _hash
+        }
+
+        let (_prev, _current) = data.split_at_mut(16);
+        result = _prev;
+        data   = _current;
+
+        if data.len() == 0 { break }
+    }
+}
+
+// WIP
+// fn decrypt_helper<'a:'b, 'b>(data: &'a mut [u8], mut prev_result: &'b [u8], result: &mut Vec<u8>, mut hash: &mut[u8], secret: &[u8]) {
+//     for data_chunk in data.chunks_exact(16) {
+//         let mut md5  = Md5::new();
+//         md5.input(secret);
+//         md5.input(prev_result);
+//         md5.result(&mut hash);
+
+//         for (_data, _hash) in data_chunk.iter().zip(hash.iter_mut()) {
+//             *_hash ^= _data
+//         }
+
+//         result.extend_from_slice(&hash);
+//         prev_result = data_chunk;
+//     }
+// }
+
 fn u16_to_be_bytes(u16_data: u16) -> [u8;2] {
     u16_data.to_be_bytes()
 }
