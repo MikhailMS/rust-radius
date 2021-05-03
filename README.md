@@ -91,7 +91,7 @@ test test_async_coa_client_wo_response_against_server  ... bench:      97,011 ns
 
 
 ## Notes
-1. All dev works happens on **development** branch, so if you feel that project is abandoned, check out **development** branch or raise an issue
+1. All works happens on **development** branch, so if you feel that project is abandoned, check out **development** branch or raise an issue
 2. Main core functionality is completed, but there is a chance that I've missed something here and there because it is not needed for my projects yet. **If this is the case, raise an issue or PR and I'll see what could be done to get it resolved**
 3. Minimum required version of Rust:
     1. `1.43.0` if you want to use `async-radius` feature
