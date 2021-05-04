@@ -60,7 +60,7 @@ Would you love to contribute to this project? I'd really appreciate your input!
 2. Then run `cargo +nightly bench` or `cargo +nightly bench --all-features`
 3. Results:
 ```
-    1. RADIUS Client       against RADIUS Server
+1. RADIUS Client       against RADIUS Server
 test test_acct_client_w_response_against_server        ... bench:     106,383 ns/iter (+/- 4,014)
 test test_acct_client_wo_response_against_server       ... bench:     106,075 ns/iter (+/- 10,151)
 test test_auth_client_w_response_against_server        ... bench:     100,156 ns/iter (+/- 5,719)
@@ -69,7 +69,7 @@ test test_coa_client_w_response_against_server         ... bench:      79,086 ns
 test test_coa_client_wo_response_against_server        ... bench:      78,813 ns/iter (+/- 6,330)
 ``` 
 ```
-    2. Async RADIUS Client against RADIUS Server
+2. Async RADIUS Client against RADIUS Server
 test test_async_acct_client_w_response_against_server  ... bench:     120,529 ns/iter (+/- 6,305)
 test test_async_acct_client_wo_response_against_server ... bench:     120,881 ns/iter (+/- 5,505)
 test test_async_auth_client_w_response_against_server  ... bench:     113,678 ns/iter (+/- 6,219)
@@ -78,7 +78,7 @@ test test_async_coa_client_w_response_against_server   ... bench:      93,113 ns
 test test_async_coa_client_wo_response_against_server  ... bench:      92,298 ns/iter (+/- 10,021)
 ```
 ```
-    3. RADIUS Client       against Async RADIUS Server
+3. RADIUS Client       against Async RADIUS Server
 test test_acct_client_w_response_against_server        ... bench:     116,303 ns/iter (+/- 22,485)
 test test_acct_client_wo_response_against_server       ... bench:     115,774 ns/iter (+/- 5,040)
 test test_auth_client_w_response_against_server        ... bench:     110,263 ns/iter (+/- 4,067)
@@ -87,7 +87,7 @@ test test_coa_client_w_response_against_server         ... bench:      87,650 ns
 test test_coa_client_wo_response_against_server        ... bench:      84,563 ns/iter (+/- 2,856)
 ```
 ```
-    4. Async RADIUS Client against Async RADIUS Server
+4. Async RADIUS Client against Async RADIUS Server
 test test_async_acct_client_w_response_against_server  ... bench:     129,056 ns/iter (+/- 6,221)
 test test_async_acct_client_wo_response_against_server ... bench:     127,969 ns/iter (+/- 7,174)
 test test_async_auth_client_w_response_against_server  ... bench:     127,812 ns/iter (+/- 37,821)
