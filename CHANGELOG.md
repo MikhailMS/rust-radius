@@ -3,14 +3,16 @@
 
 
 ## What's new
-* added a few more tests for **encrypt_data()** & **decrypt_data()** (thanks to Istvan91 [!2](/../../pull/2))
-* added **salt_encrypt_data()** & **salt_decrypt_data()** functions to **tools/mod.rs** which are handling salting as described in RFC 2828 (thanks to Istvan91 [!3](/../../pull/3))
+* Added a few more tests for **encrypt_data()** & **decrypt_data()** (thanks to Istvan91 [!2](/../../pull/2))
+* Added **salt_encrypt_data()** & **salt_decrypt_data()** functions, which are handling salting (thanks to Istvan91 [!3](/../../pull/3))
+
 ## What's removed or deprecated
 
 ## What's changed
-* Breaking change - **encrypt_data()** in **tools/mod.rs** changed function signature, so **data** parameter is now of type **&[u8]** instead of **&str**. Was reported in [#4](/../../issues/4) by Istvan91
-* **encrypt_data()** in **tools/mod.rs** got rewritten a bit to remove unneeded allocations (thanks to Istvan91 [!2](/../../pull/2))
-* **decrypt_data()** in **tools/mod.rs** got rewritten a bit to remove unneeded allocations (thanks to Istvan91 [!2](/../../pull/2))
+* Breaking change - Changed **encrypt_data()** function signature, so **data** parameter is now of type **&[u8]** instead of **&str**. Was reported in [#4](/../../issues/4) by Istvan91
+* Breaking change - RADIUS packet creation now doesn't require **Vec<RadiusAttribute>**. To set attributes for packet, call **set_attributes()** function. For examples have a look at **examples/*_client.rs** (Fixes #11)
+* Rewrote **encrypt_data()** a bit to remove unneeded allocations (thanks to Istvan91 [!2](/../../pull/2))
+* Rewrote **decrypt_data()** a bit to remove unneeded allocations (thanks to Istvan91 [!2](/../../pull/2))
 
 
 =============
