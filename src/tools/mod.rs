@@ -118,21 +118,14 @@ pub fn encrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8>
     *  Step 2. Construct hash:
     *
     *  On each iteration:
-    *   1. consume 16 elements from data buffer
+    *   1. read 16 elements from data
     *   2. calculate MD5 hash for: provided secret + (authenticator(on 1st iteration) or 16 elements of result from previous iteration (2nd+ iteration))
     *   3. execute bitwise XOR between each of 16 elements of MD5 hash and data buffer and record it in results vector
     *
     * Step 3. Return result vector
     */
     let mut hash = [0u8; 16];
-
-    // Cast is safe, `len()` should never be bigger than 255 (according to the RADIUS standard)
-    // Explanation:
-    // (x % 16 == x & 15)* --> adding `-` gives us exact padding, otherwise we would have
-    // needed to do 16 - result_of_* to get padding
-    // Therefore -x & 15 removes an extra operation. Nice!
-    let padding = (-(data.len() as isize) & 15) as usize;
-    // ------------------------------
+    let padding  = 16 - data.len() % 16;
 
     let mut result = Vec::with_capacity(data.len() + padding);
     result.extend_from_slice(data);
@@ -156,7 +149,7 @@ pub fn decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8>
      * but with small change
      *
      *  On each iteration:
-     *   1. consume 16 elements from data buffer
+     *   1. read 16 elements from data
      *   2. calculate MD5 hash for: provided secret + (authenticator(on 1st iteration) or 16 elements of data buffer from previous iteration (2nd+ iteration))
      *   3. execute bitwise XOR between each of 16 elements of MD5 hash and data buffer and record it in results vector
      *
@@ -194,8 +187,9 @@ pub fn salt_encrypt_data(data: &[u8], authenticator: &[u8], salt: &[u8], secret:
         return Vec::new();
     }
 
+    // let salt       = &data[..2];
     let mut hash   = [0u8; 16];
-    let padding    = ((-(data.len() as isize + 1)) & 15) as usize;
+    let padding    = 15 - data.len() % 16;
     let mut result = Vec::with_capacity(data.len() + 3 + padding); // make buffer big enough to fit the salt & encrypted data
 
     result.extend_from_slice(salt);
@@ -217,7 +211,7 @@ pub fn salt_encrypt_data(data: &[u8], authenticator: &[u8], salt: &[u8], secret:
 
 /// Decrypts data with salt since RADIUS packet is sent in plain text
 ///
-/// SHould be used for RADIUS Tunnel-Password Attribute
+/// Should be used for RADIUS Tunnel-Password Attribute
 pub fn salt_decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Result<Vec<u8>, RadiusError> {
     /*
      * The salt decryption behaves almost the same as normal Password encryption in RADIUS
@@ -376,7 +370,24 @@ mod tests {
                    149, 82, 147, 72, 149, 79, 48, 187, 199, 194, 200, 246, 6, 186, 182, 220, 19, 227, 32, 26, 20, 9, 152,
                    63, 40, 41, 91, 212, 22, 158, 54, 91, 247, 151, 67, 250,170, 105, 94, 20, 105, 120, 196, 237, 191, 99, 69]
         );
+    }
 
+    #[test]
+    fn test_encrypt_data_limit_long() {
+        let secret        = String::from("secret");
+        let authenticator = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+        let data          = "a very long password, which will need multiple iterations. a very long password, which will need multiple iterations. a very long password, which will need multiple iterations. a very long password, which will need multiple iterations. a very long passw";
+
+        let encrypted_bytes = encrypt_data(data.as_bytes(), &authenticator, &secret.as_bytes());
+        assert_eq!(encrypted_bytes, vec![150, 53, 158, 249, 231, 79, 8, 213, 81, 115, 189, 162, 22, 207, 204, 137, 193, 149, 82, 147, 72, 149, 79, 48, 187, 199, 194, 200,
+                                         246, 6, 186, 182, 220, 19, 227, 32, 26, 20, 9, 152, 63, 40, 41, 91, 212, 22, 158, 54, 91, 247, 151, 67, 250, 170, 105, 94, 20, 71,
+                                         88, 165, 205, 201, 6, 55, 222, 205, 192, 227, 172, 93, 166, 15, 33, 86, 56, 181, 52, 4, 49, 190, 186, 17, 125, 50, 140, 52, 130, 194,
+                                         125, 93, 177, 65, 217, 195, 23, 75, 175, 219, 244, 156, 133, 145, 20, 176, 36, 90, 16, 77, 148, 221, 251, 155, 9, 107, 213, 140, 107,
+                                         112, 161, 99, 6, 108, 106, 33, 69, 192, 191, 98, 30, 147, 197, 72, 160, 234, 50, 243, 195, 62, 72, 225, 19, 63, 28, 221, 164, 43, 67,
+                                         63, 206, 208, 124, 254, 202, 118, 229, 58, 180, 210, 100, 149, 120, 97, 23, 203, 197, 139, 244, 241, 175, 232, 149, 77, 43, 231, 27, 56,
+                                         250, 58, 251, 6, 203, 197, 190, 78, 83, 127, 164, 31, 211, 52, 74, 92, 36, 250, 236, 210, 72, 52, 55, 248, 161, 160, 95, 102, 63, 190, 43,
+                                         253, 224, 114, 62, 23, 11, 242, 186, 91, 132, 14, 76, 171, 26, 1, 51, 78, 144, 50, 228, 212, 47, 104, 98, 60, 245, 1, 103, 217, 49, 105,
+                                         38, 108, 93, 85, 224, 227, 33, 50, 144, 0, 233, 54, 174, 67, 174, 101, 189, 41]);
     }
 
     #[test]
@@ -407,6 +418,26 @@ mod tests {
     }
 
     #[test]
+    fn test_descrypt_data_limit_long() {
+        let secret         = String::from("secret");
+        let authenticator  = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+
+        let expected_data  = String::from("a very long password, which will need multiple iterations. a very long password, which will need multiple iterations. a very long password, which will need multiple iterations. a very long password, which will need multiple iterations. a very long passw");
+        let encrypted_data = vec![150, 53, 158, 249, 231, 79, 8, 213, 81, 115, 189, 162, 22, 207, 204, 137, 193, 149, 82, 147, 72, 149, 79, 48, 187, 199, 194, 200,
+                                  246, 6, 186, 182, 220, 19, 227, 32, 26, 20, 9, 152, 63, 40, 41, 91, 212, 22, 158, 54, 91, 247, 151, 67, 250, 170, 105, 94, 20, 71,
+                                  88, 165, 205, 201, 6, 55, 222, 205, 192, 227, 172, 93, 166, 15, 33, 86, 56, 181, 52, 4, 49, 190, 186, 17, 125, 50, 140, 52, 130, 194,
+                                  125, 93, 177, 65, 217, 195, 23, 75, 175, 219, 244, 156, 133, 145, 20, 176, 36, 90, 16, 77, 148, 221, 251, 155, 9, 107, 213, 140, 107,
+                                  112, 161, 99, 6, 108, 106, 33, 69, 192, 191, 98, 30, 147, 197, 72, 160, 234, 50, 243, 195, 62, 72, 225, 19, 63, 28, 221, 164, 43, 67,
+                                  63, 206, 208, 124, 254, 202, 118, 229, 58, 180, 210, 100, 149, 120, 97, 23, 203, 197, 139, 244, 241, 175, 232, 149, 77, 43, 231, 27, 56,
+                                  250, 58, 251, 6, 203, 197, 190, 78, 83, 127, 164, 31, 211, 52, 74, 92, 36, 250, 236, 210, 72, 52, 55, 248, 161, 160, 95, 102, 63, 190, 43,
+                                  253, 224, 114, 62, 23, 11, 242, 186, 91, 132, 14, 76, 171, 26, 1, 51, 78, 144, 50, 228, 212, 47, 104, 98, 60, 245, 1, 103, 217, 49, 105,
+                                  38, 108, 93, 85, 224, 227, 33, 50, 144, 0, 233, 54, 174, 67, 174, 101, 189, 41];
+
+        let decrypted_data = decrypt_data(&encrypted_data, &authenticator, &secret.as_bytes());
+        assert_eq!(expected_data.as_bytes().to_vec(), decrypted_data);
+    }
+
+    #[test]
     fn test_salt_encrypt_data() {
         let secret               = b"secret";
         let authenticator: &[u8] = &[0u8; 16];
@@ -429,7 +460,7 @@ mod tests {
         0x0c, 0xc1, 0x52, 0xcf, 0x38, 0x76, 0x29, 0x02, 0xc7, 0xb1, 0x29, 0xdf, 0x63, 0x96, 0x26,
         0x1a, 0x27, 0xe5, 0xc3, 0x13, 0x78, 0xa7, 0x97, 0xd8, 0x97, 0x9a, 0x45, 0xc3, 0x70, 0xd3,
         0xe4, 0xe2, 0xae, 0xd0, 0x55, 0x77, 0x19, 0xa5, 0xb6, 0x44, 0xe6, 0x8a];
-        let salt = &encrypted_data_long[..2];
+        let salt                       = &encrypted_data_long[..2];
 
         assert_eq!(encrypted_data_long, salt_encrypt_data(plaintext_long, authenticator, salt, secret).as_slice());
     }
