@@ -135,7 +135,8 @@ fn test_client_auth_request() {
         client.base_client.create_attribute_by_name("Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
     ];
     
-    let mut auth_packet = client.base_client.create_auth_packet(attributes);
+    let mut auth_packet = client.base_client.create_auth_packet();
+    auth_packet.set_attributes(attributes);
 
     match client.send_packet(&mut auth_packet) {
         Err(error) => {
@@ -175,7 +176,9 @@ fn test_client_acct_request() {
         client.base_client.create_attribute_by_name("Calling-Station-Id", String::from("00-01-24-80-B3-9C").into_bytes()).unwrap(),
         client.base_client.create_attribute_by_name("Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
     ];
-    let mut acct_packet = client.base_client.create_acct_packet(attributes);
+
+    let mut acct_packet = client.base_client.create_acct_packet();
+    acct_packet.set_attributes(attributes);
 
     match client.send_packet(&mut acct_packet) {
         Err(error) => {
@@ -208,7 +211,8 @@ fn test_client_coa_request() {
         client.base_client.create_attribute_by_name("Calling-Station-Id", String::from("00-01-24-80-B3-9C").into_bytes()).unwrap(),
     ];
     
-    let mut coa_packet = client.base_client.create_coa_packet(attributes);
+    let mut coa_packet = client.base_client.create_coa_packet();
+    coa_packet.set_attributes(attributes);
 
     match client.send_packet(&mut coa_packet) {
         Err(error) => {

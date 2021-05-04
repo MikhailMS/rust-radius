@@ -9,7 +9,7 @@ use radius_rust::protocol::{
     error::RadiusError,
     radius_packet::{ RadiusPacket, RadiusMsgType }
 };
-use radius_rust::tools::{ ipv4_string_to_bytes, integer_to_bytes };
+use radius_rust::tools::{ encrypt_data, ipv4_string_to_bytes, integer_to_bytes };
 
 use mio::net::UdpSocket;
 use mio::{ Events, Interest, Poll, Token };
@@ -128,11 +128,15 @@ fn test_auth_client_wo_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let mut client = ClientWrapper::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
+    let user_name            = String::from("testing").into_bytes();
+    let user_pass            = b"very secure password, that noone is able to guess";
     let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10").unwrap();
     let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100").unwrap();
 
-    let attributes = vec![
-        client.base_client.create_attribute_by_name("User-Name",          String::from("testing").into_bytes()).unwrap(),
+    let mut auth_packet = client.base_client.create_auth_packet();
+    let attributes      = vec![
+        client.base_client.create_attribute_by_name("User-Name",          user_name).unwrap(),
+        client.base_client.create_attribute_by_name("Password",           encrypt_data(user_pass, auth_packet.authenticator(), client.base_client.secret().as_bytes())).unwrap(),
         client.base_client.create_attribute_by_name("NAS-IP-Address",     nas_ip_addr_bytes).unwrap(),
         client.base_client.create_attribute_by_name("NAS-Port-Id",        integer_to_bytes(0)).unwrap(),
         client.base_client.create_attribute_by_name("Service-Type",       integer_to_bytes(2)).unwrap(),
@@ -142,7 +146,7 @@ fn test_auth_client_wo_response_against_server(b: &mut Bencher) {
         client.base_client.create_attribute_by_name("Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
     ];
 
-    let mut auth_packet = client.base_client.create_auth_packet(attributes);
+    auth_packet.set_attributes(attributes);
 
     b.iter(|| client.send_packet(&mut auth_packet))
 }
@@ -152,11 +156,15 @@ fn test_auth_client_w_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let mut client = ClientWrapper::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
+    let user_name            = String::from("testing").into_bytes();
+    let user_pass            = b"very secure password, that noone is able to guess";
     let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10").unwrap();
     let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100").unwrap();
 
-    let attributes = vec![
-        client.base_client.create_attribute_by_name("User-Name",          String::from("testing").into_bytes()).unwrap(),
+    let mut auth_packet = client.base_client.create_auth_packet();
+    let attributes      = vec![
+        client.base_client.create_attribute_by_name("User-Name",          user_name).unwrap(),
+        client.base_client.create_attribute_by_name("Password",           encrypt_data(user_pass, auth_packet.authenticator(), client.base_client.secret().as_bytes())).unwrap(),
         client.base_client.create_attribute_by_name("NAS-IP-Address",     nas_ip_addr_bytes).unwrap(),
         client.base_client.create_attribute_by_name("NAS-Port-Id",        integer_to_bytes(0)).unwrap(),
         client.base_client.create_attribute_by_name("Service-Type",       integer_to_bytes(2)).unwrap(),
@@ -166,7 +174,7 @@ fn test_auth_client_w_response_against_server(b: &mut Bencher) {
         client.base_client.create_attribute_by_name("Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
     ];
 
-    let mut auth_packet = client.base_client.create_auth_packet(attributes);
+    auth_packet.set_attributes(attributes);
 
     b.iter(|| client.send_and_receive_packet(&mut auth_packet))
 }
@@ -179,11 +187,15 @@ fn test_acct_client_wo_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let mut client = ClientWrapper::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
+    let user_name            = String::from("testing").into_bytes();
+    let user_pass            = b"very secure password, that noone is able to guess";
     let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10").unwrap();
     let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100").unwrap();
 
-    let attributes = vec![
-        client.base_client.create_attribute_by_name("User-Name",          String::from("testing").into_bytes()).unwrap(),
+    let mut acct_packet = client.base_client.create_acct_packet();
+    let attributes      = vec![
+        client.base_client.create_attribute_by_name("User-Name",          user_name).unwrap(),
+        client.base_client.create_attribute_by_name("Password",           encrypt_data(user_pass, acct_packet.authenticator(), client.base_client.secret().as_bytes())).unwrap(),
         client.base_client.create_attribute_by_name("NAS-IP-Address",     nas_ip_addr_bytes).unwrap(),
         client.base_client.create_attribute_by_name("NAS-Port-Id",        integer_to_bytes(0)).unwrap(),
         client.base_client.create_attribute_by_name("Service-Type",       integer_to_bytes(2)).unwrap(),
@@ -193,7 +205,7 @@ fn test_acct_client_wo_response_against_server(b: &mut Bencher) {
         client.base_client.create_attribute_by_name("Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
     ];
 
-    let mut acct_packet = client.base_client.create_acct_packet(attributes);
+    acct_packet.set_attributes(attributes);
 
     b.iter(|| client.send_packet(&mut acct_packet))
 }
@@ -203,11 +215,15 @@ fn test_acct_client_w_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let mut client = ClientWrapper::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
+    let user_name            = String::from("testing").into_bytes();
+    let user_pass            = b"very secure password, that noone is able to guess";
     let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10").unwrap();
     let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100").unwrap();
 
-    let attributes = vec![
-        client.base_client.create_attribute_by_name("User-Name",          String::from("testing").into_bytes()).unwrap(),
+    let mut acct_packet = client.base_client.create_acct_packet();
+    let attributes      = vec![
+        client.base_client.create_attribute_by_name("User-Name",          user_name).unwrap(),
+        client.base_client.create_attribute_by_name("Password",           encrypt_data(user_pass, acct_packet.authenticator(), client.base_client.secret().as_bytes())).unwrap(),
         client.base_client.create_attribute_by_name("NAS-IP-Address",     nas_ip_addr_bytes).unwrap(),
         client.base_client.create_attribute_by_name("NAS-Port-Id",        integer_to_bytes(0)).unwrap(),
         client.base_client.create_attribute_by_name("Service-Type",       integer_to_bytes(2)).unwrap(),
@@ -217,7 +233,7 @@ fn test_acct_client_w_response_against_server(b: &mut Bencher) {
         client.base_client.create_attribute_by_name("Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
     ];
 
-    let mut acct_packet = client.base_client.create_acct_packet(attributes);
+    acct_packet.set_attributes(attributes);
 
     b.iter(|| client.send_and_receive_packet(&mut acct_packet))
 }
@@ -230,11 +246,15 @@ fn test_coa_client_wo_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let mut client = ClientWrapper::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
+    let user_name            = String::from("testing").into_bytes();
+    let user_pass            = b"very secure password, that noone is able to guess";
     let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10").unwrap();
     let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100").unwrap();
 
-    let attributes = vec![
-        client.base_client.create_attribute_by_name("User-Name",          String::from("testing").into_bytes()).unwrap(),
+    let mut coa_packet = client.base_client.create_coa_packet();
+    let attributes     = vec![
+        client.base_client.create_attribute_by_name("User-Name",          user_name).unwrap(),
+        client.base_client.create_attribute_by_name("Password",           encrypt_data(user_pass, coa_packet.authenticator(), client.base_client.secret().as_bytes())).unwrap(),
         client.base_client.create_attribute_by_name("NAS-IP-Address",     nas_ip_addr_bytes).unwrap(),
         client.base_client.create_attribute_by_name("NAS-Port-Id",        integer_to_bytes(0)).unwrap(),
         client.base_client.create_attribute_by_name("Service-Type",       integer_to_bytes(2)).unwrap(),
@@ -244,7 +264,7 @@ fn test_coa_client_wo_response_against_server(b: &mut Bencher) {
         client.base_client.create_attribute_by_name("Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
     ];
 
-    let mut coa_packet = client.base_client.create_coa_packet(attributes);
+    coa_packet.set_attributes(attributes);
 
     b.iter(|| client.send_packet(&mut coa_packet))
 }
@@ -254,11 +274,15 @@ fn test_coa_client_w_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let mut client = ClientWrapper::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
+    let user_name            = String::from("testing").into_bytes();
+    let user_pass            = b"very secure password, that noone is able to guess";
     let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10").unwrap();
     let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100").unwrap();
 
-    let attributes = vec![
-        client.base_client.create_attribute_by_name("User-Name",          String::from("testing").into_bytes()).unwrap(),
+    let mut coa_packet = client.base_client.create_coa_packet();
+    let attributes     = vec![
+        client.base_client.create_attribute_by_name("User-Name",          user_name).unwrap(),
+        client.base_client.create_attribute_by_name("Password",           encrypt_data(user_pass, coa_packet.authenticator(), client.base_client.secret().as_bytes())).unwrap(),
         client.base_client.create_attribute_by_name("NAS-IP-Address",     nas_ip_addr_bytes).unwrap(),
         client.base_client.create_attribute_by_name("NAS-Port-Id",        integer_to_bytes(0)).unwrap(),
         client.base_client.create_attribute_by_name("Service-Type",       integer_to_bytes(2)).unwrap(),
@@ -268,7 +292,7 @@ fn test_coa_client_w_response_against_server(b: &mut Bencher) {
         client.base_client.create_attribute_by_name("Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
     ];
 
-    let mut coa_packet = client.base_client.create_coa_packet(attributes);
+    coa_packet.set_attributes(attributes);
 
     b.iter(|| client.send_and_receive_packet(&mut coa_packet))
 }
