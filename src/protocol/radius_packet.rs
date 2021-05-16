@@ -300,12 +300,12 @@ pub struct RadiusPacket {
 
 impl RadiusPacket {
     /// Initialises RADIUS packet with random ID and authenticator
-    pub fn initialise_packet(code: TypeCode, attributes: Vec<RadiusAttribute>) -> RadiusPacket {
+    pub fn initialise_packet(code: TypeCode) -> RadiusPacket {
         RadiusPacket {
             id:            RadiusPacket::create_id(),
             code:          code,
             authenticator: RadiusPacket::create_authenticator(),
-            attributes:    attributes
+            attributes:    Vec::new()
         }
     }
 
@@ -332,12 +332,20 @@ impl RadiusPacket {
             }
         }
 
-        Ok(RadiusPacket{
+        let mut packet = RadiusPacket{
             id:            id,
             code:          code,
             authenticator: authenticator,
-            attributes:    attributes
-        })
+            attributes:    Vec::new()
+        };
+        packet.set_attributes(attributes);
+
+        Ok(packet)
+    }
+
+    /// Sets attrbiutes
+    pub fn set_attributes(&mut self, attributes: Vec<RadiusAttribute>) {
+        self.attributes = attributes;
     }
 
     /// Overrides RadiusPacket id
@@ -514,7 +522,8 @@ mod tests {
             RadiusAttribute::create_by_name(&dict, "Framed-IP-Address",  framed_ip_addr_bytes).unwrap()
         ];
         let authenticator       = vec![215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
-        let mut expected_packet = RadiusPacket::initialise_packet(TypeCode::AccountingRequest, attributes);
+        let mut expected_packet = RadiusPacket::initialise_packet(TypeCode::AccountingRequest);
+        expected_packet.set_attributes(attributes);
         expected_packet.override_id(43);
         expected_packet.override_authenticator(authenticator);
 
@@ -529,7 +538,8 @@ mod tests {
         let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
         let new_id: u8                       = 50;
 
-        let mut packet = RadiusPacket::initialise_packet(TypeCode::AccessRequest, attributes);
+        let mut packet = RadiusPacket::initialise_packet(TypeCode::AccessRequest);
+        packet.set_attributes(attributes);
         packet.override_id(new_id);
 
         assert_eq!(new_id, packet.id());
@@ -539,7 +549,8 @@ mod tests {
         let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
         let new_authenticator: Vec<u8>       = vec![0, 25, 100, 56, 13];
 
-        let mut packet = RadiusPacket::initialise_packet(TypeCode::AccessRequest, attributes);
+        let mut packet = RadiusPacket::initialise_packet(TypeCode::AccessRequest);
+        packet.set_attributes(attributes);
         packet.override_authenticator(new_authenticator.to_vec());
 
         assert_eq!(new_authenticator, packet.authenticator());
@@ -549,10 +560,10 @@ mod tests {
         let attributes: Vec<RadiusAttribute> = Vec::with_capacity(1);
         let new_id: u8                       = 50;
         let new_authenticator: Vec<u8>       = vec![0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153, 0, 1, 2, 3];
-        
-        let exepcted_bytes = vec![1, 50, 0, 20, 0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153, 0, 1, 2, 3];
-        let mut packet = RadiusPacket::initialise_packet(TypeCode::AccessRequest, attributes);
 
+        let exepcted_bytes = vec![1, 50, 0, 20, 0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153, 0, 1, 2, 3];
+        let mut packet = RadiusPacket::initialise_packet(TypeCode::AccessRequest);
+        packet.set_attributes(attributes);
         packet.override_id(new_id);
         packet.override_authenticator(new_authenticator);
         
@@ -576,7 +587,8 @@ mod tests {
         ];
 
         let new_message_authenticator = vec![1, 50, 0, 20, 0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153];
-        let mut packet = RadiusPacket::initialise_packet(TypeCode::AccountingRequest, attributes);
+        let mut packet = RadiusPacket::initialise_packet(TypeCode::AccountingRequest);
+        packet.set_attributes(attributes);
 
         match packet.override_message_authenticator(new_message_authenticator) {
             Err(err) => assert_eq!(String::from("Radius packet is malformed"), err.to_string()),
@@ -595,10 +607,11 @@ mod tests {
         ];
 
         let new_message_authenticator  = vec![1, 50, 0, 20, 0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153];
-        let mut packet                 = RadiusPacket::initialise_packet(TypeCode::AccessRequest, attributes);
+        let mut packet                 = RadiusPacket::initialise_packet(TypeCode::AccessRequest);
         let new_id: u8                 = 50;
         let new_authenticator: Vec<u8> = vec![0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153, 0, 1, 2, 3];
 
+        packet.set_attributes(attributes);
         packet.override_id(new_id);
         packet.override_authenticator(new_authenticator);
 

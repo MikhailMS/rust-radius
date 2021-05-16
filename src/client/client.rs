@@ -91,6 +91,11 @@ impl Client {
         &self.server
     }
 
+    /// Returns secret
+    pub fn secret(&self) -> &str {
+        &self.secret
+    }
+
     /// Returns retries
     pub fn retries(&self) -> u16 {
         self.retries
@@ -101,24 +106,32 @@ impl Client {
         self.timeout
     }
 
-    /// Creates RADIUS packet with any TypeCode
-    pub fn create_packet(&self, code: TypeCode, attributes: Vec<RadiusAttribute>) -> RadiusPacket {
-        RadiusPacket::initialise_packet(code, attributes)
+    /// Creates RADIUS packet with any TypeCode without attributes
+    ///
+    /// You would need to set attributes manually via *set_attributes()* function
+    pub fn create_packet(&self, code: TypeCode) -> RadiusPacket {
+        RadiusPacket::initialise_packet(code)
     }
 
     /// Creates RADIUS Access Request packet
-    pub fn create_auth_packet(&self, attributes: Vec<RadiusAttribute>) -> RadiusPacket {
-        RadiusPacket::initialise_packet(TypeCode::AccessRequest, attributes)
+    ///
+    /// You would need to set attributes manually via *set_attributes()* function
+    pub fn create_auth_packet(&self) -> RadiusPacket {
+        RadiusPacket::initialise_packet(TypeCode::AccessRequest)
     }
 
-    /// Creates RADIUS Accounting Request packet
-    pub fn create_acct_packet(&self, attributes: Vec<RadiusAttribute>) -> RadiusPacket {
-        RadiusPacket::initialise_packet(TypeCode::AccountingRequest, attributes)
+    /// Creates RADIUS Accounting Request packet without attributes
+    ///
+    /// You would need to set attributes manually via *set_attributes()* function
+    pub fn create_acct_packet(&self) -> RadiusPacket {
+        RadiusPacket::initialise_packet(TypeCode::AccountingRequest)
     }
 
-    /// Creates RADIUS CoA Request packet
-    pub fn create_coa_packet(&self, attributes: Vec<RadiusAttribute>) -> RadiusPacket {
-        RadiusPacket::initialise_packet(TypeCode::CoARequest, attributes)
+    /// Creates RADIUS CoA Request packet without attributes
+    ///
+    /// You would need to set attributes manually via *set_attributes()* function
+    pub fn create_coa_packet(&self) -> RadiusPacket {
+        RadiusPacket::initialise_packet(TypeCode::CoARequest)
     }
 
     /// Creates RADIUS packet attribute by name, that is defined in dictionary file

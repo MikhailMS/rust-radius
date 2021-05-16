@@ -131,7 +131,8 @@ impl Server {
     ///
     /// Similar to [Client's create_packet()](crate::client::client::Client::create_packet), however also sets correct packet ID and authenticator
     pub fn create_reply_packet(&self, reply_code: TypeCode, attributes: Vec<RadiusAttribute>, request: &mut [u8]) -> RadiusPacket {
-        let mut reply_packet = RadiusPacket::initialise_packet(reply_code, attributes);
+        let mut reply_packet = RadiusPacket::initialise_packet(reply_code);
+        reply_packet.set_attributes(attributes);
 
         // We can only create new authenticator after we set reply packet ID to the request's ID
         reply_packet.override_id(request[1]);

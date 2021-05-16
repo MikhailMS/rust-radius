@@ -1,4 +1,22 @@
 =============
+# v0.4.0 (16 May 2021)
+
+Got a couple of PRs & issues raised with some of them introducing breaking changes(read details below), so had to increase minor version to reflect that
+
+## What's new
+* Added a few more tests for **encrypt_data()** & **decrypt_data()** (thanks to Istvan91 [!2](/../../pull/2))
+* Added **salt_encrypt_data()** & **salt_decrypt_data()** functions, which are handling salting (thanks to Istvan91 [!3](/../../pull/3))
+
+## What's removed or deprecated
+
+## What's changed
+* Breaking change - Changed **encrypt_data()** function signature, so **data** parameter is now of type **&[u8]** instead of **&str**. Was reported in [#4](/../../issues/4) by Istvan91
+* Breaking change - RADIUS packet creation now doesn't require **Vec<RadiusAttribute>**. To set attributes for packet, call **set_attributes()** function. For examples have a look at **examples/*_client.rs** (Fixes #11)
+* Rewrote **encrypt_data()** a bit to remove unneeded allocations (thanks to Istvan91 [!2](/../../pull/2))
+* Rewrote **decrypt_data()** a bit to remove unneeded allocations (thanks to Istvan91 [!2](/../../pull/2))
+
+
+=============
 # v0.3.0 (18 April 2021)
 
 I've decided to rewrite previous implementations of RADIUS Client and Server so they are now only have bare minimum in order to allow
