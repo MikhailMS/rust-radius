@@ -2,7 +2,7 @@
 authors       = ["MikhailMS <1488maiklm@gmail.com>"]
 categories    = ["network-programming"]
 description   = "Pure Rust implementation of RADIUS Server/Client"
-documentation = "https://docs.rs/radius-rust/0.3.0"
+documentation = "https://docs.rs/radius-rust/0.4.0"
 edition       = "2018"
 include       = [
   "Cargo.toml",
