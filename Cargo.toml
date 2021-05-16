@@ -20,7 +20,7 @@ license       = "MIT"
 name          = "radius-rust"
 readme        = "README.md"
 repository    = "https://github.com/MikhailMS/rust-radius"
-version       = "0.3.0"
+version       = "0.4.0"
 
 [features]
 # Default doesn\t include anythin - keep it simple

@@ -1,6 +1,7 @@
 =============
-# v0.4.0 (Coming soon)
+# v0.4.0 (16 May 2021)
 
+Got a couple of PRs & issues raised with some of them introducing breaking changes(read details below), so had to increase minor version to reflect that
 
 ## What's new
 * Added a few more tests for **encrypt_data()** & **decrypt_data()** (thanks to Istvan91 [!2](/../../pull/2))
