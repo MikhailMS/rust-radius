@@ -105,9 +105,10 @@ pub fn timestamp_to_bytes(timestamp: u64) -> Vec<u8> {
 }
 
 /// Converts timestamp bytes into u64
-pub fn bytes_to_timestamp(timestamp: &[u8; 8]) -> u64 {
-    u64::from_be_bytes(*timestamp)
+pub fn bytes_to_timestamp(timestamp: &[u8; 4]) -> u32 {
+    u32::from_be_bytes(*timestamp)
 }
+
 
 /// Encrypts data since RADIUS packet is sent in plain text
 ///
@@ -144,7 +145,7 @@ pub fn encrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8>
 /// Should be used to decrypt value of **User-Password** attribute (but could also be used to
 /// decrypt any data)
 pub fn decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8> {
-    /* 
+    /*
      * To decrypt the data, we need to apply the same algorithm as in encrypt_data()
      * but with small change
      *
@@ -514,7 +515,7 @@ mod tests {
 
     #[test]
     fn test_bytes_to_timestamp() {
-        let timestamp_bytes = [0, 0, 0, 0, 95, 71, 138, 29];
+        let timestamp_bytes = [95, 71, 138, 29];
 
         assert_eq!(1598523933, bytes_to_timestamp(&timestamp_bytes));
     }
