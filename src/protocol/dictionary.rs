@@ -10,18 +10,28 @@ use super::error::RadiusError;
 /// Represents a list of supported data types
 /// as defined in RFC 2865
 pub enum SupportedAttributeTypes {
-    /// Rust's String
+    /// Rust's String RFC 8044 calls this "text"
     AsciiString,
+    /// Rusts's [u8] RFC 8044 calls this "string", freeradius calls this "octets"
+    ByteString,
+    /// Rusts's [u8]
+    Concat,
     /// Rust's u32
     Integer,
+    /// Rust's u64
+    Integer64,
     /// Rust's u64
     Date,
     /// Rust's \[u8;4\]
     IPv4Addr,
+    /// Rust's \[u8;5\]
+    IPv4Prefix,
     /// Rust's \[u8;16\]
     IPv6Addr,
     /// Rust's \[u8;18\]
-    IPv6Prefix
+    IPv6Prefix,
+    /// Rust's \[u8;6\] RFC 8044 calls this "ifid"
+    InterfaceId,
 }
 
 
@@ -155,11 +165,16 @@ impl Dictionary {
 fn assign_attribute_type(code_type: &str) -> Option<SupportedAttributeTypes> {
     match code_type {
         "string"     => Some(SupportedAttributeTypes::AsciiString),
+        "octets"     => Some(SupportedAttributeTypes::ByteString),
+        "concat"     => Some(SupportedAttributeTypes::Concat),
         "integer"    => Some(SupportedAttributeTypes::Integer),
+        "integer64"  => Some(SupportedAttributeTypes::Integer64),
         "date"       => Some(SupportedAttributeTypes::Date),
         "ipaddr"     => Some(SupportedAttributeTypes::IPv4Addr),
+        "ipv4prefix" => Some(SupportedAttributeTypes::IPv4Prefix),
         "ipv6addr"   => Some(SupportedAttributeTypes::IPv6Addr),
         "ipv6prefix" => Some(SupportedAttributeTypes::IPv6Prefix),
+        "ifid"       => Some(SupportedAttributeTypes::InterfaceId),
         _            => None
     }
 }
@@ -205,7 +220,7 @@ mod tests {
             name:        "User-Name".to_string(),
             vendor_name: "".to_string(),
             code:        "1".to_string(),
-            code_type:   Some(SupportedAttributeTypes::AsciiString) 
+            code_type:   Some(SupportedAttributeTypes::AsciiString)
         });
         attributes.push(DictionaryAttribute {
             name:        "NAS-IP-Address".to_string(),
@@ -226,6 +241,45 @@ mod tests {
             code_type:   Some(SupportedAttributeTypes::Integer)
         });
         attributes.push(DictionaryAttribute {
+            name:        "Chargeable-User-Identity".to_string(),
+            vendor_name: "".to_string(),
+            code:        "89".to_string(),
+            code_type:   Some(SupportedAttributeTypes::ByteString)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "Delegated-IPv6-Prefix".to_string(),
+            vendor_name: "".to_string(),
+            code:        "123".to_string(),
+            code_type:   Some(SupportedAttributeTypes::IPv6Prefix)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "MIP6-Feature-Vector".to_string(),
+            vendor_name: "".to_string(),
+            code:        "124".to_string(),
+            code_type:   Some(SupportedAttributeTypes::Integer64)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "Mobile-Node-Identifier".to_string(),
+            vendor_name: "".to_string(),
+            code:        "145".to_string(),
+            // TODO: This should be of type octet
+            code_type:   Some(SupportedAttributeTypes::ByteString)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "PMIP6-Home-Interface-ID".to_string(),
+            vendor_name: "".to_string(),
+            code:        "153".to_string(),
+            // TODO: This should be of type octet
+            code_type:   Some(SupportedAttributeTypes::InterfaceId)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "PMIP6-Home-IPv4-HoA".to_string(),
+            vendor_name: "".to_string(),
+            code:        "155".to_string(),
+            // TODO: This should be of type octet
+            code_type:   Some(SupportedAttributeTypes::IPv4Prefix)
+        });
+        attributes.push(DictionaryAttribute {
             name:        "Somevendor-Name".to_string(),
             vendor_name: "Somevendor".to_string(),
             code:        "1".to_string(),
@@ -243,7 +297,7 @@ mod tests {
             code:        "25".to_string(),
             code_type:   Some(SupportedAttributeTypes::IPv4Addr)
         });
-        
+
         let mut values: Vec<DictionaryValue> = Vec::new();
         values.push(DictionaryValue {
             attribute_name: "Framed-Protocol".to_string(),
