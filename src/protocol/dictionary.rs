@@ -14,7 +14,7 @@ pub enum SupportedAttributeTypes {
     AsciiString,
     /// Rust's u32
     Integer,
-    /// Rust's u64
+    /// Rust's u32
     Date,
     /// Rust's \[u8;4\]
     IPv4Addr,
@@ -205,7 +205,7 @@ mod tests {
             name:        "User-Name".to_string(),
             vendor_name: "".to_string(),
             code:        "1".to_string(),
-            code_type:   Some(SupportedAttributeTypes::AsciiString) 
+            code_type:   Some(SupportedAttributeTypes::AsciiString)
         });
         attributes.push(DictionaryAttribute {
             name:        "NAS-IP-Address".to_string(),
@@ -243,7 +243,7 @@ mod tests {
             code:        "25".to_string(),
             code_type:   Some(SupportedAttributeTypes::IPv4Addr)
         });
-        
+
         let mut values: Vec<DictionaryValue> = Vec::new();
         values.push(DictionaryValue {
             attribute_name: "Framed-Protocol".to_string(),

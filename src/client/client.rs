@@ -184,7 +184,7 @@ impl Client {
 
     /// Generates HMAC-MD5 hash for Message-Authenticator attribute
     ///
-    /// Note: this function assumes that RadiusAttribute Message-Authenticator already exists in RadiusPacket 
+    /// Note: this function assumes that RadiusAttribute Message-Authenticator already exists in RadiusPacket
     pub fn generate_message_hash(&self, packet: &mut RadiusPacket) -> Vec<u8> {
         // Feels redundant, but let it be for now
         let mut hash = Hmac::new(Md5::new(), self.secret.as_bytes());
@@ -204,7 +204,7 @@ impl Client {
     /// Gets the original value as an Integer
     ///
     /// If the RadiusAttribute respresents dictionary attribute of type: integer or date
-    pub fn radius_attr_original_integer_value(&self, attribute: &RadiusAttribute) -> Result<u64, RadiusError> {
+    pub fn radius_attr_original_integer_value(&self, attribute: &RadiusAttribute) -> Result<u32, RadiusError> {
         let dict_attr = self.host.dictionary_attribute_by_id(attribute.id()).ok_or_else(|| RadiusError::MalformedAttributeError {error: format!("No attribute with ID: {} found in dictionary", attribute.id())} )?;
         attribute.original_integer_value(dict_attr.code_type())
     }
