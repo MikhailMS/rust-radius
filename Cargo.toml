@@ -40,7 +40,7 @@ rust-crypto = "0.2.36"
 thiserror   = "1.0.23"
 
 [dev-dependencies]
-mio           = { version = "0.7.7", features = ["os-poll", "udp"] }
+mio           = { version = "0.7.7",  features = ["os-poll", "udp"] }
 simple_logger = { version = "1.11.0", default-features = false }
 
 [[example]]
