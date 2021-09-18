@@ -44,7 +44,7 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: install
-        args:    --debug cargo-make --version 0.18.0
+        args:    --debug cargo-make --version 0.15.0
         
     - name: OLD -- Build
       run: cargo build --verbose
