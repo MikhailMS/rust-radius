@@ -54,8 +54,7 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: make
-        args:    --makefile 
-
+        args:    --makefile
 
   new_ci_test:
     name:     New Rust CI testing
@@ -63,7 +62,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [1.43.0, 1.44.0, 1.45.0, 1.46.0, 1.47.0, 1.48.0, 1.49.0, 1.50.0, 1.51.0, 1.52.0, 1.53.0, 1.54.0, 1.55.0, nightly]
+        rust: [1.43.0, 1.44.0, 1.45.0, 1.46.0, 1.47.0, 1.48.0, 1.49.0, 1.50.0, 1.51.0, 1.52.0, 1.53.0, 1.54.0, 1.55.0]
         os:   [ubuntu-18.04]
     steps:
 
@@ -81,15 +80,8 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: install
-        args:    --debug cargo-make --version 0.33.0
+        args:    --debug cargo-make --version 0.30.0
         
-    # Tarpaulin only compiles on rust version 1.45.0+ (and I only run it on nightly rust)
-    - name: NEW -- Install tarpaulin
-      if:   matrix.rust == 'nightly'
-      uses: actions-rs/cargo@v1
-      with:
-        command: install
-        args:    --debug cargo-tarpaulin
 
     - name: NEW -- Build
       run: cargo build --verbose
@@ -101,21 +93,59 @@ jobs:
       run: cargo test --verbose
 
     - name: NEW -- Run CI
-      if:   matrix.rust != 'nightly'
       uses: actions-rs/cargo@v1
       with:
         command: make
         args:    ci-flow
 
-    - name: NEW -- Run CI (Allow Failures)
-      if:                matrix.rust == 'nightly'
+  nightly_ci_test:
+    name:     Nightly Rust CI testing
+    runs-on:  ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [nightly]
+        os:   [ubuntu-18.04]
+    steps:
+
+    - name: Nightly Rust -- Checkout
+      uses: actions/checkout@v2
+
+    - name: Nightly Rust -- Install rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ matrix.rust }}
+        profile:   minimal
+        override:  true
+
+    - name: Nightly Rust -- Install cargo-make
+      uses: actions-rs/cargo@v1
+      with:
+        command: install
+        args:    --debug cargo-make --version 0.35.0
+
+    - name: Nightly Rust -- Install tarpaulin
+      uses: actions-rs/cargo@v1
+      with:
+        command: install
+        args:    --debug cargo-tarpaulin
+
+    - name: Nightly Rust -- Build
+      run: cargo build --verbose
+
+    - name: Nightly Rust -- Start simple RADIUS server
+      run: cargo run --example sync_radius_server &
+
+    - name: Nightly Rust -- Run tests
+      run: cargo test --verbose
+
+    - name: Nightly Rust -- Run CI (Allow Failures)
       continue-on-error: true
       uses:              actions-rs/cargo@v1
       with:
         command: make
         args:    ci-flow
 
-    - name: NEW -- Generate code coverage
-      if:  matrix.rust == 'nightly'
+    - name: Nightly Rust -- Generate code coverage
       run: |
         cargo tarpaulin --verbose --all-features --ignore-tests --tests --exclude-files benches/* --workspace --timeout 120 --out Json
