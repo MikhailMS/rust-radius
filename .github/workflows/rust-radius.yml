@@ -20,13 +20,36 @@ env:
 
 
 jobs:
+  minimum_build_ci_test:
+    name:     Old Rust CI testing
+    runs-on:  ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [1.42.0]
+        os:   [ubuntu-18.04]
+    steps:
+
+    - name: OLD -- Checkout
+      uses: actions/checkout@v2
+
+    - name: OLD -- Install rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ matrix.rust }}
+        profile:   minimal
+        override:  true
+
+    - name: OLD -- Build
+      run: cargo build --verbose
+
   old_rust_ci_test:
     name:     Old Rust CI testing
     runs-on:  ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        rust: [1.42.0, 1.43.0, 1.44.0, 1.45.0]
+        rust: [1.43.0, 1.44.0, 1.45.0]
         os:   [ubuntu-18.04]
     steps:
 
@@ -49,8 +72,8 @@ jobs:
     - name: OLD -- Run tests
       run: cargo test --verbose
 
-    - name: OLD -- Run async tests
-      run: cargo test --all-features --verbose
+    # - name: OLD -- Run async tests
+    #   run: cargo test --all-features --verbose
 
   new_ci_test:
     name:     New Rust CI testing
