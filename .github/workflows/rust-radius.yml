@@ -1,5 +1,11 @@
 name: RustRadius
 
+###
+# cargo-make - Rust compatibility matrix
+# 0.20.0 works for 1.46.0 up to 1.55.0
+# 0.30.0 works for 1.52 and above
+# 0.35.0 works for nightly
+###
 
 on:
   push:
@@ -38,7 +44,7 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: install
-        args:    --debug cargo-make --version 0.20.0
+        args:    --debug cargo-make --version 0.18.0
         
     - name: OLD -- Build
       run: cargo build --verbose
