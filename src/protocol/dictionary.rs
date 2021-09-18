@@ -10,9 +10,9 @@ use super::error::RadiusError;
 /// Represents a list of supported data types
 /// as defined in RFC 2865
 pub enum SupportedAttributeTypes {
-    /// Rust's String RFC 8044 calls this "text"
+    /// Rust's String; RFC 8044 calls this "text"
     AsciiString,
-    /// Rusts's [u8] RFC 8044 calls this "string", freeradius calls this "octets"
+    /// Rusts's [u8]; RFC 8044 calls this "string", freeradius calls this "octets"
     ByteString,
     /// Rusts's [u8]
     Concat,
@@ -30,7 +30,7 @@ pub enum SupportedAttributeTypes {
     IPv6Addr,
     /// Rust's \[u8;18\]
     IPv6Prefix,
-    /// Rust's \[u8;6\] RFC 8044 calls this "ifid"
+    /// Rust's \[u8;6\]; RFC 8044 calls this "ifid"
     InterfaceId,
 }
 

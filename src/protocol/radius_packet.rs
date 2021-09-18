@@ -256,17 +256,17 @@ impl RadiusAttribute {
 
     /// Returns RadiusAttribute value, if the attribute is dictionary's ATTRIBUTE with code type
     /// integer of date
-    pub fn original_integer_value(&self, allowed_type: &Option<SupportedAttributeTypes>) -> Result<u64, RadiusError> {
+    pub fn original_integer_value(&self, allowed_type: &Option<SupportedAttributeTypes>) -> Result<u32, RadiusError> {
         match allowed_type {
             Some(SupportedAttributeTypes::Integer) => {
                 match self.value().try_into() {
-                    Ok(value) => Ok(bytes_to_integer(value) as u64),
+                    Ok(value) => Ok(bytes_to_integer(value) as u32),
                     _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Integer bytes")} )
                 }
             } ,
             Some(SupportedAttributeTypes::Date)    => {
                 match self.value().try_into() {
-                    Ok(value) => Ok(bytes_to_timestamp(value) as u64),
+                    Ok(value) => Ok(bytes_to_timestamp(value)),
                     _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Date bytes")} )
                 }
             },
@@ -276,13 +276,13 @@ impl RadiusAttribute {
 
     fn to_bytes(&self) -> Vec<u8> {
         /*
-         *    
+         *
          *         0               1              2
             0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0
            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
            |     Type      |    Length     |  Value ...
            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-        *  Taken from https://tools.ietf.org/html/rfc2865#page-23 
+        *  Taken from https://tools.ietf.org/html/rfc2865#page-23
         */
         [ &[self.id], &[(2 + self.value.len()) as u8], self.value.as_slice() ].concat()
     }
@@ -428,7 +428,7 @@ impl RadiusPacket {
            |  Attributes ...
            +-+-+-+-+-+-+-+-+-+-+-+-+-
          * Taken from https://tools.ietf.org/html/rfc2865#page-14
-         * 
+         *
          */
 
         let mut packet_bytes = Vec::new();
@@ -454,7 +454,7 @@ impl RadiusPacket {
     fn create_id() -> u8 {
         rand::thread_rng().gen_range(0u8, 255u8)
     }
-    
+
     fn create_authenticator() -> Vec<u8> {
         let mut authenticator: Vec<u8> = Vec::with_capacity(16);
         for _ in 0..16 {
@@ -495,7 +495,7 @@ mod tests {
     fn test_radius_attribute_create_by_id() {
         let dictionary_path = "./dict_examples/test_dictionary_dict";
         let dict            = Dictionary::from_file(dictionary_path).unwrap();
-        
+
         let expected = RadiusAttribute {
             id:    5,
             name:  String::from("NAS-Port-Id"),
@@ -504,7 +504,7 @@ mod tests {
 
         assert_eq!(Some(expected), RadiusAttribute::create_by_id(&dict, 5, vec![1,2,3]));
     }
-    
+
 
     #[test]
     fn test_initialise_packet_from_bytes() {
@@ -566,7 +566,7 @@ mod tests {
         packet.set_attributes(attributes);
         packet.override_id(new_id);
         packet.override_authenticator(new_authenticator);
-        
+
         assert_eq!(exepcted_bytes, packet.to_bytes());
     }
 
