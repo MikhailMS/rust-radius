@@ -166,7 +166,7 @@ mod tests {
 
         assert_eq!("Message-Authenticator",                    dict_attr.name());
         assert_eq!("80",                                       dict_attr.code());
-        assert_eq!(&Some(SupportedAttributeTypes::AsciiString), dict_attr.code_type());
+        assert_eq!(&Some(SupportedAttributeTypes::ByteString), dict_attr.code_type());
     }
 
     #[test]

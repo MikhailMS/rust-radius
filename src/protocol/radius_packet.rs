@@ -179,13 +179,60 @@ impl RadiusAttribute {
             Some(SupportedAttributeTypes::AsciiString) => {
                 match String::from_utf8(self.value().to_vec()) {
                     Ok(_) => Ok(()),
-                    _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid ASCII bytes")} )
+                    _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid ASCII(Text) bytes")} )
+                }
+            },
+            Some(SupportedAttributeTypes::ByteString) => {
+                match String::from_utf8(self.value().to_vec()) {
+                    Ok(_) => Ok(()),
+                    _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Byte string")} )
+                }
+            },
+            Some(SupportedAttributeTypes::Concat) => {
+                match String::from_utf8(self.value().to_vec()) {
+                    Ok(_) => Ok(()),
+                    _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Concat bytes")} )
+                }
+            },
+            Some(SupportedAttributeTypes::Integer)     => {
+                match self.value().try_into() {
+                    Ok(value) => {
+                        bytes_to_integer(value);
+                        Ok(())
+                    },
+                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Integer bytes")} )
+                }
+            },
+            Some(SupportedAttributeTypes::Integer64)     => {
+                match self.value().try_into() {
+                    Ok(value) => {
+                        // TODO - create bytes_to_integer64() function so it could be used instead
+                        // of bytes_to_integer() which takes 32bit integer as input
+                        bytes_to_integer(value);
+                        Ok(())
+                    },
+                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Integer64 bytes")} )
+                }
+            },
+            Some(SupportedAttributeTypes::Date)        => {
+                match self.value().try_into() {
+                    Ok(value) => {
+                        bytes_to_timestamp(value);
+                        Ok(())
+                    },
+                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Date bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::IPv4Addr)    => {
                 match bytes_to_ipv4_string(self.value()) {
                     Ok(_) => Ok(()),
                     _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv4 bytes")} )
+                }
+            },
+            Some(SupportedAttributeTypes::IPv4Prefix)    => {
+                match bytes_to_ipv4_string(self.value()) {
+                    Ok(_) => Ok(()),
+                    _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv4Prefix bytes")} )
                 }
             },
             Some(SupportedAttributeTypes::IPv6Addr)    => {
@@ -197,33 +244,22 @@ impl RadiusAttribute {
             Some(SupportedAttributeTypes::IPv6Prefix)  => {
                 match bytes_to_ipv6_string(self.value()) {
                     Ok(_) => Ok(()),
-                    _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv6 bytes")} )
+                    _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv6Prefix bytes")} )
                 }
             },
-            Some(SupportedAttributeTypes::Integer)     => {
-                match self.value().try_into() {
-                    Ok(value) => {
-                        bytes_to_integer(value);
-                        Ok(())
-                    },
-                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Integer bytes")} )
-                }
-            } ,
-            Some(SupportedAttributeTypes::Date)        => {
-                match self.value().try_into() {
-                    Ok(value) => {
-                        bytes_to_timestamp(value);
-                        Ok(())
-                    },
-                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Date bytes")} )
-                }
-            },
+            // Some(SupportedAttributeTypes::InterfaceId)    => {
+            //     // TODO - create bytes_to_interfaceid_string() function
+            //     match bytes_to_interfaceid_string(self.value()) {
+            //         Ok(_) => Ok(()),
+            //         _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid InterfaceId bytes")} )
+            //     }
+            // },
             _                                          => Err( RadiusError::MalformedAttributeError {error: String::from("unsupported attribute code type")} )
         }
     }
 
     /// Returns RadiusAttribute value, if the attribute is dictionary's ATTRIBUTE with code type string, ipaddr,
-    /// ipv6addr or aipv6prefix
+    /// ipv6addr or ipv6prefix
     pub fn original_string_value(&self, allowed_type: &Option<SupportedAttributeTypes>) -> Result<String, RadiusError> {
         match allowed_type {
             Some(SupportedAttributeTypes::AsciiString) => {
@@ -255,7 +291,7 @@ impl RadiusAttribute {
     }
 
     /// Returns RadiusAttribute value, if the attribute is dictionary's ATTRIBUTE with code type
-    /// integer of date
+    /// integer or date
     pub fn original_integer_value(&self, allowed_type: &Option<SupportedAttributeTypes>) -> Result<u32, RadiusError> {
         match allowed_type {
             Some(SupportedAttributeTypes::Integer) => {

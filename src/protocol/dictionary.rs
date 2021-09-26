@@ -10,9 +10,9 @@ use super::error::RadiusError;
 /// Represents a list of supported data types
 /// as defined in RFC 2865
 pub enum SupportedAttributeTypes {
-    /// Rust's String; RFC 8044 calls this "text"
+    /// Rust's String; RFC 8044 calls this "text" - UTF-8 text
     AsciiString,
-    /// Rusts's [u8]; RFC 8044 calls this "string", freeradius calls this "octets"
+    /// Rusts's [u8]; RFC 8044 calls this "string" (FreeRADIUS calls this "octets") - binary data as a sequence of undistinguished octets
     ByteString,
     /// Rusts's [u8]
     Concat,
@@ -20,7 +20,7 @@ pub enum SupportedAttributeTypes {
     Integer,
     /// Rust's u64
     Integer64,
-    /// Rust's u64
+    /// Rust's u32
     Date,
     /// Rust's \[u8;4\]
     IPv4Addr,
@@ -164,13 +164,13 @@ impl Dictionary {
 
 fn assign_attribute_type(code_type: &str) -> Option<SupportedAttributeTypes> {
     match code_type {
-        "string"     => Some(SupportedAttributeTypes::AsciiString),
-        "octets"     => Some(SupportedAttributeTypes::ByteString),
+        "text"       => Some(SupportedAttributeTypes::AsciiString),
+        "string"     => Some(SupportedAttributeTypes::ByteString),
         "concat"     => Some(SupportedAttributeTypes::Concat),
         "integer"    => Some(SupportedAttributeTypes::Integer),
         "integer64"  => Some(SupportedAttributeTypes::Integer64),
         "date"       => Some(SupportedAttributeTypes::Date),
-        "ipaddr"     => Some(SupportedAttributeTypes::IPv4Addr),
+        "ipv4addr"   => Some(SupportedAttributeTypes::IPv4Addr),
         "ipv4prefix" => Some(SupportedAttributeTypes::IPv4Prefix),
         "ipv6addr"   => Some(SupportedAttributeTypes::IPv6Addr),
         "ipv6prefix" => Some(SupportedAttributeTypes::IPv6Prefix),
@@ -262,21 +262,18 @@ mod tests {
             name:        "Mobile-Node-Identifier".to_string(),
             vendor_name: "".to_string(),
             code:        "145".to_string(),
-            // TODO: This should be of type octet
             code_type:   Some(SupportedAttributeTypes::ByteString)
         });
         attributes.push(DictionaryAttribute {
             name:        "PMIP6-Home-Interface-ID".to_string(),
             vendor_name: "".to_string(),
             code:        "153".to_string(),
-            // TODO: This should be of type octet
             code_type:   Some(SupportedAttributeTypes::InterfaceId)
         });
         attributes.push(DictionaryAttribute {
             name:        "PMIP6-Home-IPv4-HoA".to_string(),
             vendor_name: "".to_string(),
             code:        "155".to_string(),
-            // TODO: This should be of type octet
             code_type:   Some(SupportedAttributeTypes::IPv4Prefix)
         });
         attributes.push(DictionaryAttribute {
@@ -292,10 +289,10 @@ mod tests {
             code_type:   Some(SupportedAttributeTypes::Integer)
         });
         attributes.push(DictionaryAttribute {
-            name:        "Test-IP".to_string(),
+            name:        "Class".to_string(),
             vendor_name: "".to_string(),
             code:        "25".to_string(),
-            code_type:   Some(SupportedAttributeTypes::IPv4Addr)
+            code_type:   Some(SupportedAttributeTypes::ByteString)
         });
 
         let mut values: Vec<DictionaryValue> = Vec::new();

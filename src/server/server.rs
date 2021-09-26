@@ -89,7 +89,7 @@ impl Server {
     // ===================
 
     /// Returns port of RADIUS server, that receives given type of RADIUS message/packet
-    pub fn port(&self, code: &TypeCode) -> Option<u16> {
+   pub fn port(&self, code: &TypeCode) -> Option<u16> {
         self.host.port(code)
     }
 
