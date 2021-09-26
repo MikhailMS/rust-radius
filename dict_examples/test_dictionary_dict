@@ -1,13 +1,13 @@
 # Comment line - should be ignored, same as empty line
 
-ATTRIBUTE User-Name                1   string
-ATTRIBUTE NAS-IP-Address           4   ipaddr
+ATTRIBUTE User-Name                1   text
+ATTRIBUTE NAS-IP-Address           4   ipv4addr
 ATTRIBUTE NAS-Port-Id              5   integer
 ATTRIBUTE Framed-Protocol          7   integer
-ATTRIBUTE Chargeable-User-Identity 89  octets
+ATTRIBUTE Chargeable-User-Identity 89  string
 ATTRIBUTE Delegated-IPv6-Prefix    123 ipv6prefix
 ATTRIBUTE MIP6-Feature-Vector      124 integer64
-ATTRIBUTE Mobile-Node-Identifier   145 octets      concat
+ATTRIBUTE Mobile-Node-Identifier   145 string      concat
 ATTRIBUTE PMIP6-Home-Interface-ID  153 ifid
 ATTRIBUTE PMIP6-Home-IPv4-HoA      155 ipv4prefix
 
@@ -16,11 +16,11 @@ VALUE Framed-Protocol PPP 1
 VENDOR Somevendor 10
 
 BEGIN-VENDOR Somevendor
-ATTRIBUTE Somevendor-Name   1 string
+ATTRIBUTE Somevendor-Name   1 text
 ATTRIBUTE Somevendor-Number 2 integer
 
 VALUE Somevendor-Number Two 2
 
 END-VENDOR Somevendor
 
-ATTRIBUTE Test-IP 25 ipaddr
+ATTRIBUTE Class 25 string
