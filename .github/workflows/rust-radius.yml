@@ -21,7 +21,7 @@ env:
 
 jobs:
   minimum_build_ci_test:
-    name:     Old Rust CI testing
+    name:     MSVR for build - CI testing
     runs-on:  ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -30,17 +30,17 @@ jobs:
         os:   [ubuntu-18.04]
     steps:
 
-    - name: OLD -- Checkout
+    - name: MSVR for build -- Checkout
       uses: actions/checkout@v2
 
-    - name: OLD -- Install rust
+    - name: MSVR for build -- Install rust
       uses: actions-rs/toolchain@v1
       with:
         toolchain: ${{ matrix.rust }}
         profile:   minimal
         override:  true
 
-    - name: OLD -- Build
+    - name: MSVR for build -- Build
       run: cargo build --verbose
 
   old_rust_ci_test:
