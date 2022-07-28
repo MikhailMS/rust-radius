@@ -129,7 +129,7 @@ impl RadiusAttribute {
     pub fn create_by_name(dictionary: &Dictionary, attribute_name: &str, value: Vec<u8>) -> Option<RadiusAttribute> {
         match dictionary.attributes().iter().find(|&attr| attr.name() == attribute_name) {
             Some(attr) => Some(RadiusAttribute {
-                id:    attr.code().parse::<u8>().unwrap(),
+                id:    attr.code().parse::<u8>().unwrap(), // TODO - remove unwrap()
                 name:  attr.name().to_string(),
                 value: value
             }),
