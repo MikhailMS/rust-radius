@@ -9,6 +9,7 @@ use crypto::hmac::Hmac;
 use crypto::mac::Mac;
 use crypto::md5::Md5;
 
+const IGNORE_VERIFY_ATTRIBUTE: &str = "Message-Authenticator";
 
 #[derive(Debug)]
 /// Generic struct that holds Server & Client common functions and attributes
@@ -99,16 +100,18 @@ impl Host{
     /// Note: doesn't verify Message-Authenticator attribute, because it is HMAC-MD5 hash, not an
     /// ASCII string
     pub fn verify_packet_attributes(&self, packet: &[u8]) -> Result<(), RadiusError> {
-        let ignore_attribute = "Message-Authenticator";
-        let _packet_tmp      = RadiusPacket::initialise_packet_from_bytes(&self.dictionary, &packet)?;
+        let _packet_tmp = RadiusPacket::initialise_packet_from_bytes(&self.dictionary, &packet)?;
 
-        for packet_attr in _packet_tmp.attributes().iter().filter(|&attr| attr.name() != ignore_attribute) {
-            let _dict_attr           = self.dictionary_attribute_by_id(packet_attr.id()).unwrap();
-            let _dict_attr_data_type = _dict_attr.code_type();
-
-            match packet_attr.verify_original_value(_dict_attr_data_type) {
-                Err(err) => return Err( RadiusError::ValidationError {error: err.to_string()} ),
-                _        => continue
+        for packet_attr in _packet_tmp.attributes().iter().filter(|&attr| attr.name() != IGNORE_VERIFY_ATTRIBUTE) {
+            match self.dictionary_attribute_by_id(packet_attr.id()) {
+                None             => return Err( RadiusError::ValidationError {error: format!("Attribute with ID {} may not exist in provided dictionary file, thus verification failed", packet_attr.id())} ),
+                Some(_dict_attr) => {
+                    let _dict_attr_data_type = _dict_attr.code_type();
+                    match packet_attr.verify_original_value(_dict_attr_data_type) {
+                        Err(err) => return Err( RadiusError::ValidationError {error: err.to_string()} ),
+                        _        => continue
+                    }
+                }
             }
         }
         Ok(())
