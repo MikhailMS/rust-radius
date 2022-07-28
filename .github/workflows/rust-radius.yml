@@ -72,16 +72,13 @@ jobs:
     - name: OLD -- Run tests
       run: cargo test --verbose
 
-    # - name: OLD -- Run async tests
-    #   run: cargo test --all-features --verbose
-
   new_ci_test:
     name:     New Rust CI testing
     runs-on:  ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        rust: [1.46.0, 1.47.0, 1.48.0, 1.49.0, 1.50.0, 1.51.0, 1.52.0, 1.52.1, 1.53.0, 1.54.0, 1.55.0, 1.56.0, 1.56.1, 1.57.0, 1.58.0, 1.58.1, 1.59.0, 1.60.0, 1.61.0, 1.62.1]
+        rust: [1.46.0, 1.47.0, 1.48.0, 1.49.0, 1.50.0, 1.51.0]
         os:   [ubuntu-18.04]
     steps:
 
@@ -112,6 +109,47 @@ jobs:
       run: cargo test --verbose
 
     - name: NEW -- Run CI
+      uses: actions-rs/cargo@v1
+      with:
+        command: make
+        args:    ci-flow
+
+  modern_ci_test:
+    name:     New Rust CI testing
+    runs-on:  ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [1.52.0, 1.52.1, 1.53.0, 1.54.0, 1.55.0, 1.56.0, 1.56.1, 1.57.0, 1.58.0, 1.58.1, 1.59.0, 1.60.0, 1.61.0, 1.62.1]
+        os:   [ubuntu-18.04]
+    steps:
+
+    - name: MODERN -- Checkout
+      uses: actions/checkout@v2
+
+    - name: MODERN -- Install rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ matrix.rust }}
+        profile:   minimal
+        override:  true
+
+    - name: MODERN -- Install cargo-make
+      uses: actions-rs/cargo@v1
+      with:
+        command: install
+        args:    --debug cargo-make --version 0.30.0
+        
+    - name: MODERN -- Build
+      run: cargo build --verbose
+
+    - name: MODERN -- Start simple RADIUS server
+      run: cargo run --example sync_radius_server &
+
+    - name: MODERN -- Run tests
+      run: cargo test --verbose
+
+    - name: MODERN -- Run CI
       uses: actions-rs/cargo@v1
       with:
         command: make
