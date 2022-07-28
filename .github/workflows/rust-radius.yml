@@ -148,11 +148,11 @@ jobs:
     - name: MODERN -- Run tests
       run: cargo test --verbose
 
-    - name: MODERN -- Run CI
-      uses: actions-rs/cargo@v1
-      with:
-        command: make
-        args:    ci-flow
+    # - name: MODERN -- Run CI
+    #   uses: actions-rs/cargo@v1
+    #   with:
+    #     command: make
+    #     args:    ci-flow
 
   modern_ci_test_w_cargo_make:
     name:     Modern w cargo-make Rust CI testing
