@@ -64,7 +64,7 @@ jobs:
         override:  true
 
     - name: OLD -- Build
-      run: cargo build --verbose
+      run: cargo build --features default --verbose
 
     - name: OLD -- Start simple RADIUS server
       run: cargo run --example sync_radius_server &
@@ -98,7 +98,6 @@ jobs:
         command: install
         args:    --debug cargo-make --version 0.20.0
         
-
     - name: NEW -- Build
       run: cargo build --verbose
 
@@ -115,7 +114,7 @@ jobs:
         args:    ci-flow
 
   modern_ci_test:
-    name:     New Rust CI testing
+    name:     Modern Rust CI testing
     runs-on:  ${{ matrix.os }}
     strategy:
       fail-fast: false
