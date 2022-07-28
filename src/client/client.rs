@@ -10,7 +10,6 @@ use crypto::digest::Digest;
 use crypto::hmac::Hmac;
 use crypto::mac::Mac;
 use crypto::md5::Md5;
-use log::debug;
 
 
 #[derive(Debug)]
@@ -216,6 +215,9 @@ impl Client {
 
     /// Verifies that reply packet's ID and authenticator are a match
     pub fn verify_reply(&self, request: &RadiusPacket, reply: &[u8]) -> Result<(), RadiusError> {
+        if reply.is_empty() {
+            return Err( RadiusError::ValidationError { error: String::from("Empty reply") } )
+        }
         if request.id() != reply[1] {
             return Err( RadiusError::ValidationError { error: String::from("Packet identifier mismatch") } )
         };
@@ -229,9 +231,6 @@ impl Client {
         md5_hasher.input(&self.secret.as_bytes());  // Append secret
 
         md5_hasher.result(&mut hash);
-
-        debug!("{:?}", &hash);
-        debug!("{:?}", &reply[4..20]);
 
         if hash == reply[4..20] {
             Ok(())
@@ -335,6 +334,89 @@ mod tests {
         match client.radius_attr_original_integer_value(&attributes[0]) {
             Ok(_)      => assert!(false),
             Err(error) => assert_eq!(String::from("Radius packet attribute is malformed"), error.to_string())
+        }
+    }
+
+    #[test]
+    fn test_verify_empty_reply() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let attributes = vec![ RadiusAttribute::create_by_name(&dictionary, "Calling-Station-Id", String::from("00-01-24-80-B3-9C").into_bytes()).unwrap() ];
+
+        let client     = Client::with_dictionary(dictionary)
+            .set_server(String::from("127.0.0.1"))
+            .set_secret(String::from("secret"))
+            .set_retries(1)
+            .set_timeout(2)
+            .set_port(RadiusMsgType::AUTH, 1812)
+            .set_port(RadiusMsgType::ACCT, 1813)
+            .set_port(RadiusMsgType::COA,  3799);
+
+        let authenticator     = vec![215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
+        let reply             = vec![];
+        let mut radius_packet = RadiusPacket::initialise_packet(TypeCode::AccountingRequest);
+
+        radius_packet.set_attributes(attributes);
+        radius_packet.override_id(43);
+        radius_packet.override_authenticator(authenticator);
+
+        match client.verify_reply(&radius_packet, &reply) {
+            Err(error) => assert_eq!(String::from("Verification failed for incoming Radius packet"), error.to_string()),
+            _          => assert!(false)
+        }
+    }
+
+    #[test]
+    fn test_verify_malformed_reply() {
+        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let attributes = vec![ RadiusAttribute::create_by_name(&dictionary, "Calling-Station-Id", String::from("00-01-24-80-B3-9C").into_bytes()).unwrap() ];
+
+        let client     = Client::with_dictionary(dictionary)
+            .set_server(String::from("127.0.0.1"))
+            .set_secret(String::from("secret"))
+            .set_retries(1)
+            .set_timeout(2)
+            .set_port(RadiusMsgType::AUTH, 1812)
+            .set_port(RadiusMsgType::ACCT, 1813)
+            .set_port(RadiusMsgType::COA,  3799);
+
+        let authenticator     = vec![215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
+        let reply             = vec![43, 215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
+        let mut radius_packet = RadiusPacket::initialise_packet(TypeCode::AccountingRequest);
+
+        radius_packet.set_attributes(attributes);
+        radius_packet.override_id(43);
+        radius_packet.override_authenticator(authenticator);
+
+        match client.verify_reply(&radius_packet, &reply) {
+            Err(error) => assert_eq!(String::from("Verification failed for incoming Radius packet"), error.to_string()),
+            _          => assert!(false)
+        }
+    }
+
+    #[test]
+    fn test_verify_reply() {
+        let dictionary    = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let authenticator = vec![152, 137, 115, 14, 56, 250, 103, 56, 57, 57, 104, 246, 226, 80, 71, 167];
+        let attributes    = vec![ RadiusAttribute::create_by_name(&dictionary, "User-Name", String::from("testing").into_bytes()).unwrap() ];
+
+        let reply             = vec![2, 220, 0, 52, 165, 196, 239, 87, 197, 230, 219, 74, 148, 177, 209, 155, 35, 36, 236, 63, 6, 6, 0, 0, 0, 2, 8, 6, 192, 168, 0, 1, 97, 20, 0, 64, 252, 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
+        let mut radius_packet = RadiusPacket::initialise_packet(TypeCode::AccessRequest);
+        radius_packet.set_attributes(attributes);
+        radius_packet.override_id(220);
+        radius_packet.override_authenticator(authenticator);
+
+        let client = Client::with_dictionary(dictionary)
+            .set_server(String::from("127.0.0.1"))
+            .set_secret(String::from("secret"))
+            .set_retries(1)
+            .set_timeout(2)
+            .set_port(RadiusMsgType::AUTH, 1812)
+            .set_port(RadiusMsgType::ACCT, 1813)
+            .set_port(RadiusMsgType::COA,  3799);
+
+        match client.verify_reply(&radius_packet, &reply) {
+            Err(_error) => assert!(false),
+            _           => assert!(true)
         }
     }
 }
