@@ -6,8 +6,8 @@
 
 
 #![deny(
-    missing_crate_level_docs,
-    missing_doc_code_examples,
+    rustdoc::missing_crate_level_docs,
+    rustdoc::missing_doc_code_examples,
     missing_docs,
     rust_2018_idioms,
     unused_imports,
