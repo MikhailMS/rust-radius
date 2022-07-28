@@ -7,7 +7,7 @@ use crypto::digest::Digest;
 use crypto::md5::Md5;
 
 use std::str::FromStr;
-use std::net::Ipv6Addr;
+use std::net::{ Ipv4Addr, Ipv6Addr };
 use std::convert::TryInto;
 
 use crate::protocol::error::RadiusError;
@@ -22,7 +22,7 @@ pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, RadiusError> {
     let ipv6_address           = Ipv6Addr::from_str(parsed_ipv6[0]).map_err(|error| RadiusError::MalformedIpAddrError { error: error.to_string() })?;
 
     if parsed_ipv6.len() == 2 {
-        bytes.append( &mut u16_to_be_bytes(parsed_ipv6[1].parse::<u16>().unwrap()).to_vec() )
+        bytes.append( &mut u16_to_be_bytes(parsed_ipv6[1].parse::<u16>().map_err(|error| RadiusError::MalformedIpAddrError { error: error.to_string() })?).to_vec() )
     }
     bytes.append(&mut ipv6_address.octets().to_vec());
     Ok(bytes)
@@ -30,32 +30,36 @@ pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, RadiusError> {
 
 /// Converts IPv6 bytes into IPv6 string
 pub fn bytes_to_ipv6_string(ipv6: &[u8]) -> Result<String, RadiusError> {
-    if ipv6.len() == 18 {
-        // Case with subnet
-        let subnet = u16_from_be_bytes(&ipv6[0..2]);
-        let ipv6_string = Ipv6Addr::new(
-            u16_from_be_bytes(&ipv6[2..4]),
-            u16_from_be_bytes(&ipv6[4..6]),
-            u16_from_be_bytes(&ipv6[6..8]),
-            u16_from_be_bytes(&ipv6[8..10]),
-            u16_from_be_bytes(&ipv6[10..12]),
-            u16_from_be_bytes(&ipv6[12..14]),
-            u16_from_be_bytes(&ipv6[14..16]),
-            u16_from_be_bytes(&ipv6[16..]),
-            ).to_string();
-        Ok(format!("{}/{}",ipv6_string, subnet))
-    } else {
-        // Case without subnet
-        Ok(Ipv6Addr::new(
-            u16_from_be_bytes(&ipv6[0..2]),
-            u16_from_be_bytes(&ipv6[2..4]),
-            u16_from_be_bytes(&ipv6[4..6]),
-            u16_from_be_bytes(&ipv6[6..8]),
-            u16_from_be_bytes(&ipv6[8..10]),
-            u16_from_be_bytes(&ipv6[10..12]),
-            u16_from_be_bytes(&ipv6[12..14]),
-            u16_from_be_bytes(&ipv6[14..]),
-            ).to_string())
+    match ipv6.len() {
+        18 => {
+            // Case with subnet
+            let subnet = u16_from_be_bytes(&ipv6[0..2]);
+            let ipv6_string = Ipv6Addr::new(
+                u16_from_be_bytes(&ipv6[2..4]),
+                u16_from_be_bytes(&ipv6[4..6]),
+                u16_from_be_bytes(&ipv6[6..8]),
+                u16_from_be_bytes(&ipv6[8..10]),
+                u16_from_be_bytes(&ipv6[10..12]),
+                u16_from_be_bytes(&ipv6[12..14]),
+                u16_from_be_bytes(&ipv6[14..16]),
+                u16_from_be_bytes(&ipv6[16..]),
+                ).to_string();
+            Ok(format!("{}/{}",ipv6_string, subnet))
+        },
+        16 => {
+            // Case without subnet
+            Ok(Ipv6Addr::new(
+                u16_from_be_bytes(&ipv6[0..2]),
+                u16_from_be_bytes(&ipv6[2..4]),
+                u16_from_be_bytes(&ipv6[4..6]),
+                u16_from_be_bytes(&ipv6[6..8]),
+                u16_from_be_bytes(&ipv6[8..10]),
+                u16_from_be_bytes(&ipv6[10..12]),
+                u16_from_be_bytes(&ipv6[12..14]),
+                u16_from_be_bytes(&ipv6[14..]),
+                ).to_string())
+        },
+        _ => Err(RadiusError::MalformedIpAddrError { error: "Malformed IPv6 bytes".to_string() })
     }
 }
 
@@ -68,10 +72,9 @@ pub fn ipv4_string_to_bytes(ipv4: &str) -> Result<Vec<u8>, RadiusError> {
     }
 
     let mut bytes: Vec<u8> = Vec::with_capacity(4);
-    for group in ipv4.trim().split(".").map(|group| group.parse::<u8>().unwrap()) {
-        bytes.push(group);
-    }
+    let ipv4_address       = Ipv4Addr::from_str(ipv4).map_err(|error| RadiusError::MalformedIpAddrError { error: error.to_string() })?;
 
+    bytes.append(&mut ipv4_address.octets().to_vec());
     Ok(bytes)
 }
 
@@ -128,15 +131,12 @@ pub fn encrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8>
     let mut hash = [0u8; 16];
     let padding  = 16 - data.len() % 16;
 
+
     let mut result = Vec::with_capacity(data.len() + padding);
     result.extend_from_slice(data);
     result.extend_from_slice(&hash[..padding]);
 
-    let prev_result = authenticator;
-    let current     = result.as_mut_slice();
-
-    encrypt_helper(current, prev_result, &mut hash, secret);
-
+    encrypt_helper(&mut result, authenticator, &mut hash, secret);
     result
 }
 
@@ -155,6 +155,10 @@ pub fn decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8>
      *   3. execute bitwise XOR between each of 16 elements of MD5 hash and data buffer and record it in results vector
      *
      */
+    if data.len() <= 15 {
+        return Vec::new()
+    }
+
     let mut result      = Vec::with_capacity(data.len());
     let mut prev_result = authenticator;
     let mut hash        = [0u8; 16];
@@ -221,8 +225,10 @@ pub fn salt_decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Re
     if data.len() <= 1 {
         return Err(RadiusError::MalformedAttributeError {error: "salt encrypted attribute too short".to_string()});
     }
-    if data.len() <= 3 {
-        // There is a Salt or there is a salt & data.len(): Both cases mean "Password is empty"
+    if data.len() <= 17 {
+        // If len() equals to 3, it means that there is a Salt or there is a salt & data.len(): Both cases mean "Password is empty"
+        // But for this function to actually work len() must be at least 18, otherwise we cannot
+        // decrypt data as it is invalid
         return Ok(Vec::new());
     }
 
@@ -260,22 +266,22 @@ pub fn salt_decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Re
 }
 
 // -----------------------------------------
-fn encrypt_helper<'a:'b, 'b>(mut data: &'a mut [u8], mut result: &'b [u8], mut hash: &mut[u8], secret: &[u8]) {
+fn encrypt_helper<'a:'b, 'b>(mut out: &'a mut [u8], mut result: &'b [u8], mut hash: &mut[u8], secret: &[u8]) {
     loop {
         let mut md5 = Md5::new();
         md5.input(secret);
         md5.input(result);
         md5.result(&mut hash);
 
-        for (_data, _hash) in data.iter_mut().zip(hash.iter()) {
+        for (_data, _hash) in out.iter_mut().zip(hash.iter()) {
             *_data ^= _hash
         }
 
-        let (_prev, _current) = data.split_at_mut(16);
+        let (_prev, _current) = out.split_at_mut(16);
         result = _prev;
-        data   = _current;
+        out   = _current;
 
-        if data.len() == 0 { break }
+        if out.len() == 0 { break }
     }
 }
 
@@ -335,12 +341,24 @@ mod tests {
 
         assert_eq!(expected_ipv6_string, bytes_to_ipv6_string(&ipv6_bytes).unwrap());
     }
+    #[test]
+    fn test_invalid_ipv6_string_to_bytes() {
+        assert!(ipv6_string_to_bytes("::/:").is_err())
+    }
+    #[test]
+    fn test_empty_ipv6_string_to_bytes() {
+        assert!(ipv6_string_to_bytes("").is_err())
+    }
 
     #[test]
     fn test_ipv4_string_to_bytes() {
         let ipv4_bytes = ipv4_string_to_bytes("192.1.10.1").unwrap();
 
         assert_eq!(ipv4_bytes, [192, 1, 10, 1]);
+    }
+    #[test]
+    fn test_empty_ipv4_string_to_bytes() {
+        assert!(ipv4_string_to_bytes("").is_err())
     }
 
     #[test]
@@ -352,7 +370,29 @@ mod tests {
     }
 
     #[test]
-    fn test_encrypt_data() {
+    #[cfg_attr(miri, ignore)]
+    fn test_encrypt_empty_data() {
+        let secret        = String::from("secret");
+        let authenticator = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+
+        let encrypted_bytes = encrypt_data("".as_bytes(), &authenticator, &secret.as_bytes());
+
+        assert_eq!(encrypted_bytes, vec![247, 21, 232, 156, 149, 54, 40, 185, 62, 29, 218, 130, 102, 174, 191, 250]);
+    }
+
+    #[test]
+    fn test_encrypt_small_data() {
+        let secret        = String::from("secret");
+        let authenticator = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+
+        let encrypted_bytes = encrypt_data("p".as_bytes(), &authenticator, &secret.as_bytes());
+
+        assert_eq!(encrypted_bytes, vec![135, 21, 232, 156, 149, 54, 40, 185, 62, 29, 218, 130, 102, 174, 191, 250]);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn test_encrypt_normal_data() {
         let secret        = String::from("secret");
         let authenticator = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
@@ -362,7 +402,8 @@ mod tests {
     }
 
     #[test]
-    fn test_encrypt_data_long() {
+    #[cfg_attr(miri, ignore)]
+    fn test_encrypt_long_data() {
         let secret        = String::from("secret");
         let authenticator = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
@@ -374,7 +415,8 @@ mod tests {
     }
 
     #[test]
-    fn test_encrypt_data_limit_long() {
+    #[cfg_attr(miri, ignore)]
+    fn test_encrypt_limit_long_data() {
         let secret        = String::from("secret");
         let authenticator = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
         let data          = "a very long password, which will need multiple iterations. a very long password, which will need multiple iterations. a very long password, which will need multiple iterations. a very long password, which will need multiple iterations. a very long passw";
@@ -392,7 +434,21 @@ mod tests {
     }
 
     #[test]
-    fn test_decrypt_data() {
+    fn test_decrypt_under16_data() {
+        let secret         = String::from("secret");
+        let authenticator  = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+
+        let expected_data  = String::from("");
+        let encrypted_data = vec![135, 116, 155, 239, 226, 89, 90, 221, 62, 29, 218, 130, 102, 174, 191];
+
+        let decrypted_data = decrypt_data(&encrypted_data, &authenticator, &secret.as_bytes());
+
+        assert_eq!(expected_data.as_bytes().to_vec(), decrypted_data);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn test_decrypt_normal_data() {
         let secret         = String::from("secret");
         let authenticator  = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
@@ -405,7 +461,8 @@ mod tests {
     }
 
     #[test]
-    fn test_descrypt_data_long() {
+    #[cfg_attr(miri, ignore)]
+    fn test_descrypt_long_data() {
         let secret         = String::from("secret");
         let authenticator  = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
@@ -419,7 +476,8 @@ mod tests {
     }
 
     #[test]
-    fn test_descrypt_data_limit_long() {
+    #[cfg_attr(miri, ignore)]
+    fn test_descrypt_limit_long_data() {
         let secret         = String::from("secret");
         let authenticator  = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
@@ -439,7 +497,8 @@ mod tests {
     }
 
     #[test]
-    fn test_salt_encrypt_data() {
+    #[cfg_attr(miri, ignore)]
+    fn test_salt_encrypt_normal_data() {
         let secret               = b"secret";
         let authenticator: &[u8] = &[0u8; 16];
 
@@ -451,7 +510,8 @@ mod tests {
     }
 
     #[test]
-    fn test_salt_encrypt_data_long() {
+    #[cfg_attr(miri, ignore)]
+    fn test_salt_encrypt_long_data() {
         let secret               = b"secret";
         let authenticator: &[u8] = &[0u8; 16];
 
@@ -467,6 +527,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_salt_decrypt_data() {
         let secret               = b"secret";
         let authenticator: &[u8] = &[0u8; 16];
@@ -478,7 +539,8 @@ mod tests {
     }
 
     #[test]
-    fn test_salt_decrypt_data_long() {
+    #[cfg_attr(miri, ignore)]
+    fn test_salt_decrypt_long_data() {
         let secret               = b"secret";
         let authenticator: &[u8] = &[0u8; 16];
 
