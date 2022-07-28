@@ -8,19 +8,17 @@ use super::error::RadiusError;
 
 #[derive(Debug, PartialEq)]
 /// Represents a list of supported data types
-/// as defined in RFC 2865
+/// as defined in RFC 2865 & RFC 8044
 pub enum SupportedAttributeTypes {
     /// Rust's String; RFC 8044 calls this "text" - UTF-8 text
     AsciiString,
     /// Rusts's [u8]; RFC 8044 calls this "string" (FreeRADIUS calls this "octets") - binary data as a sequence of undistinguished octets
     ByteString,
-    /// Rusts's [u8]
-    Concat,
     /// Rust's u32
     Integer,
     /// Rust's u64
     Integer64,
-    /// Rust's u32
+    /// Rust's u32; RFC 8044 calls this "time"
     Date,
     /// Rust's \[u8;4\]
     IPv4Addr,
@@ -32,6 +30,22 @@ pub enum SupportedAttributeTypes {
     IPv6Prefix,
     /// Rust's \[u8;6\]; RFC 8044 calls this "ifid"
     InterfaceId,
+    /// Rust's u32
+    Enum,
+    /// Rust's [u8]
+    Tlv,
+    /// Rust's [u8]; RFC 8044 defines this as vendor-specific data
+    Vsa,
+    /// Rust's [u8]; RFC 8044 defines this as Extended-Vendor-Specific Attribute (FreeRADIUS
+    /// accepts VSA instead of EVS data type)
+    Evs,
+    /// Rust's [u8]; Doesn't look like a type on its own, but rather an extension to some data types (in FreeRADIUS this is a flag)
+    /// usually string/octets
+    Concat,
+    /// Rust's [u8]; Doesn't look like a type on its own, but rather an extension to some data types (in FreeRADIUS this is a flag)
+    Extended,
+    /// Rust's [u8]; Doesn't look like a type on its own, but rather an extension to some data types (in FreeRADIUS this is a flag)
+    LongExtended
 }
 
 
@@ -44,7 +58,7 @@ pub struct DictionaryAttribute {
      */
     name:        String,
     vendor_name: String,
-    code:        String,
+    code:        String, // ideally should be u8
     code_type:   Option<SupportedAttributeTypes>
 }
 
@@ -124,7 +138,6 @@ impl Dictionary {
         let mut values:      Vec<DictionaryValue>     = Vec::new();
         let mut vendors:     Vec<DictionaryVendor>    = Vec::new();
         let mut vendor_name: String                   = String::new();
-        let comment_prefix:  String                   = String::from("#");
 
         let reader = io::BufReader::new(File::open(file_path).map_err(|error| RadiusError::MalformedDictionaryError { error })?);
         let lines  = reader.lines()
@@ -164,18 +177,24 @@ impl Dictionary {
 
 fn assign_attribute_type(code_type: &str) -> Option<SupportedAttributeTypes> {
     match code_type {
-        "text"       => Some(SupportedAttributeTypes::AsciiString),
-        "string"     => Some(SupportedAttributeTypes::ByteString),
-        "concat"     => Some(SupportedAttributeTypes::Concat),
-        "integer"    => Some(SupportedAttributeTypes::Integer),
-        "integer64"  => Some(SupportedAttributeTypes::Integer64),
-        "date"       => Some(SupportedAttributeTypes::Date),
-        "ipv4addr"   => Some(SupportedAttributeTypes::IPv4Addr),
-        "ipv4prefix" => Some(SupportedAttributeTypes::IPv4Prefix),
-        "ipv6addr"   => Some(SupportedAttributeTypes::IPv6Addr),
-        "ipv6prefix" => Some(SupportedAttributeTypes::IPv6Prefix),
-        "ifid"       => Some(SupportedAttributeTypes::InterfaceId),
-        _            => None
+        "text"          => Some(SupportedAttributeTypes::AsciiString),
+        "string"        => Some(SupportedAttributeTypes::ByteString),
+        "integer"       => Some(SupportedAttributeTypes::Integer),
+        "integer64"     => Some(SupportedAttributeTypes::Integer64),
+        "time"          => Some(SupportedAttributeTypes::Date),
+        "ipv4addr"      => Some(SupportedAttributeTypes::IPv4Addr),
+        "ipv4prefix"    => Some(SupportedAttributeTypes::IPv4Prefix),
+        "ipv6addr"      => Some(SupportedAttributeTypes::IPv6Addr),
+        "ipv6prefix"    => Some(SupportedAttributeTypes::IPv6Prefix),
+        "ifid"          => Some(SupportedAttributeTypes::InterfaceId),
+        "enum"          => Some(SupportedAttributeTypes::Enum),
+        "tlv"           => Some(SupportedAttributeTypes::Tlv),
+        "vsa"           => Some(SupportedAttributeTypes::Vsa),
+        "evs"           => Some(SupportedAttributeTypes::Evs),
+        "concat"        => Some(SupportedAttributeTypes::Concat),
+        "extended"      => Some(SupportedAttributeTypes::Extended),
+        "long-extended" => Some(SupportedAttributeTypes::LongExtended),
+        _               => None
     }
 }
 
