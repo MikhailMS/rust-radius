@@ -96,28 +96,33 @@ fn main() -> Result<(), RadiusError> {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict")?;
     let mut client = ClientWrapper::initialise_client(1812, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2)?;
 
-    let user_name            = String::from("testing").into_bytes();
-    let user_pass            = b"very secure password, that noone is able to guess";
-    let nas_ip_addr_bytes    = ipv4_string_to_bytes("192.168.1.10")?;
-    let framed_ip_addr_bytes = ipv4_string_to_bytes("10.0.0.100")?;
-    let nas_id               = String::from("trillian").into_bytes();
-    let called_station_id    = String::from("00-04-5F-00-0F-D1").into_bytes();
-    let calling_station_id   = String::from("00-01-24-80-B3-9C").into_bytes();
+    let user_name             = String::from("testing").into_bytes();
+    let message_authenticator = [0; 16];
+    let user_pass             = b"very secure password, that noone is able to guess";
+    let nas_ip_addr_bytes     = ipv4_string_to_bytes("192.168.1.10")?;
+    let framed_ip_addr_bytes  = ipv4_string_to_bytes("10.0.0.100")?;
+    let nas_id                = String::from("trillian").into_bytes();
+    let called_station_id     = String::from("00-04-5F-00-0F-D1").into_bytes();
+    let calling_station_id    = String::from("00-01-24-80-B3-9C").into_bytes();
 
     let mut auth_packet = client.base_client.create_auth_packet();
     let attributes = vec![
-        client.base_client.create_attribute_by_name("User-Name",          user_name)?,
-        client.base_client.create_attribute_by_name("Password",           encrypt_data(user_pass, auth_packet.authenticator(), client.base_client.secret().as_bytes()))?,
-        client.base_client.create_attribute_by_name("NAS-IP-Address",     nas_ip_addr_bytes)?,
-        client.base_client.create_attribute_by_name("NAS-Port-Id",        integer_to_bytes(0))?,
-        client.base_client.create_attribute_by_name("Service-Type",       integer_to_bytes(2))?,
-        client.base_client.create_attribute_by_name("NAS-Identifier",     nas_id)?,
-        client.base_client.create_attribute_by_name("Called-Station-Id",  called_station_id)?,
-        client.base_client.create_attribute_by_name("Calling-Station-Id", calling_station_id)?,
-        client.base_client.create_attribute_by_name("Framed-IP-Address",  framed_ip_addr_bytes)?
+        client.base_client.create_attribute_by_name("User-Name",             user_name)?,
+        client.base_client.create_attribute_by_name("Message-Authenticator", message_authenticator.to_vec())?,
+        client.base_client.create_attribute_by_name("Password",              encrypt_data(user_pass, auth_packet.authenticator(), client.base_client.secret().as_bytes()))?,
+        client.base_client.create_attribute_by_name("NAS-IP-Address",        nas_ip_addr_bytes)?,
+        client.base_client.create_attribute_by_name("NAS-Port-Id",           integer_to_bytes(0))?,
+        client.base_client.create_attribute_by_name("Service-Type",          integer_to_bytes(2))?,
+        client.base_client.create_attribute_by_name("NAS-Identifier",        nas_id)?,
+        client.base_client.create_attribute_by_name("Called-Station-Id",     called_station_id)?,
+        client.base_client.create_attribute_by_name("Calling-Station-Id",    calling_station_id)?,
+        client.base_client.create_attribute_by_name("Framed-IP-Address",     framed_ip_addr_bytes)?
     ];
 
     auth_packet.set_attributes(attributes);
+    let message_authenticator = client.base_client.generate_message_hash(&mut auth_packet);
+    auth_packet.override_message_authenticator(message_authenticator)?;
+
     match client.send_packet(&mut auth_packet) {
         Err(error) => {
             println!("{:?}", error);
