@@ -146,7 +146,7 @@ impl Dictionary {
             .filter(|line| !line.contains(&COMMENT_PREFIX));
 
         for line in lines {
-            let parsed_line: Vec<&str> = line.split(" ").filter(|&item| !item.is_empty()).collect();
+            let parsed_line: Vec<&str> = line.split_whitespace().filter(|&item| !item.is_empty()).collect();
             match parsed_line[0] {
                 "ATTRIBUTE"    => parse_attribute(parsed_line, &vendor_name, &mut attributes),
                 "VALUE"        => parse_value(parsed_line, &vendor_name, &mut values),
