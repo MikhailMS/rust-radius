@@ -183,9 +183,11 @@ impl Client {
 
     /// Generates HMAC-MD5 hash for Message-Authenticator attribute
     ///
-    /// Note: this function assumes that RadiusAttribute Message-Authenticator already exists in RadiusPacket
+    /// Note 1: this function assumes that RadiusAttribute Message-Authenticator already exists in RadiusPacket
+    /// Note 2: this function only works correctly when Message-Authenticator is set to exactly [0;16]
+    /// Note 3: this function would be removed in 0.5.0
+    #[deprecated(since="0.4.1", note="This function may work incorrectly, please use radius_packet's `generate_message_authenticator` instead")]
     pub fn generate_message_hash(&self, packet: &mut RadiusPacket) -> Vec<u8> {
-        // Feels redundant, but let it be for now
         let mut hash = Hmac::new(Md5::new(), self.secret.as_bytes());
 
         hash.input(&packet.to_bytes());
@@ -292,7 +294,7 @@ mod tests {
 
         match client.radius_attr_original_string_value(&attributes[0]) {
             Ok(_)      => assert!(false),
-            Err(error) => assert_eq!(String::from("Radius packet attribute is malformed"), error.to_string())
+            Err(error) => assert_eq!(String::from("Attribute in Radius packet is malformed: invalid ASCII bytes"), error.to_string())
         }
     }
 
@@ -333,7 +335,7 @@ mod tests {
 
         match client.radius_attr_original_integer_value(&attributes[0]) {
             Ok(_)      => assert!(false),
-            Err(error) => assert_eq!(String::from("Radius packet attribute is malformed"), error.to_string())
+            Err(error) => assert_eq!(String::from("Attribute in Radius packet is malformed: invalid Integer bytes"), error.to_string())
         }
     }
 
@@ -360,7 +362,7 @@ mod tests {
         radius_packet.override_authenticator(authenticator);
 
         match client.verify_reply(&radius_packet, &reply) {
-            Err(error) => assert_eq!(String::from("Verification failed for incoming Radius packet"), error.to_string()),
+            Err(error) => assert_eq!(String::from("Verification failed for incoming Radius packet: Empty reply"), error.to_string()),
             _          => assert!(false)
         }
     }
@@ -388,7 +390,7 @@ mod tests {
         radius_packet.override_authenticator(authenticator);
 
         match client.verify_reply(&radius_packet, &reply) {
-            Err(error) => assert_eq!(String::from("Verification failed for incoming Radius packet"), error.to_string()),
+            Err(error) => assert_eq!(String::from("Verification failed for incoming Radius packet: Packet identifier mismatch"), error.to_string()),
             _          => assert!(false)
         }
     }
@@ -418,5 +420,35 @@ mod tests {
             Err(_error) => assert!(false),
             _           => assert!(true)
         }
+    }
+
+    #[test]
+    fn test_generate_message_hash() {
+        let expected_message_autthenticator = vec![85, 134, 2, 170, 83, 101, 202, 79, 109, 163, 59, 12, 66, 170, 183, 220];
+
+        let dictionary    = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let authenticator = vec![152, 137, 115, 14, 56, 250, 103, 56, 57, 57, 104, 246, 226, 80, 71, 167];
+        let attributes    = vec![
+            RadiusAttribute::create_by_name(&dictionary, "User-Name", String::from("testing").into_bytes()).unwrap(),
+            RadiusAttribute::create_by_name(&dictionary, "Message-Authenticator", [0;16].to_vec()).unwrap()
+        ];
+
+        let mut radius_packet = RadiusPacket::initialise_packet(TypeCode::AccessRequest);
+        radius_packet.set_attributes(attributes);
+        radius_packet.override_id(220);
+        radius_packet.override_authenticator(authenticator);
+
+        let client = Client::with_dictionary(dictionary)
+            .set_server(String::from("127.0.0.1"))
+            .set_secret(String::from("secret"))
+            .set_retries(1)
+            .set_timeout(2)
+            .set_port(RadiusMsgType::AUTH, 1812)
+            .set_port(RadiusMsgType::ACCT, 1813)
+            .set_port(RadiusMsgType::COA,  3799);
+
+        let generated_message_authenticator = client.generate_message_hash(&mut radius_packet);
+
+        assert_eq!(expected_message_autthenticator, generated_message_authenticator)
     }
 }
