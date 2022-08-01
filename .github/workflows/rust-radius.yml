@@ -92,12 +92,6 @@ jobs:
         profile:   minimal
         override:  true
 
-    # - name: NEW -- Install cargo-make
-    #   uses: actions-rs/cargo@v1
-    #   with:
-    #     command: install
-    #     args:    --debug cargo-make --version 0.20.0
-        
     - name: NEW -- Build
       run: cargo build --verbose
 
@@ -106,12 +100,6 @@ jobs:
 
     - name: NEW -- Run tests
       run: cargo test --verbose
-
-    # - name: NEW -- Run CI
-    #   uses: actions-rs/cargo@v1
-    #   with:
-    #     command: make
-    #     args:    ci-flow
 
   modern_ci_test:
     name:     Modern w/o cargo-make Rust CI testing
