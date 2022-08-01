@@ -3,8 +3,7 @@
 //! They are also available to crate users to prepare data before it is packed into RADIUS packet
 
 
-use crypto::digest::Digest;
-use crypto::md5::Md5;
+use md5::{Digest, Md5};
 
 use std::str::FromStr;
 use std::net::{ Ipv4Addr, Ipv6Addr };
@@ -165,9 +164,9 @@ pub fn decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8>
 
     for data_chunk in data.chunks_exact(16) {
         let mut md5  = Md5::new();
-        md5.input(secret);
-        md5.input(prev_result);
-        md5.result(&mut hash);
+        md5.update(secret);
+        md5.update(prev_result);
+        hash.copy_from_slice(&md5.finalize());
 
         for (_data, _hash) in data_chunk.iter().zip(hash.iter_mut()) {
             *_hash ^= _data
@@ -242,10 +241,9 @@ pub fn salt_decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Re
 
     for data_chunk in (&data[2..]).chunks_exact(16) {
         let mut md5 = Md5::new();
-        md5.input(secret);
-        md5.input(prev_result);
-        md5.result(&mut hash);
-
+        md5.update(secret);
+        md5.update(prev_result);
+        hash.copy_from_slice(&md5.finalize());
 
         for (_data, _hash) in data_chunk.iter().zip(hash.iter_mut()) {
             *_hash ^= _data
@@ -266,12 +264,12 @@ pub fn salt_decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Re
 }
 
 // -----------------------------------------
-fn encrypt_helper<'a:'b, 'b>(mut out: &'a mut [u8], mut result: &'b [u8], mut hash: &mut[u8], secret: &[u8]) {
+fn encrypt_helper<'a:'b, 'b>(mut out: &'a mut [u8], mut result: &'b [u8], hash: &mut[u8], secret: &[u8]) {
     loop {
         let mut md5 = Md5::new();
-        md5.input(secret);
-        md5.input(result);
-        md5.result(&mut hash);
+        md5.update(secret);
+        md5.update(result);
+        hash.copy_from_slice(&md5.finalize());
 
         for (_data, _hash) in out.iter_mut().zip(hash.iter()) {
             *_data ^= _hash

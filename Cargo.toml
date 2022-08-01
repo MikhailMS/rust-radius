@@ -37,6 +37,8 @@ futures     = { version = "0.3.13", optional = true }
 log         = "0.4.14"
 rand        = "0.7.3"
 rust-crypto = "0.2.36"
+md-5        = "0.10.1"
+hmac        = "0.12.1"
 thiserror   = "1.0.23"
 
 [dev-dependencies]
