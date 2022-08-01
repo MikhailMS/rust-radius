@@ -5,6 +5,10 @@ use super::dictionary::{ Dictionary, SupportedAttributeTypes };
 use super::error::RadiusError;
 use crate::tools::{ bytes_to_integer, bytes_to_timestamp, bytes_to_ipv4_string, bytes_to_ipv6_string };
 
+use crypto::hmac::Hmac;
+use crypto::mac::Mac;
+use crypto::md5::Md5;
+
 use rand::Rng;
 
 use std::convert::TryInto;
@@ -407,6 +411,25 @@ impl RadiusPacket {
         }
     }
 
+    /// Generates HMAC-MD5 hash for Message-Authenticator attribute
+    ///
+    /// Note 1: this function assumes that RadiusAttribute Message-Authenticator already exists in RadiusPacket
+    /// Note 2: Message-Authenticator in RadiusPacket would be overwritten when this function is called
+    pub fn generate_message_authenticator(&mut self, secret: &str) -> Result<(), RadiusError> {
+        // Step 1. Set Message-Authenticator to an array of 16 zeros in the RadiusPacket
+        let zeroed_authenticator = [0; 16];
+        self.override_message_authenticator(zeroed_authenticator.to_vec())?;
+
+        // Step 2. Calculate HMAC-MD5 for the entire RadiusPacket
+        let mut hash = Hmac::new(Md5::new(), secret.as_bytes());
+        hash.input(&self.to_bytes());
+
+        // Step 3. Set Message-Authenticator to the result of Step 2
+        self.override_message_authenticator(hash.result().code().to_vec())?;
+
+        Ok(())
+    }
+
     /// Returns Message-Authenticator value, if exists in RadiusPacket
     pub fn message_authenticator(&self) -> Result<&[u8], RadiusError> {
         match self.attributes.iter().find(|attr| attr.name() == "Message-Authenticator") {
@@ -627,7 +650,7 @@ mod tests {
         packet.set_attributes(attributes);
 
         match packet.override_message_authenticator(new_message_authenticator) {
-            Err(err) => assert_eq!(String::from("Radius packet is malformed"), err.to_string()),
+            Err(err) => assert_eq!(String::from("Radius packet is malformed: Message-Authenticator attribute not found in packet"), err.to_string()),
             _        => assert!(false)
         }
     }
@@ -642,8 +665,8 @@ mod tests {
             RadiusAttribute::create_by_name(&dict, "Message-Authenticator", vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).unwrap()
         ];
 
-        let new_message_authenticator  = vec![1, 50, 0, 20, 0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153];
         let mut packet                 = RadiusPacket::initialise_packet(TypeCode::AccessRequest);
+        let new_message_authenticator  = vec![1, 50, 0, 20, 0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153];
         let new_id: u8                 = 50;
         let new_authenticator: Vec<u8> = vec![0, 25, 100, 56, 13, 0, 67, 34, 39, 12, 88, 153, 0, 1, 2, 3];
 
@@ -658,4 +681,30 @@ mod tests {
             _      => assert_eq!(expected_packet_bytes, packet.to_bytes())
         }
     }
+
+    #[test]
+    fn test_generate_message_authenticator_success() {
+        let expected_message_authenticator = vec![85, 134, 2, 170, 83, 101, 202, 79, 109, 163, 59, 12, 66, 170, 183, 220];
+
+        let dictionary_path = "./dict_examples/integration_dict";
+        let dict            = Dictionary::from_file(dictionary_path).unwrap();
+        let secret          = "secret";
+        let mut packet      = RadiusPacket::initialise_packet(TypeCode::AccessRequest);
+
+        let attributes        = vec![
+            RadiusAttribute::create_by_name(&dict, "User-Name",             String::from("testing").into_bytes()).unwrap(),
+            RadiusAttribute::create_by_name(&dict, "Message-Authenticator", [0;16].to_vec()).unwrap()
+        ];
+        let new_authenticator = vec![152, 137, 115, 14, 56, 250, 103, 56, 57, 57, 104, 246, 226, 80, 71, 167];
+        let new_id: u8        = 220;
+
+        packet.set_attributes(attributes);
+        packet.override_id(new_id);
+        packet.override_authenticator(new_authenticator);
+
+        packet.generate_message_authenticator(&secret).unwrap();
+
+        assert_eq!(expected_message_authenticator, packet.message_authenticator().unwrap());
+    }
+    
 }
