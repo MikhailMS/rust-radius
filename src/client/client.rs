@@ -6,10 +6,11 @@ use crate::protocol::error::RadiusError;
 use crate::protocol::host::Host;
 use crate::protocol::radius_packet::{ RadiusAttribute, RadiusPacket, RadiusMsgType, TypeCode };
 
-use crypto::digest::Digest;
-use crypto::hmac::Hmac;
-use crypto::mac::Mac;
-use crypto::md5::Md5;
+use hmac::{ Hmac, Mac };
+use md5::{ Digest, Md5 };
+
+
+type HmacMd5 = Hmac<Md5>;
 
 
 #[derive(Debug)]
@@ -188,10 +189,10 @@ impl Client {
     /// Note 3: this function would be removed in 0.5.0
     #[deprecated(since="0.4.1", note="This function may work incorrectly, please use radius_packet's `generate_message_authenticator` instead")]
     pub fn generate_message_hash(&self, packet: &mut RadiusPacket) -> Vec<u8> {
-        let mut hash = Hmac::new(Md5::new(), self.secret.as_bytes());
+        let mut hash = HmacMd5::new_from_slice(self.secret.as_bytes()).unwrap();
 
-        hash.input(&packet.to_bytes());
-        hash.result().code().to_vec()
+        hash.update(&packet.to_bytes());
+        hash.finalize().into_bytes().to_vec()
     }
 
     /// Gets the original value as a String
@@ -225,16 +226,13 @@ impl Client {
         };
 
         let mut md5_hasher = Md5::new();
-        let mut hash       = [0; 16];
 
-        md5_hasher.input(&reply[0..4]);             // Append reply type code, reply ID and reply length
-        md5_hasher.input(&request.authenticator()); // Append request authenticator
-        md5_hasher.input(&reply[20..]);             // Append rest of the reply
-        md5_hasher.input(&self.secret.as_bytes());  // Append secret
+        md5_hasher.update(&reply[0..4]);             // Append reply type code, reply ID and reply length
+        md5_hasher.update(&request.authenticator()); // Append request authenticator
+        md5_hasher.update(&reply[20..]);             // Append rest of the reply
+        md5_hasher.update(&self.secret.as_bytes());  // Append secret
 
-        md5_hasher.result(&mut hash);
-
-        if hash == reply[4..20] {
+        if md5_hasher.finalize().as_slice() == &reply[4..20] {
             Ok(())
         } else {
             Err( RadiusError::ValidationError { error: String::from("Packet authenticator mismatch") } )

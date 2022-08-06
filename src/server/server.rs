@@ -6,8 +6,7 @@ use crate::protocol::radius_packet::{ RadiusAttribute, RadiusMsgType, RadiusPack
 use crate::protocol::dictionary::Dictionary;
 use crate::protocol::error::RadiusError;
 
-use crypto::digest::Digest;
-use crypto::md5::Md5;
+use md5::{ Digest, Md5 };
 
 
 #[derive(Debug)]
@@ -146,17 +145,14 @@ impl Server {
     fn create_reply_authenticator(&self, raw_reply_packet: &[u8], request_authenticator: &[u8]) -> Vec<u8> {
         // We need to create authenticator as MD5 hash (similar to how client verifies server reply)
         let mut md5_hasher    = Md5::new();
-        let mut authenticator = [0; 16];
 
-        md5_hasher.input(&raw_reply_packet[0..4]); // Append reply's   type code, reply ID and reply length
-        md5_hasher.input(&request_authenticator);  // Append request's authenticator
-        md5_hasher.input(&raw_reply_packet[20..]); // Append reply's   attributes
-        md5_hasher.input(&self.secret.as_bytes()); // Append server's  secret. Possibly it should be client's secret, which sould be stored together with allowed hostnames ?
-        
-        md5_hasher.result(&mut authenticator);
+        md5_hasher.update(&raw_reply_packet[0..4]); // Append reply's   type code, reply ID and reply length
+        md5_hasher.update(&request_authenticator);  // Append request's authenticator
+        md5_hasher.update(&raw_reply_packet[20..]); // Append reply's   attributes
+        md5_hasher.update(&self.secret.as_bytes()); // Append server's  secret. Possibly it should be client's secret, which sould be stored together with allowed hostnames ?
         // ----------------
 
-        authenticator.to_vec()
+        md5_hasher.finalize().to_vec()
     }
 
     /// Verifies incoming RADIUS packet:

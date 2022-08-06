@@ -5,14 +5,18 @@ use super::dictionary::{ Dictionary, SupportedAttributeTypes };
 use super::error::RadiusError;
 use crate::tools::{ bytes_to_integer, bytes_to_timestamp, bytes_to_ipv4_string, bytes_to_ipv6_string };
 
-use crypto::hmac::Hmac;
-use crypto::mac::Mac;
-use crypto::md5::Md5;
+use hmac::{ Hmac, Mac };
+use md5::Md5;
 
-use rand::Rng;
+use rand::{ thread_rng, Rng };
+use rand::distributions::{ Distribution, Uniform };
+
 
 use std::convert::TryInto;
 use std::fmt;
+
+
+type HmacMd5 = Hmac<Md5>;
 
 
 #[derive(PartialEq, Eq, Hash)]
@@ -421,11 +425,11 @@ impl RadiusPacket {
         self.override_message_authenticator(zeroed_authenticator.to_vec())?;
 
         // Step 2. Calculate HMAC-MD5 for the entire RadiusPacket
-        let mut hash = Hmac::new(Md5::new(), secret.as_bytes());
-        hash.input(&self.to_bytes());
+        let mut hash = HmacMd5::new_from_slice(secret.as_bytes()).map_err(|error| RadiusError::MalformedPacketError { error: error.to_string() })?;
+        hash.update(&self.to_bytes());
 
         // Step 3. Set Message-Authenticator to the result of Step 2
-        self.override_message_authenticator(hash.result().code().to_vec())?;
+        self.override_message_authenticator(hash.finalize().into_bytes().to_vec())?;
 
         Ok(())
     }
@@ -511,13 +515,16 @@ impl RadiusPacket {
     }
 
     fn create_id() -> u8 {
-        rand::thread_rng().gen_range(0u8, 255u8)
+        thread_rng().gen_range(0u8..=255u8)
     }
 
     fn create_authenticator() -> Vec<u8> {
+        let allowed_values             = Uniform::from(0u8..=255u8);
+        let mut rng                    = thread_rng();
         let mut authenticator: Vec<u8> = Vec::with_capacity(16);
+
         for _ in 0..16 {
-            authenticator.push(rand::thread_rng().gen_range(0u8, 255u8))
+            authenticator.push(allowed_values.sample(&mut rng))
         }
 
         authenticator

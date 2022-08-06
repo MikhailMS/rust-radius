@@ -368,7 +368,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(miri, ignore)]
     fn test_encrypt_empty_data() {
         let secret        = String::from("secret");
         let authenticator = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -389,7 +388,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(miri, ignore)]
     fn test_encrypt_normal_data() {
         let secret        = String::from("secret");
         let authenticator = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -400,7 +398,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(miri, ignore)]
     fn test_encrypt_long_data() {
         let secret        = String::from("secret");
         let authenticator = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -413,7 +410,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(miri, ignore)]
     fn test_encrypt_limit_long_data() {
         let secret        = String::from("secret");
         let authenticator = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -445,7 +441,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(miri, ignore)]
     fn test_decrypt_normal_data() {
         let secret         = String::from("secret");
         let authenticator  = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -459,7 +454,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(miri, ignore)]
     fn test_descrypt_long_data() {
         let secret         = String::from("secret");
         let authenticator  = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -474,7 +468,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(miri, ignore)]
     fn test_descrypt_limit_long_data() {
         let secret         = String::from("secret");
         let authenticator  = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -495,7 +488,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(miri, ignore)]
     fn test_salt_encrypt_normal_data() {
         let secret               = b"secret";
         let authenticator: &[u8] = &[0u8; 16];
@@ -508,7 +500,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(miri, ignore)]
     fn test_salt_encrypt_long_data() {
         let secret               = b"secret";
         let authenticator: &[u8] = &[0u8; 16];
@@ -525,7 +516,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(miri, ignore)]
     fn test_salt_decrypt_data() {
         let secret               = b"secret";
         let authenticator: &[u8] = &[0u8; 16];
@@ -537,7 +527,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(miri, ignore)]
     fn test_salt_decrypt_long_data() {
         let secret               = b"secret";
         let authenticator: &[u8] = &[0u8; 16];
