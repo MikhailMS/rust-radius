@@ -5,11 +5,13 @@ use super::dictionary::{ Dictionary, DictionaryAttribute, DictionaryValue };
 use super::error::RadiusError;
 use super::radius_packet::{ RadiusAttribute, RadiusMsgType, RadiusPacket, TypeCode };
 
-use crypto::hmac::Hmac;
-use crypto::mac::Mac;
-use crypto::md5::Md5;
+use hmac::{ Hmac, Mac };
+use md5::Md5;
+
 
 const IGNORE_VERIFY_ATTRIBUTE: &str = "Message-Authenticator";
+type HmacMd5 = Hmac<Md5>;
+
 
 #[derive(Debug)]
 /// Generic struct that holds Server & Client common functions and attributes
@@ -128,14 +130,13 @@ impl Host{
         _packet_tmp.override_message_authenticator(zeroed_authenticator.to_vec())?;
 
         // Step 3. Calculate HMAC-MD5 for the packet
-        let mut calculated_msg_auth = Hmac::new(Md5::new(), secret.as_bytes());
-        calculated_msg_auth.input(&_packet_tmp.to_bytes());
+        let mut calculated_msg_auth = HmacMd5::new_from_slice(secret.as_bytes()).map_err(|error| RadiusError::ValidationError { error: error.to_string() })?;
+        calculated_msg_auth.update(&_packet_tmp.to_bytes());
 
         // Step 4. Compare calculated hash with the one extracted in Step 1
-        if calculated_msg_auth.result().code() == original_msg_auth {
-            Ok(())
-        } else {
-            Err( RadiusError::ValidationError {error: String::from("Packet Message-Authenticator mismatch")} )
+        match calculated_msg_auth.verify_slice(&original_msg_auth) {
+            Ok(())   => Ok(()),
+            Err(_) => Err( RadiusError::ValidationError {error: String::from("Packet Message-Authenticator mismatch")} )
         }
     }
 }
