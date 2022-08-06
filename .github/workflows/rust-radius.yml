@@ -64,7 +64,7 @@ jobs:
         override:  true
 
     - name: OLD -- Build
-      run: cargo build --features default --verbose
+      run: CARGO_NET_GIT_FETCH_WITH_CLI=true cargo build --verbose
 
     - name: OLD -- Start simple RADIUS server
       run: cargo run --example sync_radius_server &
