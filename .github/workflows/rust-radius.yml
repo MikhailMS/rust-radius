@@ -177,7 +177,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [nightly]
+        rust: [nightly-2022-07-23]
         os:   [ubuntu-18.04]
     steps:
 
