@@ -137,7 +137,7 @@ impl RadiusAttribute {
     pub fn create_by_name(dictionary: &Dictionary, attribute_name: &str, value: Vec<u8>) -> Option<RadiusAttribute> {
         match dictionary.attributes().iter().find(|&attr| attr.name() == attribute_name) {
             Some(attr) => Some(RadiusAttribute {
-                id:    attr.code().parse::<u8>().unwrap(), // TODO - remove unwrap()
+                id:    attr.code(),
                 name:  attr.name().to_string(),
                 value: value
             }),
@@ -149,7 +149,7 @@ impl RadiusAttribute {
     ///
     /// Returns None, if ATTRIBUTE with such id is not found in Dictionary
     pub fn create_by_id(dictionary: &Dictionary, attribute_code: u8, value: Vec<u8>) -> Option<RadiusAttribute> {
-        match dictionary.attributes().iter().find(|&attr| attr.code() == attribute_code.to_string()) {
+        match dictionary.attributes().iter().find(|&attr| attr.code() == attribute_code) {
             Some(attr) => Some(RadiusAttribute {
                 id:    attribute_code,
                 name:  attr.name().to_string(),

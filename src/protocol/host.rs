@@ -83,7 +83,7 @@ impl Host{
 
     /// Returns ATTRIBUTE from dictionary with given id
     pub fn dictionary_attribute_by_id(&self, packet_attr_id: u8) -> Option<&DictionaryAttribute> {
-        self.dictionary.attributes().iter().find(|&attr| attr.code() == packet_attr_id.to_string())
+        self.dictionary.attributes().iter().find(|&attr| attr.code() == packet_attr_id)
     }
 
     #[allow(dead_code)]
@@ -176,7 +176,7 @@ mod tests {
         let dict_attr = host.dictionary_attribute_by_id(80).unwrap();
 
         assert_eq!("Message-Authenticator",                    dict_attr.name());
-        assert_eq!("80",                                       dict_attr.code());
+        assert_eq!(80,                                         dict_attr.code());
         assert_eq!(&Some(SupportedAttributeTypes::ByteString), dict_attr.code_type());
     }
 
