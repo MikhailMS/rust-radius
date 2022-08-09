@@ -1,4 +1,28 @@
 =============
+# v0.4.1 (10 Aug 2022)
+
+This is small release/patch fixing a few bits here & there
+
+## What's new
+* Now all `unwrap()` calls are removed - with exception for a `generate_message_authenticator` in `client.rs`
+* Now using `md-5` & `hmac` libraries instead of `rust-crypto`
+* Added more tests
+
+## What's removed or deprecated
+* `client.rs` --> `generate_message_authenticator` function is marked as **deprecated** and would be removed in release 0.5.0
+* `rust-crypto` library has been removed from dependencies as it is no longer maintained and Miri was flagging it as unsafe
+
+## What's changed
+* Re-work functions to generate Message-Authenticator, so now it should work correctly - previous function was only working if RADIUS packet had Message-Authenticator attribute set to zeros, now it can work with any initial state of the attribute
+* Re-work `RadiusError` to return better error messages
+* Bumped versions of the following dependencies:
+    * `rand`, `0.7.3`       --> `0.8.5`
+    * `thiserror`, `1.0.23` --> `1.0.32`
+* `log` library is moved into `dev-dependencies` and bumped to `0.4.17`
+* Added code from PR #24 - ensure dictionary parser not failing when file has tabs as well as whitespaces
+
+
+=============
 # v0.4.0 (16 May 2021)
 
 Got a couple of PRs & issues raised with some of them introducing breaking changes(read details below), so had to increase minor version to reflect that

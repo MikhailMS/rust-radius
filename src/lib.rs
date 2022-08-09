@@ -6,12 +6,12 @@
 
 
 #![deny(
+    dead_code,
     missing_crate_level_docs,
     missing_doc_code_examples,
     missing_docs,
     rust_2018_idioms,
-    unused_imports,
-    dead_code
+    unused_imports
 )]
 
 

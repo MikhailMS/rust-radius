@@ -8,20 +8,44 @@ use super::error::RadiusError;
 
 #[derive(Debug, PartialEq)]
 /// Represents a list of supported data types
-/// as defined in RFC 2865
+/// as defined in RFC 2865 & RFC 8044
 pub enum SupportedAttributeTypes {
-    /// Rust's String
+    /// Rust's String; RFC 8044 calls this "text" - UTF-8 text
     AsciiString,
+    /// Rusts's [u8]; RFC 8044 calls this "string" (FreeRADIUS calls this "octets") - binary data as a sequence of undistinguished octets
+    ByteString,
     /// Rust's u32
     Integer,
     /// Rust's u64
+    Integer64,
+    /// Rust's u32; RFC 8044 calls this "time"
     Date,
     /// Rust's \[u8;4\]
     IPv4Addr,
+    /// Rust's \[u8;5\]
+    IPv4Prefix,
     /// Rust's \[u8;16\]
     IPv6Addr,
     /// Rust's \[u8;18\]
-    IPv6Prefix
+    IPv6Prefix,
+    /// Rust's \[u8;6\]; RFC 8044 calls this "ifid"
+    InterfaceId,
+    /// Rust's u32
+    Enum,
+    /// Rust's [u8]
+    Tlv,
+    /// Rust's [u8]; RFC 8044 defines this as vendor-specific data
+    Vsa,
+    /// Rust's [u8]; RFC 8044 defines this as Extended-Vendor-Specific Attribute (FreeRADIUS
+    /// accepts VSA instead of EVS data type)
+    Evs,
+    /// Rust's [u8]; Doesn't look like a type on its own, but rather an extension to some data types (in FreeRADIUS this is a flag)
+    /// usually string/octets
+    Concat,
+    /// Rust's [u8]; Doesn't look like a type on its own, but rather an extension to some data types (in FreeRADIUS this is a flag)
+    Extended,
+    /// Rust's [u8]; Doesn't look like a type on its own, but rather an extension to some data types (in FreeRADIUS this is a flag)
+    LongExtended
 }
 
 
@@ -34,7 +58,7 @@ pub struct DictionaryAttribute {
      */
     name:        String,
     vendor_name: String,
-    code:        String,
+    code:        u8,
     code_type:   Option<SupportedAttributeTypes>
 }
 
@@ -45,8 +69,8 @@ impl DictionaryAttribute {
     }
 
     /// Return code of the Attribute
-    pub fn code(&self) -> &str {
-        &self.code
+    pub fn code(&self) -> u8 {
+        self.code
     }
 
     /// Return code_type of the Attribute
@@ -87,7 +111,7 @@ impl DictionaryValue {
 /// Represents a VENDOR from RADIUS dictionary file
 pub struct DictionaryVendor {
     name: String,
-    id:   String  // ideally should be u16
+    id:   u8
 }
 
 
@@ -114,7 +138,6 @@ impl Dictionary {
         let mut values:      Vec<DictionaryValue>     = Vec::new();
         let mut vendors:     Vec<DictionaryVendor>    = Vec::new();
         let mut vendor_name: String                   = String::new();
-        let comment_prefix:  String                   = String::from("#");
 
         let reader = io::BufReader::new(File::open(file_path).map_err(|error| RadiusError::MalformedDictionaryError { error })?);
         let lines  = reader.lines()
@@ -123,7 +146,7 @@ impl Dictionary {
             .filter(|line| !line.contains(&COMMENT_PREFIX));
 
         for line in lines {
-            let parsed_line: Vec<&str> = line.split(" ").filter(|&item| !item.is_empty()).collect();
+            let parsed_line: Vec<&str> = line.split_whitespace().filter(|&item| !item.is_empty()).collect();
             match parsed_line[0] {
                 "ATTRIBUTE"    => parse_attribute(parsed_line, &vendor_name, &mut attributes),
                 "VALUE"        => parse_value(parsed_line, &vendor_name, &mut values),
@@ -154,23 +177,39 @@ impl Dictionary {
 
 fn assign_attribute_type(code_type: &str) -> Option<SupportedAttributeTypes> {
     match code_type {
-        "string"     => Some(SupportedAttributeTypes::AsciiString),
-        "integer"    => Some(SupportedAttributeTypes::Integer),
-        "date"       => Some(SupportedAttributeTypes::Date),
-        "ipaddr"     => Some(SupportedAttributeTypes::IPv4Addr),
-        "ipv6addr"   => Some(SupportedAttributeTypes::IPv6Addr),
-        "ipv6prefix" => Some(SupportedAttributeTypes::IPv6Prefix),
-        _            => None
+        "text"          => Some(SupportedAttributeTypes::AsciiString),
+        "string"        => Some(SupportedAttributeTypes::ByteString),
+        "integer"       => Some(SupportedAttributeTypes::Integer),
+        "integer64"     => Some(SupportedAttributeTypes::Integer64),
+        "time"          => Some(SupportedAttributeTypes::Date),
+        "ipv4addr"      => Some(SupportedAttributeTypes::IPv4Addr),
+        "ipv4prefix"    => Some(SupportedAttributeTypes::IPv4Prefix),
+        "ipv6addr"      => Some(SupportedAttributeTypes::IPv6Addr),
+        "ipv6prefix"    => Some(SupportedAttributeTypes::IPv6Prefix),
+        "ifid"          => Some(SupportedAttributeTypes::InterfaceId),
+        "enum"          => Some(SupportedAttributeTypes::Enum),
+        "tlv"           => Some(SupportedAttributeTypes::Tlv),
+        "vsa"           => Some(SupportedAttributeTypes::Vsa),
+        "evs"           => Some(SupportedAttributeTypes::Evs),
+        "concat"        => Some(SupportedAttributeTypes::Concat),
+        "extended"      => Some(SupportedAttributeTypes::Extended),
+        "long-extended" => Some(SupportedAttributeTypes::LongExtended),
+        _               => None
     }
 }
 
 fn parse_attribute(parsed_line: Vec<&str>, vendor_name: &str, attributes: &mut Vec<DictionaryAttribute>) {
-    attributes.push(DictionaryAttribute {
-        name:        parsed_line[1].to_string(),
-        vendor_name: vendor_name.to_string(),
-        code:        parsed_line[2].to_string(),
-        code_type:   assign_attribute_type(parsed_line[3])
-    });
+    match parsed_line[2].parse::<u8>() {
+        Ok(value) => {
+            attributes.push(DictionaryAttribute {
+                name:        parsed_line[1].to_string(),
+                vendor_name: vendor_name.to_string(),
+                code:        value,
+                code_type:   assign_attribute_type(parsed_line[3])
+            });
+        },
+        Err(_) => {}
+    }
 }
 
 fn parse_value(parsed_line: Vec<&str>, vendor_name: &str, values: &mut Vec<DictionaryValue>) {
@@ -183,10 +222,15 @@ fn parse_value(parsed_line: Vec<&str>, vendor_name: &str, values: &mut Vec<Dicti
 }
 
 fn parse_vendor(parsed_line: Vec<&str>, vendors: &mut Vec<DictionaryVendor>) {
-    vendors.push(DictionaryVendor {
-        name: parsed_line[1].to_string(),
-        id:   parsed_line[2].to_string(),
-    })
+    match parsed_line[2].parse::<u8>() {
+        Ok(value) => {
+            vendors.push(DictionaryVendor {
+                name: parsed_line[1].to_string(),
+                id:   value,
+            })
+        },
+        Err(_) => {}
+    }
 }
 
 
@@ -204,46 +248,82 @@ mod tests {
         attributes.push(DictionaryAttribute {
             name:        "User-Name".to_string(),
             vendor_name: "".to_string(),
-            code:        "1".to_string(),
-            code_type:   Some(SupportedAttributeTypes::AsciiString) 
+            code:        1,
+            code_type:   Some(SupportedAttributeTypes::AsciiString)
         });
         attributes.push(DictionaryAttribute {
             name:        "NAS-IP-Address".to_string(),
             vendor_name: "".to_string(),
-            code:        "4".to_string(),
+            code:        4,
             code_type:   Some(SupportedAttributeTypes::IPv4Addr)
         });
         attributes.push(DictionaryAttribute {
             name:        "NAS-Port-Id".to_string(),
             vendor_name: "".to_string(),
-            code:        "5".to_string(),
+            code:        5,
             code_type:   Some(SupportedAttributeTypes::Integer)
         });
         attributes.push(DictionaryAttribute {
             name:        "Framed-Protocol".to_string(),
             vendor_name: "".to_string(),
-            code:        "7".to_string(),
+            code:        7,
             code_type:   Some(SupportedAttributeTypes::Integer)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "Chargeable-User-Identity".to_string(),
+            vendor_name: "".to_string(),
+            code:        89,
+            code_type:   Some(SupportedAttributeTypes::ByteString)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "Delegated-IPv6-Prefix".to_string(),
+            vendor_name: "".to_string(),
+            code:        123,
+            code_type:   Some(SupportedAttributeTypes::IPv6Prefix)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "MIP6-Feature-Vector".to_string(),
+            vendor_name: "".to_string(),
+            code:        124,
+            code_type:   Some(SupportedAttributeTypes::Integer64)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "Mobile-Node-Identifier".to_string(),
+            vendor_name: "".to_string(),
+            code:        145,
+            code_type:   Some(SupportedAttributeTypes::ByteString)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "PMIP6-Home-Interface-ID".to_string(),
+            vendor_name: "".to_string(),
+            code:        153,
+            code_type:   Some(SupportedAttributeTypes::InterfaceId)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "PMIP6-Home-IPv4-HoA".to_string(),
+            vendor_name: "".to_string(),
+            code:        155,
+            code_type:   Some(SupportedAttributeTypes::IPv4Prefix)
         });
         attributes.push(DictionaryAttribute {
             name:        "Somevendor-Name".to_string(),
             vendor_name: "Somevendor".to_string(),
-            code:        "1".to_string(),
+            code:        1,
             code_type:   Some(SupportedAttributeTypes::AsciiString)
         });
         attributes.push(DictionaryAttribute {
             name:        "Somevendor-Number".to_string(),
             vendor_name: "Somevendor".to_string(),
-            code:        "2".to_string(),
+            code:        2,
             code_type:   Some(SupportedAttributeTypes::Integer)
         });
         attributes.push(DictionaryAttribute {
-            name:        "Test-IP".to_string(),
+            name:        "Class".to_string(),
             vendor_name: "".to_string(),
-            code:        "25".to_string(),
-            code_type:   Some(SupportedAttributeTypes::IPv4Addr)
+            code:        25,
+            code_type:   Some(SupportedAttributeTypes::ByteString)
         });
-        
+
         let mut values: Vec<DictionaryValue> = Vec::new();
         values.push(DictionaryValue {
             attribute_name: "Framed-Protocol".to_string(),
@@ -261,7 +341,7 @@ mod tests {
         let mut vendors: Vec<DictionaryVendor> = Vec::new();
         vendors.push(DictionaryVendor {
             name: "Somevendor".to_string(),
-            id:   "10".to_string(),
+            id:   10,
         });
 
         let expected_dict = Dictionary { attributes, values, vendors };

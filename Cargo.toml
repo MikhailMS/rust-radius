@@ -2,7 +2,7 @@
 authors       = ["MikhailMS <1488maiklm@gmail.com>"]
 categories    = ["network-programming"]
 description   = "Pure Rust implementation of RADIUS Server/Client"
-documentation = "https://docs.rs/radius-rust/0.3.0"
+documentation = "https://docs.rs/radius-rust/0.4.1"
 edition       = "2018"
 include       = [
   "Cargo.toml",
@@ -20,7 +20,7 @@ license       = "MIT"
 name          = "radius-rust"
 readme        = "README.md"
 repository    = "https://github.com/MikhailMS/rust-radius"
-version       = "0.4.0"
+version       = "0.4.1"
 
 [features]
 # Default doesn\t include anythin - keep it simple
@@ -34,14 +34,15 @@ async-examples = [ "async-trait", "async-std", "futures" ]
 async-std   = { version = "1.9.0",  optional = true }
 async-trait = { version = "0.1.48", optional = true }
 futures     = { version = "0.3.13", optional = true }
-log         = "0.4.14"
-rand        = "0.7.3"
-rust-crypto = "0.2.36"
-thiserror   = "1.0.23"
+rand        = "0.8.5"
+md-5        = "0.10.1"
+hmac        = "0.12.1"
+thiserror   = "1.0.32"
 
 [dev-dependencies]
-mio           = { version = "0.7.7", features = ["os-poll", "udp"] }
+mio           = { version = "0.7.7",  features = ["os-poll", "udp"] }
 simple_logger = { version = "1.11.0", default-features = false }
+log           = "0.4.17"
 
 [[example]]
 name = "sync_radius_server"

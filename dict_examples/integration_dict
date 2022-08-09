@@ -26,15 +26,15 @@
 #        7         =  1   (integer encoding)
 #
 
-ATTRIBUTE User-Name                1   string
+ATTRIBUTE User-Name                1   text
 ATTRIBUTE Password                 2   string
 ATTRIBUTE CHAP-Password            3   string
-ATTRIBUTE NAS-IP-Address           4   ipaddr
+ATTRIBUTE NAS-IP-Address           4   ipv4addr
 ATTRIBUTE NAS-Port-Id              5   integer
 ATTRIBUTE Service-Type             6   integer
 ATTRIBUTE Framed-Protocol          7   integer
-ATTRIBUTE Framed-IP-Address        8   ipaddr
-ATTRIBUTE Framed-IP-Netmask        9   ipaddr
+ATTRIBUTE Framed-IP-Address        8   ipv4addr
+ATTRIBUTE Framed-IP-Netmask        9   ipv4addr
 ATTRIBUTE Framed-Routing           10  integer
 ATTRIBUTE Filter-Id                11  string
 ATTRIBUTE Framed-MTU               12  integer

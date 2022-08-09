@@ -117,6 +117,7 @@ impl SyncClientTrait for ClientWrapper {
 
 // Test Sync RADIUS Client
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_client_auth_request() {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let mut client = ClientWrapper::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).expect("Failed to create Client Wrapper");
@@ -160,6 +161,7 @@ fn test_client_auth_request() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_client_acct_request() {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let mut client = ClientWrapper::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).expect("Failed to create Client Wrapper");
@@ -202,6 +204,7 @@ fn test_client_acct_request() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_client_coa_request() {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
     let mut client = ClientWrapper::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).expect("Failed to create Client Wrapper");
