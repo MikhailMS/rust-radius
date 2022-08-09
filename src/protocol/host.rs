@@ -30,7 +30,7 @@ impl Host{
             auth_port:  0,
             acct_port:  0,
             coa_port:   0,
-            dictionary: dictionary
+            dictionary
         }
     }
 

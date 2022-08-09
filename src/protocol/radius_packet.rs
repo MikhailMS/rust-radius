@@ -139,7 +139,7 @@ impl RadiusAttribute {
             Some(attr) => Some(RadiusAttribute {
                 id:    attr.code(),
                 name:  attr.name().to_string(),
-                value: value
+                value
             }),
             _          => None
         }
@@ -153,7 +153,7 @@ impl RadiusAttribute {
             Some(attr) => Some(RadiusAttribute {
                 id:    attribute_code,
                 name:  attr.name().to_string(),
-                value: value
+                value
             }),
             _          => None
         }
@@ -347,7 +347,7 @@ impl RadiusPacket {
     pub fn initialise_packet(code: TypeCode) -> RadiusPacket {
         RadiusPacket {
             id:            RadiusPacket::create_id(),
-            code:          code,
+            code,
             authenticator: RadiusPacket::create_authenticator(),
             attributes:    Vec::new()
         }
@@ -377,9 +377,9 @@ impl RadiusPacket {
         }
 
         let mut packet = RadiusPacket{
-            id:            id,
-            code:          code,
-            authenticator: authenticator,
+            id,
+            code,
+            authenticator,
             attributes:    Vec::new()
         };
         packet.set_attributes(attributes);

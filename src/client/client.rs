@@ -32,7 +32,7 @@ impl Client {
         let host = Host::with_dictionary(dictionary);
 
         Client {
-            host:    host,
+            host,
             server:  String::from(""),
             secret:  String::from(""),
             retries: 1,
