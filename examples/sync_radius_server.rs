@@ -17,6 +17,8 @@ use mio::net::UdpSocket;
 use mio::{ Events, Interest, Poll, Token };
 use simple_logger::SimpleLogger;
 use std::io::{Error, ErrorKind};
+use std::collections::HashMap;
+
 
 struct CustomServer {
     base_server: Server,
@@ -34,14 +36,13 @@ impl CustomServer {
     /// Exists to allow mapping between CoA socket and CoA requests processing
     pub const COA_SOCKET:  Token = Token(3);
 
-    fn initialise_server(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16, allowed_hosts: Vec<String>) -> Result<CustomServer, RadiusError> {
+    fn initialise_server(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, retries: u16, timeout: u16, allowed_hosts: HashMap<String, String>) -> Result<CustomServer, RadiusError> {
         let auth_bind_addr = format!("{}:{}", &server, auth_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
         let acct_bind_addr = format!("{}:{}", &server, acct_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
         let coa_bind_addr  = format!("{}:{}", &server, coa_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
 
         let server = Server::with_dictionary(dictionary)
             .set_server(server)
-            .set_secret(secret)
             .set_allowed_hosts(allowed_hosts)
             .set_retries(retries)
             .set_timeout(timeout)
@@ -94,7 +95,8 @@ impl SyncServerTrait for CustomServer {
                         match self.auth_socket.recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
                                 if self.base_server.host_allowed(&source_address) {
-                                    let response = self.handle_auth_request(&mut request[..packet_size])?;
+                                    let secret   = self.base_server.retrieve_secret(&source_address);
+                                    let response = self.handle_auth_request(&mut request[..packet_size], &secret)?;
                                     self.auth_socket.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
@@ -117,7 +119,8 @@ impl SyncServerTrait for CustomServer {
                         match self.acct_socket.recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
                                 if self.base_server.host_allowed(&source_address) {
-                                    let response = self.handle_acct_request(&mut request[..packet_size])?;
+                                    let secret   = self.base_server.retrieve_secret(&source_address);
+                                    let response = self.handle_acct_request(&mut request[..packet_size], &secret)?;
                                     self.acct_socket.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
@@ -140,7 +143,8 @@ impl SyncServerTrait for CustomServer {
                         match self.coa_socket.recv_from(&mut request) {
                             Ok((packet_size, source_address)) => {
                                 if self.base_server.host_allowed(&source_address) {
-                                    let response = self.handle_coa_request(&mut request[..packet_size])?;
+                                    let secret   = self.base_server.retrieve_secret(&source_address);
+                                    let response = self.handle_coa_request(&mut request[..packet_size], &secret)?;
                                     self.coa_socket.send_to(&response.as_slice(), source_address)?;
                                     break;
                                 } else {
@@ -165,7 +169,7 @@ impl SyncServerTrait for CustomServer {
     }
 
     // Define your own RADIUS packet handlers
-    fn handle_auth_request(&self, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
+    fn handle_auth_request(&self, request: &mut [u8], secret: &str) -> Result<Vec<u8>, RadiusError> {
         let ipv6_bytes = ipv6_string_to_bytes("fc66::1/64")?;
         let ipv4_bytes = ipv4_string_to_bytes("192.168.0.1")?;
 
@@ -175,11 +179,11 @@ impl SyncServerTrait for CustomServer {
             self.base_server.create_attribute_by_name("Framed-IPv6-Prefix", ipv6_bytes)?
         ];
 
-        let mut reply_packet = self.base_server.create_reply_packet(TypeCode::AccessAccept, attributes, request);
+        let mut reply_packet = self.base_server.create_reply_packet(TypeCode::AccessAccept, attributes, request, secret);
         Ok(reply_packet.to_bytes())
     }
 
-    fn handle_acct_request(&self, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
+    fn handle_acct_request(&self, request: &mut [u8], secret: &str) -> Result<Vec<u8>, RadiusError> {
         let ipv6_bytes        = ipv6_string_to_bytes("fc66::1/64")?;
         let ipv4_bytes        = ipv4_string_to_bytes("192.168.0.1")?;
         let nas_ip_addr_bytes = ipv4_string_to_bytes("192.168.1.10")?;
@@ -191,18 +195,18 @@ impl SyncServerTrait for CustomServer {
             self.base_server.create_attribute_by_name("NAS-IP-Address",     nas_ip_addr_bytes)?
         ];
 
-        let mut reply_packet = self.base_server.create_reply_packet(TypeCode::AccountingResponse, attributes, request);
+        let mut reply_packet = self.base_server.create_reply_packet(TypeCode::AccountingResponse, attributes, request, secret);
         Ok(reply_packet.to_bytes())
     }
 
-    fn handle_coa_request(&self, request: &mut [u8]) -> Result<Vec<u8>, RadiusError> {
+    fn handle_coa_request(&self, request: &mut [u8], secret: &str) -> Result<Vec<u8>, RadiusError> {
         let state = String::from("testing").into_bytes();
 
         let attributes = vec![
             self.base_server.create_attribute_by_name("State", state)?
         ];
 
-        let mut reply_packet = self.base_server.create_reply_packet(TypeCode::CoAACK, attributes, request);
+        let mut reply_packet = self.base_server.create_reply_packet(TypeCode::CoAACK, attributes, request, secret);
         Ok(reply_packet.to_bytes())
     }
     // ------------------------
@@ -212,8 +216,12 @@ fn main() -> Result<(), RadiusError> {
     SimpleLogger::new().with_level(LevelFilter::Debug).init().expect("Failed to create new logger");
     debug!("RADIUS Server started");
 
+    let allowed_hosts = HashMap::from([
+        ("127.0.0.1".to_string(), "secret".to_string())
+    ]);
+
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict")?;
-    let mut server = CustomServer::initialise_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2, vec![String::from("127.0.0.1")])?;
+    let mut server = CustomServer::initialise_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), 1, 2, allowed_hosts)?;
 
     server.run()
 }

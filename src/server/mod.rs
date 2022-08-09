@@ -47,19 +47,22 @@ pub trait SyncServerTrait {
     /// Function is responsible for resolving AUTH RADIUS request
     ///
     /// For example see `examples/sync_radius_server.rs`
-    fn handle_auth_request(&self, request: &mut [u8])->Result<Vec<u8>, RadiusError> {
+    #[allow(unused_variables)]
+    fn handle_auth_request(&self, request: &mut [u8], secret: &str)->Result<Vec<u8>, RadiusError> {
         Ok(request.to_vec())
     }
     /// Function is responsible for resolving ACCT RADIUS request
     ///
     /// For example see `examples/sync_radius_server.rs`
-    fn handle_acct_request(&self, request: &mut [u8])->Result<Vec<u8>, RadiusError> {
+    #[allow(unused_variables)]
+    fn handle_acct_request(&self, request: &mut [u8], secret: &str)->Result<Vec<u8>, RadiusError> {
         Ok(request.to_vec())
     }
     /// Function is responsible for resolving CoA RADIUS request
     ///
     /// For example see `examples/sync_radius_server.rs`
-    fn handle_coa_request(&self, request: &mut [u8])->Result<Vec<u8>, RadiusError> {
+    #[allow(unused_variables)]
+    fn handle_coa_request(&self, request: &mut [u8], secret: &str)->Result<Vec<u8>, RadiusError> {
         Ok(request.to_vec())
     }
 }

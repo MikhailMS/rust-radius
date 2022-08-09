@@ -8,14 +8,15 @@ use crate::protocol::error::RadiusError;
 
 use md5::{ Digest, Md5 };
 
+use std::collections::HashMap;
+
 
 #[derive(Debug)]
 /// Represents RADIUS Generic Server instance
 pub struct Server {
     host:          Host,
-    allowed_hosts: Vec<String>,
+    allowed_hosts: HashMap<String, String>,
     server:        String,
-    secret:        String,
     retries:       u16,
     timeout:       u16,
 }
@@ -29,10 +30,9 @@ impl Server {
         let host = Host::with_dictionary(dictionary);
 
         Server {
-            host:          host,
-            allowed_hosts: Vec::new(),
+            host,
+            allowed_hosts: HashMap::new(),
             server:        String::from(""),
-            secret:        String::from(""),
             retries:       1,
             timeout:       2,
         }
@@ -46,18 +46,8 @@ impl Server {
         self
     }
 
-    /// **Required**
-    ///
-    /// Sets secret which is used to encode/decode RADIUS packet
-    pub fn set_secret(mut self, secret: String) -> Server {
-        self.secret = secret;
-        self
-    }
-
-    /// **Required**
-    ///
     /// Sets allowed hosts, from where Server would be allowed to accept RADIUS requests
-    pub fn set_allowed_hosts(mut self, allowed_hosts: Vec<String>) -> Server {
+    pub fn set_allowed_hosts(mut self, allowed_hosts: HashMap<String, String>) -> Server {
         self.allowed_hosts = allowed_hosts;
         self
     }
@@ -108,8 +98,22 @@ impl Server {
     }
 
     /// Returns allowed hosts list
-    pub fn allowed_hosts(&self) -> &[String] {
+    pub fn allowed_hosts(&self) -> &HashMap<String, String> {
         &self.allowed_hosts
+    }
+
+    /// Returns secret for given host
+    pub fn retrieve_secret(&self, remote_host: &std::net::SocketAddr) -> &str {
+        let remote_host_name            = remote_host.to_string();
+        let remote_host_name: Vec<&str> = remote_host_name.split(":").collect();
+
+        for (host, secret) in self.allowed_hosts.iter() {
+            if host == remote_host_name[0] {
+                return &secret
+            }
+        }
+
+        return ""
     }
 
     /// Creates RADIUS packet attribute by name, that is defined in dictionary file
@@ -129,27 +133,27 @@ impl Server {
     /// Creates reply RADIUS packet
     ///
     /// Similar to [Client's create_packet()](crate::client::client::Client::create_packet), however also sets correct packet ID and authenticator
-    pub fn create_reply_packet(&self, reply_code: TypeCode, attributes: Vec<RadiusAttribute>, request: &mut [u8]) -> RadiusPacket {
+    pub fn create_reply_packet(&self, reply_code: TypeCode, attributes: Vec<RadiusAttribute>, request: &mut [u8], secret: &str) -> RadiusPacket {
         let mut reply_packet = RadiusPacket::initialise_packet(reply_code);
         reply_packet.set_attributes(attributes);
 
         // We can only create new authenticator after we set reply packet ID to the request's ID
         reply_packet.override_id(request[1]);
 
-        let authenticator = self.create_reply_authenticator(&reply_packet.to_bytes(), &request[4..20]);
+        let authenticator = self.create_reply_authenticator(&reply_packet.to_bytes(), &request[4..20], secret);
         reply_packet.override_authenticator(authenticator);
 
         reply_packet
     }
 
-    fn create_reply_authenticator(&self, raw_reply_packet: &[u8], request_authenticator: &[u8]) -> Vec<u8> {
+    fn create_reply_authenticator(&self, raw_reply_packet: &[u8], request_authenticator: &[u8], secret: &str) -> Vec<u8> {
         // We need to create authenticator as MD5 hash (similar to how client verifies server reply)
         let mut md5_hasher    = Md5::new();
 
         md5_hasher.update(&raw_reply_packet[0..4]); // Append reply's   type code, reply ID and reply length
         md5_hasher.update(&request_authenticator);  // Append request's authenticator
         md5_hasher.update(&raw_reply_packet[20..]); // Append reply's   attributes
-        md5_hasher.update(&self.secret.as_bytes()); // Append server's  secret. Possibly it should be client's secret, which sould be stored together with allowed hostnames ?
+        md5_hasher.update(&secret.as_bytes()); // Append server's  secret. Possibly it should be client's secret, which sould be stored together with allowed hostnames ?
         // ----------------
 
         md5_hasher.finalize().to_vec()
@@ -188,21 +192,24 @@ impl Server {
         let remote_host_name            = remote_host.to_string();
         let remote_host_name: Vec<&str> = remote_host_name.split(":").collect();
 
-        self.allowed_hosts.iter().any(|host| host==remote_host_name[0]) 
+        self.allowed_hosts.iter().any(|(host, _)| host==remote_host_name[0]) 
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn test_add_allowed_hosts_and_add_request_handler() {
-        let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-        let server     = Server::with_dictionary(dictionary)
+        let allowed_hosts = HashMap::from([
+            ("127.0.0.1".to_string(), "secret".to_string())
+        ]);
+        let dictionary    = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
+        let server        = Server::with_dictionary(dictionary)
             .set_server(String::from("0.0.0.0"))
-            .set_secret(String::from("secret"))
-            .set_allowed_hosts(vec![String::from("127.0.0.1")]);
+            .set_allowed_hosts(allowed_hosts);
 
         assert_eq!(server.allowed_hosts().len(), 1);
     }
