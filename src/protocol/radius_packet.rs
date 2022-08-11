@@ -135,28 +135,22 @@ impl RadiusAttribute {
     ///
     /// Returns None, if ATTRIBUTE with such name is not found in Dictionary
     pub fn create_by_name(dictionary: &Dictionary, attribute_name: &str, value: Vec<u8>) -> Option<RadiusAttribute> {
-        match dictionary.attributes().iter().find(|&attr| attr.name() == attribute_name) {
-            Some(attr) => Some(RadiusAttribute {
-                id:    attr.code(),
-                name:  attr.name().to_string(),
-                value
-            }),
-            _          => None
-        }
+        dictionary.attributes().iter().find(|&attr| attr.name() == attribute_name).map(|attr| RadiusAttribute {
+            id:    attr.code(),
+            name:  attr.name().to_string(),
+            value
+        })
     }
 
     /// Creates RadiusAttribute with given id
     ///
     /// Returns None, if ATTRIBUTE with such id is not found in Dictionary
     pub fn create_by_id(dictionary: &Dictionary, attribute_code: u8, value: Vec<u8>) -> Option<RadiusAttribute> {
-        match dictionary.attributes().iter().find(|&attr| attr.code() == attribute_code) {
-            Some(attr) => Some(RadiusAttribute {
-                id:    attribute_code,
-                name:  attr.name().to_string(),
-                value
-            }),
-            _          => None
-        }
+        dictionary.attributes().iter().find(|&attr| attr.code() == attribute_code).map(|attr| RadiusAttribute {
+            id:    attribute_code,
+            name:  attr.name().to_string(),
+            value
+        })
     }
 
     /// Overriddes RadiusAttribute value
@@ -191,6 +185,8 @@ impl RadiusAttribute {
                 }
             },
             Some(SupportedAttributeTypes::ByteString) => {
+                // TODO - remove the check as we cannot really verify the value as it is a binary
+                // data, not a UTF-8 String
                 match String::from_utf8(self.value().to_vec()) {
                     Ok(_) => Ok(()),
                     _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Byte string")} )
@@ -238,6 +234,7 @@ impl RadiusAttribute {
                 }
             },
             Some(SupportedAttributeTypes::IPv4Prefix)    => {
+                // TODO - update ipv4 functions to handle prefixes
                 match bytes_to_ipv4_string(self.value()) {
                     Ok(_) => Ok(()),
                     _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv4Prefix bytes")} )
@@ -255,13 +252,13 @@ impl RadiusAttribute {
                     _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv6Prefix bytes")} )
                 }
             },
-            // Some(SupportedAttributeTypes::InterfaceId)    => {
-            //     // TODO - create bytes_to_interfaceid_string() function
-            //     match bytes_to_interfaceid_string(self.value()) {
-            //         Ok(_) => Ok(()),
-            //         _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid InterfaceId bytes")} )
-            //     }
-            // },
+            Some(SupportedAttributeTypes::InterfaceId)    => {
+                // TODO - create bytes_to_interfaceid_string() function
+                match bytes_to_interfaceid_string(self.value()) {
+                    Ok(_) => Ok(()),
+                    _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid InterfaceId bytes")} )
+                }
+            },
             _                                          => Err( RadiusError::MalformedAttributeError {error: String::from("unsupported attribute code type")} )
         }
     }
@@ -558,6 +555,14 @@ mod tests {
         assert_eq!(Some(expected), RadiusAttribute::create_by_name(&dict, "User-Name", vec![1,2,3]));
     }
     #[test]
+    fn test_radius_attribute_create_by_name_non_existing() {
+        let dictionary_path = "./dict_examples/test_dictionary_dict";
+        let dict            = Dictionary::from_file(dictionary_path).unwrap();
+
+        assert_eq!(None, RadiusAttribute::create_by_name(&dict, "Non-Existing", vec![1,2,3]));
+    }
+
+    #[test]
     fn test_radius_attribute_create_by_id() {
         let dictionary_path = "./dict_examples/test_dictionary_dict";
         let dict            = Dictionary::from_file(dictionary_path).unwrap();
@@ -570,7 +575,13 @@ mod tests {
 
         assert_eq!(Some(expected), RadiusAttribute::create_by_id(&dict, 5, vec![1,2,3]));
     }
+    #[test]
+    fn test_radius_attribute_create_by_id_non_existing() {
+        let dictionary_path = "./dict_examples/test_dictionary_dict";
+        let dict            = Dictionary::from_file(dictionary_path).unwrap();
 
+        assert_eq!(None, RadiusAttribute::create_by_id(&dict, 205, vec![1,2,3]));
+    }
 
     #[test]
     fn test_initialise_packet_from_bytes() {

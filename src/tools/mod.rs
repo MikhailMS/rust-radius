@@ -16,7 +16,7 @@ use crate::protocol::error::RadiusError;
 ///
 /// Should be used for any Attribute of type **ipv6addr** or **ipv6prefix** to ensure value is encoded correctly
 pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, RadiusError> {
-    let parsed_ipv6: Vec<&str> = ipv6.split("/").collect();
+    let parsed_ipv6: Vec<&str> = ipv6.split('/').collect();
     let mut bytes: Vec<u8>     = Vec::with_capacity(18);
     let ipv6_address           = Ipv6Addr::from_str(parsed_ipv6[0]).map_err(|error| RadiusError::MalformedIpAddrError { error: error.to_string() })?;
 
@@ -66,7 +66,7 @@ pub fn bytes_to_ipv6_string(ipv6: &[u8]) -> Result<String, RadiusError> {
 ///
 /// Should be used for any Attribute of type **ipaddr** to ensure value is encoded correctly
 pub fn ipv4_string_to_bytes(ipv4: &str) -> Result<Vec<u8>, RadiusError> {
-    if ipv4.contains("/") {
+    if ipv4.contains('/') {
         return Err( RadiusError::MalformedIpAddrError { error: format!("Subnets are not supported for IPv4: {}", ipv4) } )
     }
 
@@ -187,7 +187,7 @@ pub fn decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8>
 ///
 /// Should be used for RADIUS Tunnel-Password Attribute
 pub fn salt_encrypt_data(data: &[u8], authenticator: &[u8], salt: &[u8], secret: &[u8]) -> Vec<u8> {
-    if data.len() == 0 {
+    if data.is_empty() {
         return Vec::new();
     }
 
@@ -279,7 +279,7 @@ fn encrypt_helper<'a:'b, 'b>(mut out: &'a mut [u8], mut result: &'b [u8], hash: 
         result = _prev;
         out   = _current;
 
-        if out.len() == 0 { break }
+        if out.is_empty() { break }
     }
 }
 

@@ -29,7 +29,7 @@ impl Server {
         let host = Host::with_dictionary(dictionary);
 
         Server {
-            host:          host,
+            host,
             allowed_hosts: Vec::new(),
             server:        String::from(""),
             secret:        String::from(""),
@@ -186,7 +186,7 @@ impl Server {
     /// Server can process such request
     pub fn host_allowed(&self, remote_host: &std::net::SocketAddr) -> bool {
         let remote_host_name            = remote_host.to_string();
-        let remote_host_name: Vec<&str> = remote_host_name.split(":").collect();
+        let remote_host_name: Vec<&str> = remote_host_name.split(':').collect();
 
         self.allowed_hosts.iter().any(|host| host==remote_host_name[0]) 
     }
