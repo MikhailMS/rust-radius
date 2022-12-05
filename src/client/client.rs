@@ -110,28 +110,28 @@ impl Client {
     ///
     /// You would need to set attributes manually via *set_attributes()* function
     pub fn create_packet(&self, code: TypeCode) -> RadiusPacket {
-        RadiusPacket::initialise_packet(code)
+        RadiusPacket::initialize_packet(code)
     }
 
     /// Creates RADIUS Access Request packet
     ///
     /// You would need to set attributes manually via *set_attributes()* function
     pub fn create_auth_packet(&self) -> RadiusPacket {
-        RadiusPacket::initialise_packet(TypeCode::AccessRequest)
+        RadiusPacket::initialize_packet(TypeCode::AccessRequest)
     }
 
     /// Creates RADIUS Accounting Request packet without attributes
     ///
     /// You would need to set attributes manually via *set_attributes()* function
     pub fn create_acct_packet(&self) -> RadiusPacket {
-        RadiusPacket::initialise_packet(TypeCode::AccountingRequest)
+        RadiusPacket::initialize_packet(TypeCode::AccountingRequest)
     }
 
     /// Creates RADIUS CoA Request packet without attributes
     ///
     /// You would need to set attributes manually via *set_attributes()* function
     pub fn create_coa_packet(&self) -> RadiusPacket {
-        RadiusPacket::initialise_packet(TypeCode::CoARequest)
+        RadiusPacket::initialize_packet(TypeCode::CoARequest)
     }
 
     /// Creates RADIUS packet attribute by name, that is defined in dictionary file
@@ -212,8 +212,8 @@ impl Client {
     }
 
     /// Initialises RadiusPacket from bytes
-    pub fn initialise_packet_from_bytes(&self, reply: &[u8]) -> Result<RadiusPacket, RadiusError> {
-        self.host.initialise_packet_from_bytes(reply)
+    pub fn initialize_packet_from_bytes(&self, reply: &[u8]) -> Result<RadiusPacket, RadiusError> {
+        self.host.initialize_packet_from_bytes(reply)
     }
 
     /// Verifies that reply packet's ID and authenticator are a match
@@ -353,7 +353,7 @@ mod tests {
 
         let authenticator     = vec![215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
         let reply             = vec![];
-        let mut radius_packet = RadiusPacket::initialise_packet(TypeCode::AccountingRequest);
+        let mut radius_packet = RadiusPacket::initialize_packet(TypeCode::AccountingRequest);
 
         radius_packet.set_attributes(attributes);
         radius_packet.override_id(43);
@@ -381,7 +381,7 @@ mod tests {
 
         let authenticator     = vec![215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
         let reply             = vec![43, 215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
-        let mut radius_packet = RadiusPacket::initialise_packet(TypeCode::AccountingRequest);
+        let mut radius_packet = RadiusPacket::initialize_packet(TypeCode::AccountingRequest);
 
         radius_packet.set_attributes(attributes);
         radius_packet.override_id(43);
@@ -400,7 +400,7 @@ mod tests {
         let attributes    = vec![ RadiusAttribute::create_by_name(&dictionary, "User-Name", String::from("testing").into_bytes()).unwrap() ];
 
         let reply             = vec![2, 220, 0, 52, 165, 196, 239, 87, 197, 230, 219, 74, 148, 177, 209, 155, 35, 36, 236, 63, 6, 6, 0, 0, 0, 2, 8, 6, 192, 168, 0, 1, 97, 20, 0, 64, 252, 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
-        let mut radius_packet = RadiusPacket::initialise_packet(TypeCode::AccessRequest);
+        let mut radius_packet = RadiusPacket::initialize_packet(TypeCode::AccessRequest);
         radius_packet.set_attributes(attributes);
         radius_packet.override_id(220);
         radius_packet.override_authenticator(authenticator);
@@ -431,7 +431,7 @@ mod tests {
             RadiusAttribute::create_by_name(&dictionary, "Message-Authenticator", [0;16].to_vec()).unwrap()
         ];
 
-        let mut radius_packet = RadiusPacket::initialise_packet(TypeCode::AccessRequest);
+        let mut radius_packet = RadiusPacket::initialize_packet(TypeCode::AccessRequest);
         radius_packet.set_attributes(attributes);
         radius_packet.override_id(220);
         radius_packet.override_authenticator(authenticator);

@@ -34,7 +34,7 @@ impl CustomServer {
     /// Exists to allow mapping between CoA socket and CoA requests processing
     pub const COA_SOCKET:  Token = Token(3);
 
-    fn initialise_server(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16, allowed_hosts: Vec<String>) -> Result<CustomServer, RadiusError> {
+    fn initialize_server(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16, allowed_hosts: Vec<String>) -> Result<CustomServer, RadiusError> {
         let auth_bind_addr = format!("{}:{}", &server, auth_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
         let acct_bind_addr = format!("{}:{}", &server, acct_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
         let coa_bind_addr  = format!("{}:{}", &server, coa_port).parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
@@ -60,9 +60,9 @@ impl CustomServer {
         socket_poll.registry().register(&mut acct_server, CustomServer::ACCT_SOCKET, Interest::READABLE)?;
         socket_poll.registry().register(&mut coa_server,  CustomServer::COA_SOCKET,  Interest::READABLE)?;
 
-        debug!("Authentication is initialised to accepts RADIUS packets on {}", &auth_server.local_addr()?);
-        debug!("Accounting is initialised to accepts RADIUS packets on {}",     &acct_server.local_addr()?);
-        debug!("CoA is initialised to accepts RADIUS packets on {}",            &coa_server.local_addr()?);
+        debug!("Authentication is initialized to accepts RADIUS packets on {}", &auth_server.local_addr()?);
+        debug!("Accounting is initialized to accepts RADIUS packets on {}",     &acct_server.local_addr()?);
+        debug!("CoA is initialized to accepts RADIUS packets on {}",            &coa_server.local_addr()?);
         // ============
 
         Ok(
@@ -213,7 +213,7 @@ fn main() -> Result<(), RadiusError> {
     debug!("RADIUS Server started");
 
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict")?;
-    let mut server = CustomServer::initialise_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2, vec![String::from("127.0.0.1")])?;
+    let mut server = CustomServer::initialize_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2, vec![String::from("127.0.0.1")])?;
 
     server.run()
 }

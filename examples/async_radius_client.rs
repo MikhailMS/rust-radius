@@ -26,7 +26,7 @@ struct ClientWrapper {
 }
 
 impl ClientWrapper {
-    async fn initialise_client(auth_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<ClientWrapper, RadiusError> {
+    async fn initialize_client(auth_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<ClientWrapper, RadiusError> {
         // Bind socket
         let socket = UdpSocket::bind("0.0.0.0:0").await.map_err(|error| RadiusError::SocketConnectionError(error))?;
         // --------------------
@@ -81,7 +81,7 @@ fn main() -> Result<(), RadiusError> {
     
     task::block_on(async {
         let dictionary = Dictionary::from_file("./dict_examples/integration_dict")?;
-        let client     = ClientWrapper::initialise_client(1812, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).await?;
+        let client     = ClientWrapper::initialize_client(1812, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).await?;
 
         let user_name            = String::from("testing").into_bytes();
         let user_pass            = b"very secure password, that noone is able to guess";

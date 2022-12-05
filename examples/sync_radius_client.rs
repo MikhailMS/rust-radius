@@ -28,7 +28,7 @@ struct ClientWrapper {
 impl ClientWrapper {
     const TOKEN: Token = Token(0);
 
-    fn initialise_client(auth_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<ClientWrapper, RadiusError> {
+    fn initialize_client(auth_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<ClientWrapper, RadiusError> {
         // Bind socket
         let local_bind  = "0.0.0.0:0".parse().map_err(|error| RadiusError::SocketAddrParseError(error))?;
         let mut socket  = UdpSocket::bind(local_bind).map_err(|error| RadiusError::SocketConnectionError(error))?;
@@ -94,7 +94,7 @@ fn main() -> Result<(), RadiusError> {
     debug!("RADIUS Client started");
     
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict")?;
-    let mut client = ClientWrapper::initialise_client(1812, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2)?;
+    let mut client = ClientWrapper::initialize_client(1812, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2)?;
 
     let user_name             = String::from("testing").into_bytes();
     let message_authenticator = [0; 16];
