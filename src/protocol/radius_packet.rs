@@ -3,7 +3,7 @@
 
 use super::dictionary::{ Dictionary, SupportedAttributeTypes };
 use super::error::RadiusError;
-use crate::tools::{ bytes_to_integer, bytes_to_timestamp, bytes_to_ipv4_string, bytes_to_ipv6_string };
+use crate::tools::{ bytes_to_integer, bytes_to_interfaceid_string, bytes_to_timestamp, bytes_to_ipv4_string, bytes_to_ipv6_string };
 
 use hmac::{ Hmac, Mac };
 use md5::Md5;

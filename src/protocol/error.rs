@@ -26,9 +26,17 @@ pub enum RadiusError {
         /// Error definition received from crate
         error: String
     },
-    /// Error happens, when IPv6 Address was badly added to Radius Packet or got corrupted
-    #[error("Provided IPv6 address is malformed: {error}")]
+    /// Error happens, when IPv4/IPv6 Address was badly added to Radius Packet or got corrupted
+    /// during packet transmission
+    #[error("Provided IP Address is malformed: {error}")]
     MalformedIpAddrError    {
+        /// Error definition received from crate
+        error: String
+    },
+    /// Error happens, when Interface Id was badly added to Radius Packet or got corrupted during
+    /// packet transmission
+    #[error("Provided Interface Id is malformed: {error}")]
+    MalformedIfIdError    {
         /// Error definition received from crate
         error: String
     },
