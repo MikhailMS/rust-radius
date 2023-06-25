@@ -27,7 +27,7 @@ jobs:
       fail-fast: false
       matrix:
         rust: [1.42.0]
-        os:   [ubuntu-18.04]
+        os:   [ubuntu-20.04]
     steps:
 
     - name: MSVR for build -- Checkout
@@ -50,7 +50,7 @@ jobs:
       fail-fast: false
       matrix:
         rust: [1.43.0, 1.44.0, 1.45.0]
-        os:   [ubuntu-18.04]
+        os:   [ubuntu-20.04]
     steps:
 
     - name: OLD -- Checkout
@@ -79,7 +79,7 @@ jobs:
       fail-fast: false
       matrix:
         rust: [1.46.0, 1.47.0, 1.48.0, 1.49.0, 1.50.0, 1.51.0]
-        os:   [ubuntu-18.04]
+        os:   [ubuntu-20.04]
     steps:
 
     - name: NEW -- Checkout
@@ -107,8 +107,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [1.52.0, 1.52.1, 1.53.0, 1.54.0, 1.55.0]
-        os:   [ubuntu-18.04]
+        rust: [1.52.1, 1.53.0, 1.54.0, 1.55.0]
+        os:   [ubuntu-20.04]
     steps:
 
     - name: MODERN -- Checkout
@@ -136,8 +136,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [1.56.0, 1.56.1, 1.57.0, 1.58.0, 1.58.1, 1.59.0, 1.60.0, 1.61.0, 1.62.1]
-        os:   [ubuntu-18.04]
+        rust: [1.56.1, 1.57.0, 1.58.1, 1.59.0, 1.60.0, 1.61.0, 1.62.1, 1.63.0, 1.64.0, 1.65.0, 1.66.1, 1.67.1, 1.68.2, 1.69.0, 1.70.0, 1.71.0, 1.72.0]
+        os:   [ubuntu-20.04]
     steps:
 
     - name: MODERN -- Checkout
@@ -178,7 +178,7 @@ jobs:
       fail-fast: false
       matrix:
         rust: [nightly-2022-07-23]
-        os:   [ubuntu-18.04]
+        os:   [ubuntu-20.04]
     steps:
 
     - name: Nightly Rust -- Checkout
