@@ -17,6 +17,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   CLICOLOR_FORCE: 1
+  CI: true
 
 
 jobs:
@@ -29,19 +30,16 @@ jobs:
         rust: [1.42.0]
         os:   [ubuntu-20.04]
     steps:
-
     - name: MSVR for build -- Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: MSVR for build -- Install rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
-        profile:   minimal
-        override:  true
 
     - name: MSVR for build -- Build
-      run: cargo build --verbose
+      run: cargo build -Z minimal-versions --verbose
 
   old_rust_ci_test:
     name:     Old Rust CI testing
@@ -54,17 +52,15 @@ jobs:
     steps:
 
     - name: OLD -- Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: OLD -- Install rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
-        profile:   minimal
-        override:  true
 
     - name: OLD -- Build
-      run: CARGO_NET_GIT_FETCH_WITH_CLI=true cargo build --verbose
+      run: CARGO_NET_GIT_FETCH_WITH_CLI=true cargo build -Z minimal-versions --verbose
 
     - name: OLD -- Start simple RADIUS server
       run: cargo run --example sync_radius_server &
@@ -83,17 +79,15 @@ jobs:
     steps:
 
     - name: NEW -- Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: NEW -- Install rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
-        profile:   minimal
-        override:  true
 
     - name: NEW -- Build
-      run: cargo build --verbose
+      run: cargo build -Z minimal-versions --verbose
 
     - name: NEW -- Start simple RADIUS server
       run: cargo run --example sync_radius_server &
@@ -112,17 +106,15 @@ jobs:
     steps:
 
     - name: MODERN -- Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: MODERN -- Install rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
-        profile:   minimal
-        override:  true
 
     - name: MODERN -- Build
-      run: cargo build --verbose
+      run: cargo build -Z minimal-versions --verbose
 
     - name: MODERN -- Start simple RADIUS server
       run: cargo run --example sync_radius_server &
@@ -141,14 +133,12 @@ jobs:
     steps:
 
     - name: MODERN -- Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: MODERN -- Install rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
-        profile:   minimal
-        override:  true
 
     - name: MODERN -- Install cargo-make
       uses: actions-rs/cargo@v1
@@ -157,7 +147,7 @@ jobs:
         args:    --debug cargo-make --version 0.30.0
         
     - name: MODERN -- Build
-      run: cargo build --verbose
+      run: cargo build -Z minimal-versions --verbose
 
     - name: MODERN -- Start simple RADIUS server
       run: cargo run --example sync_radius_server &
@@ -182,14 +172,12 @@ jobs:
     steps:
 
     - name: Nightly Rust -- Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Nightly Rust -- Install rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
-        profile:   minimal
-        override:  true
 
     - name: Nightly Rust -- Install cargo-make
       uses: actions-rs/cargo@v1
@@ -204,7 +192,7 @@ jobs:
         args:    --debug cargo-tarpaulin
 
     - name: Nightly Rust -- Build
-      run: cargo build --verbose
+      run: cargo build -Z minimal-versions --verbose
 
     - name: Nightly Rust -- Start simple RADIUS server
       run: cargo run --example sync_radius_server &
