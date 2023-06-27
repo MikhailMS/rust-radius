@@ -39,7 +39,7 @@ jobs:
         toolchain: ${{ matrix.rust }}
 
     - name: MSVR for build -- Build
-      run: cargo build -Z minimal-versions --verbose
+      run: cargo build --verbose
 
   old_rust_ci_test:
     name:     Old Rust CI testing
@@ -60,7 +60,7 @@ jobs:
         toolchain: ${{ matrix.rust }}
 
     - name: OLD -- Build
-      run: CARGO_NET_GIT_FETCH_WITH_CLI=true cargo build -Z minimal-versions --verbose
+      run: CARGO_NET_GIT_FETCH_WITH_CLI=true cargo build --verbose
 
     - name: OLD -- Start simple RADIUS server
       run: cargo run --example sync_radius_server &
@@ -87,7 +87,7 @@ jobs:
         toolchain: ${{ matrix.rust }}
 
     - name: NEW -- Build
-      run: cargo build -Z minimal-versions --verbose
+      run: cargo build --verbose
 
     - name: NEW -- Start simple RADIUS server
       run: cargo run --example sync_radius_server &
@@ -114,7 +114,7 @@ jobs:
         toolchain: ${{ matrix.rust }}
 
     - name: MODERN -- Build
-      run: cargo build -Z minimal-versions --verbose
+      run: cargo build --verbose
 
     - name: MODERN -- Start simple RADIUS server
       run: cargo run --example sync_radius_server &
@@ -147,7 +147,7 @@ jobs:
         args:    --debug cargo-make --version 0.30.0
         
     - name: MODERN -- Build
-      run: cargo build -Z minimal-versions --verbose
+      run: cargo build --verbose
 
     - name: MODERN -- Start simple RADIUS server
       run: cargo run --example sync_radius_server &
@@ -167,7 +167,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [nightly-2022-07-23]
         os:   [ubuntu-20.04]
     steps:
 
@@ -175,21 +174,21 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Nightly Rust -- Install rust
-      uses: dtolnay/rust-toolchain@master
+      uses: dtolnay/rust-toolchain@nightly
       with:
-        toolchain: ${{ matrix.rust }}
+        components: cargo-make, cargo-tarpaulin
+        
+    #- name: Nightly Rust -- Install cargo-make
+    #  uses: actions-rs/cargo@v1
+    #  with:
+    #    command: install
+    #    args:    --debug cargo-make --version 0.35.0
 
-    - name: Nightly Rust -- Install cargo-make
-      uses: actions-rs/cargo@v1
-      with:
-        command: install
-        args:    --debug cargo-make --version 0.35.0
-
-    - name: Nightly Rust -- Install tarpaulin
-      uses: actions-rs/cargo@v1
-      with:
-        command: install
-        args:    --debug cargo-tarpaulin
+    #- name: Nightly Rust -- Install tarpaulin
+    #  uses: actions-rs/cargo@v1
+    #  with:
+    #    command: install
+    #    args:    --debug cargo-tarpaulin
 
     - name: Nightly Rust -- Build
       run: cargo build -Z minimal-versions --verbose
