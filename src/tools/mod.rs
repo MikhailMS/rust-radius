@@ -135,8 +135,17 @@ pub fn interfaceid_string_to_bytes(ifid: &str) -> Result<Vec<u8>, RadiusError> {
 
 /// Converts **ifid** bytes into String
 pub fn bytes_to_interfaceid_string(ifid: &[u8]) -> Result<String, RadiusError> {
-    // TODO - finish up the function
-    Ok("".to_string())
+    if ifid.len() % 2 != 0 {
+        return Err(RadiusError::MalformedIfIdError { error: "Length of Interface Id bytes is not multiple of 2".to_string()})
+    }
+
+    let mut interfaceid_string: Vec<String> = Vec::new();
+
+    for octets in ifid.chunks_exact(2) {
+        let octets_string = encode_ifid_octets(&octets)?;
+        interfaceid_string.push(octets_string);
+    }
+    Ok(interfaceid_string.join(":"))
 }
 
 fn decode_ifid_octets(octets: &str) -> Result<Vec<u8>, RadiusError> {
@@ -151,13 +160,12 @@ fn decode_ifid_octets(octets: &str) -> Result<Vec<u8>, RadiusError> {
 }
 
 fn encode_ifid_octets(octets: &[u8]) -> Result<String, RadiusError>  {
-    // TODO - finish up the function
-    if octets.len() != 4 {
-        Err(RadiusError::MalformedIfIdError { error: "Interface Id should have octets of 4, ie 0000".to_string()})
+    if octets.len() != 2 {
+        Err(RadiusError::MalformedIfIdError { error: "There should be 2 octets".to_string()})
     } else {
-        let mut string_octet = String::with_capacity(8);
-        for &b in octets {
-            write!(&mut string_octet, "{:02x}", b).map_err(|error| RadiusError::MalformedIfIdError { error: error.to_string() })?;
+        let mut string_octet = String::with_capacity(4);
+        for b in octets {
+            write!(string_octet, "{:02x}", b).map_err(|error| RadiusError::MalformedIfIdError { error: error.to_string() })?;
         }
         Ok(string_octet)
     }
@@ -194,7 +202,7 @@ pub fn timestamp_to_bytes(timestamp: u32) -> Vec<u8> {
     timestamp.to_be_bytes().to_vec()
 }
 
-/// Converts **date** bytes into u64 (timestamp)
+/// Converts **date** bytes into u32 (timestamp)
 pub fn bytes_to_timestamp(timestamp: &[u8; 4]) -> u32 {
     u32::from_be_bytes(*timestamp)
 }
@@ -454,12 +462,12 @@ mod tests {
 
     #[test]
     fn test_interfaceid_string_to_bytes() {
-        let ifid_bytes = interfaceid_string_to_bytes("fc66::1111:2222:3333").unwrap();
-        assert_eq!(ipv6_bytes, vec![252, 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
+        let ifid_bytes = interfaceid_string_to_bytes("fc66:1111:2222:3333").unwrap();
+        assert_eq!(ifid_bytes, vec![252, 102, 17, 17, 34, 34, 51, 51]);
     }
     #[test]
     fn test_interfaceid_string_to_bytes_invalid() {
-        match interfaceid_string_to_bytes("fc66::1111:3333") {
+        match interfaceid_string_to_bytes("fc66:1111:3333") {
             Ok(_)    => assert!(false),
             Err(err) => assert_eq!(err.to_string(), String::from("Provided Interface Id is malformed: Length of Interface Id string is not multiple of 2"))
         }
@@ -467,15 +475,20 @@ mod tests {
 
     #[test]
     fn test_bytes_to_interfaceid_string() {
-        let expected_ifid = "fc66::1111:2222:3333";
-        let ifid_bytes    = vec![252, 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
+        let expected_ifid = "fc66:1111:2222:3333";
+        let ifid_bytes    = vec![252, 102, 17, 17, 34, 34, 51, 51];
 
-        let ifid_string = bytes_to_interfaceid_string(ifid_bytes).unwrap();
+        let ifid_string = bytes_to_interfaceid_string(&ifid_bytes).unwrap();
         assert_eq!(expected_ifid, ifid_string)
     }
     #[test]
     fn test_bytes_to_interfaceid_string_invalid() {
-        assert!(true)
+        let ifid_bytes    = vec![252, 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+        match bytes_to_interfaceid_string(&ifid_bytes) {
+            Ok(_)    => assert!(false),
+            Err(err) => assert_eq!(err.to_string(), String::from("Provided Interface Id is malformed: Length of Interface Id bytes is not multiple of 2"))
+        }
     }
 
     #[test]
@@ -668,9 +681,9 @@ mod tests {
 
     #[test]
     fn test_timestamp_to_bytes() {
-        let timestamp: u64 = 1598523933;
+        let timestamp: u32 = 1598523933;
 
-        assert_eq!(vec![0, 0, 0, 0, 95, 71, 138, 29], timestamp_to_bytes(timestamp));
+        assert_eq!(vec![95, 71, 138, 29], timestamp_to_bytes(timestamp));
     }
 
     #[test]

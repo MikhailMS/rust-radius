@@ -28,7 +28,7 @@ pub enum SupportedAttributeTypes {
     IPv6Addr,
     /// Rust's \[u8;18\]
     IPv6Prefix,
-    /// Rust's \[u8;6\]; RFC 8044 calls this "ifid"
+    /// Rust's \[u8;8\]; RFC 8044 calls this "ifid"
     InterfaceId,
     /// Rust's u32
     Enum,
