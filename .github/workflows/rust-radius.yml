@@ -90,7 +90,7 @@ jobs:
         args:    --debug cargo-tarpaulin
 
     - name: Nightly Rust -- Build
-      run: cargo build -Z minimal-versions --verbose
+      run: cargo build --verbose
 
     - name: Nightly Rust -- Start simple RADIUS server
       run: cargo run --example sync_radius_server &
