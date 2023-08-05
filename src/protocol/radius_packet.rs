@@ -3,7 +3,14 @@
 
 use super::dictionary::{ Dictionary, SupportedAttributeTypes };
 use super::error::RadiusError;
-use crate::tools::{ bytes_to_integer, bytes_to_timestamp, bytes_to_ipv4_string, bytes_to_ipv6_string };
+use crate::tools::{
+    bytes_to_integer,
+    bytes_to_integer64,
+    bytes_to_interfaceid_string,
+    bytes_to_ipv4_string,
+    bytes_to_ipv6_string,
+    bytes_to_timestamp,
+};
 
 use hmac::{ Hmac, Mac };
 use md5::Md5;
@@ -135,28 +142,22 @@ impl RadiusAttribute {
     ///
     /// Returns None, if ATTRIBUTE with such name is not found in Dictionary
     pub fn create_by_name(dictionary: &Dictionary, attribute_name: &str, value: Vec<u8>) -> Option<RadiusAttribute> {
-        match dictionary.attributes().iter().find(|&attr| attr.name() == attribute_name) {
-            Some(attr) => Some(RadiusAttribute {
-                id:    attr.code(),
-                name:  attr.name().to_string(),
-                value
-            }),
-            _          => None
-        }
+        dictionary.attributes().iter().find(|&attr| attr.name() == attribute_name).map(|attr| RadiusAttribute {
+            id:    attr.code(),
+            name:  attr.name().to_string(),
+            value
+        })
     }
 
     /// Creates RadiusAttribute with given id
     ///
     /// Returns None, if ATTRIBUTE with such id is not found in Dictionary
     pub fn create_by_id(dictionary: &Dictionary, attribute_code: u8, value: Vec<u8>) -> Option<RadiusAttribute> {
-        match dictionary.attributes().iter().find(|&attr| attr.code() == attribute_code) {
-            Some(attr) => Some(RadiusAttribute {
-                id:    attribute_code,
-                name:  attr.name().to_string(),
-                value
-            }),
-            _          => None
-        }
+        dictionary.attributes().iter().find(|&attr| attr.code() == attribute_code).map(|attr| RadiusAttribute {
+            id:    attribute_code,
+            name:  attr.name().to_string(),
+            value
+        })
     }
 
     /// Overriddes RadiusAttribute value
@@ -190,17 +191,13 @@ impl RadiusAttribute {
                     _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid ASCII(Text) bytes")} )
                 }
             },
-            Some(SupportedAttributeTypes::ByteString) => {
-                match String::from_utf8(self.value().to_vec()) {
-                    Ok(_) => Ok(()),
-                    _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Byte string")} )
-                }
+            Some(SupportedAttributeTypes::ByteString)  => {
+                // We cannot verify original value as it is a binary string
+                Ok(())
             },
             Some(SupportedAttributeTypes::Concat) => {
-                match String::from_utf8(self.value().to_vec()) {
-                    Ok(_) => Ok(()),
-                    _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Concat bytes")} )
-                }
+                // Behaves similar to ByteString but allowed to be longer than 253 octets
+               Ok(())
             },
             Some(SupportedAttributeTypes::Integer)     => {
                 match self.value().try_into() {
@@ -211,12 +208,10 @@ impl RadiusAttribute {
                     _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Integer bytes")} )
                 }
             },
-            Some(SupportedAttributeTypes::Integer64)     => {
+            Some(SupportedAttributeTypes::Integer64)   => {
                 match self.value().try_into() {
                     Ok(value) => {
-                        // TODO - create bytes_to_integer64() function so it could be used instead
-                        // of bytes_to_integer() which takes 32bit integer as input
-                        bytes_to_integer(value);
+                        bytes_to_integer64(value);
                         Ok(())
                     },
                     _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Integer64 bytes")} )
@@ -237,7 +232,7 @@ impl RadiusAttribute {
                     _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv4 bytes")} )
                 }
             },
-            Some(SupportedAttributeTypes::IPv4Prefix)    => {
+            Some(SupportedAttributeTypes::IPv4Prefix)  => {
                 match bytes_to_ipv4_string(self.value()) {
                     Ok(_) => Ok(()),
                     _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv4Prefix bytes")} )
@@ -255,19 +250,18 @@ impl RadiusAttribute {
                     _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv6Prefix bytes")} )
                 }
             },
-            // Some(SupportedAttributeTypes::InterfaceId)    => {
-            //     // TODO - create bytes_to_interfaceid_string() function
-            //     match bytes_to_interfaceid_string(self.value()) {
-            //         Ok(_) => Ok(()),
-            //         _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid InterfaceId bytes")} )
-            //     }
-            // },
+            Some(SupportedAttributeTypes::InterfaceId) => {
+                match bytes_to_interfaceid_string(self.value()) {
+                    Ok(_) => Ok(()),
+                    _     => Err( RadiusError::MalformedAttributeError {error: String::from("invalid InterfaceId bytes")} )
+                }
+            },
             _                                          => Err( RadiusError::MalformedAttributeError {error: String::from("unsupported attribute code type")} )
         }
     }
 
-    /// Returns RadiusAttribute value, if the attribute is dictionary's ATTRIBUTE with code type string, ipaddr,
-    /// ipv6addr or ipv6prefix
+    /// Returns RadiusAttribute value, if the attribute is dictionary's ATTRIBUTE with code type
+    /// string, ipaddr, ipv4addr, ipv4prefix, ipv6addr or ipv6prefix
     pub fn original_string_value(&self, allowed_type: &Option<SupportedAttributeTypes>) -> Result<String, RadiusError> {
         match allowed_type {
             Some(SupportedAttributeTypes::AsciiString) => {
@@ -282,6 +276,12 @@ impl RadiusAttribute {
                     _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv4 bytes")} )
                 }
             },
+            Some(SupportedAttributeTypes::IPv4Prefix)  => {
+                match bytes_to_ipv4_string(self.value()) {
+                    Ok(value) => Ok(value),
+                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv4Prefix bytes")} )
+                }
+            },
             Some(SupportedAttributeTypes::IPv6Addr)    => {
                 match bytes_to_ipv6_string(self.value()) {
                     Ok(value) => Ok(value),
@@ -294,6 +294,12 @@ impl RadiusAttribute {
                     _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid IPv6 bytes")} )
                 }
             },
+            Some(SupportedAttributeTypes::InterfaceId) => {
+                match bytes_to_interfaceid_string(self.value()) {
+                    Ok(value) => Ok(value),
+                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid InterfaceId bytes")} )
+                }
+            },
             _                                          => Err( RadiusError::MalformedAttributeError {error: String::from("not a String data type")} )
         }
     }
@@ -304,7 +310,7 @@ impl RadiusAttribute {
         match allowed_type {
             Some(SupportedAttributeTypes::Integer) => {
                 match self.value().try_into() {
-                    Ok(value) => Ok(bytes_to_integer(value) as u32),
+                    Ok(value) => Ok(bytes_to_integer(value)),
                     _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Integer bytes")} )
                 }
             } ,
@@ -315,6 +321,20 @@ impl RadiusAttribute {
                 }
             },
             _                                      => Err( RadiusError::MalformedAttributeError {error: String::from("not an Integer data type")} )
+        }
+    }
+
+    /// Returns RadiusAttribute value, if the attribute is dictionary's ATTRIBUTE with code type
+    /// integer64
+    pub fn original_integer64_value(&self, allowed_type: &Option<SupportedAttributeTypes>) -> Result<u64, RadiusError> {
+        match allowed_type {
+            Some(SupportedAttributeTypes::Integer64) => {
+                match self.value().try_into() {
+                    Ok(value) => Ok(bytes_to_integer64(value)),
+                    _         => Err( RadiusError::MalformedAttributeError {error: String::from("invalid Integer64 bytes")} )
+                }
+            },
+            _                                        => Err( RadiusError::MalformedAttributeError {error: String::from("not an Integer data type")} )
         }
     }
 
@@ -558,6 +578,14 @@ mod tests {
         assert_eq!(Some(expected), RadiusAttribute::create_by_name(&dict, "User-Name", vec![1,2,3]));
     }
     #[test]
+    fn test_radius_attribute_create_by_name_non_existing() {
+        let dictionary_path = "./dict_examples/test_dictionary_dict";
+        let dict            = Dictionary::from_file(dictionary_path).unwrap();
+
+        assert_eq!(None, RadiusAttribute::create_by_name(&dict, "Non-Existing", vec![1,2,3]));
+    }
+
+    #[test]
     fn test_radius_attribute_create_by_id() {
         let dictionary_path = "./dict_examples/test_dictionary_dict";
         let dict            = Dictionary::from_file(dictionary_path).unwrap();
@@ -570,7 +598,13 @@ mod tests {
 
         assert_eq!(Some(expected), RadiusAttribute::create_by_id(&dict, 5, vec![1,2,3]));
     }
+    #[test]
+    fn test_radius_attribute_create_by_id_non_existing() {
+        let dictionary_path = "./dict_examples/test_dictionary_dict";
+        let dict            = Dictionary::from_file(dictionary_path).unwrap();
 
+        assert_eq!(None, RadiusAttribute::create_by_id(&dict, 205, vec![1,2,3]));
+    }
 
     #[test]
     fn test_initialise_packet_from_bytes() {

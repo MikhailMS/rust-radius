@@ -17,138 +17,27 @@ on:
 env:
   CARGO_TERM_COLOR: always
   CLICOLOR_FORCE: 1
+  CI: true
 
 
 jobs:
-  minimum_build_ci_test:
-    name:     MSVR for build - CI testing
-    runs-on:  ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [1.42.0]
-        os:   [ubuntu-18.04]
-    steps:
-
-    - name: MSVR for build -- Checkout
-      uses: actions/checkout@v2
-
-    - name: MSVR for build -- Install rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: ${{ matrix.rust }}
-        profile:   minimal
-        override:  true
-
-    - name: MSVR for build -- Build
-      run: cargo build --verbose
-
-  old_rust_ci_test:
-    name:     Old Rust CI testing
-    runs-on:  ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [1.43.0, 1.44.0, 1.45.0]
-        os:   [ubuntu-18.04]
-    steps:
-
-    - name: OLD -- Checkout
-      uses: actions/checkout@v2
-
-    - name: OLD -- Install rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: ${{ matrix.rust }}
-        profile:   minimal
-        override:  true
-
-    - name: OLD -- Build
-      run: CARGO_NET_GIT_FETCH_WITH_CLI=true cargo build --verbose
-
-    - name: OLD -- Start simple RADIUS server
-      run: cargo run --example sync_radius_server &
-
-    - name: OLD -- Run tests
-      run: cargo test --verbose
-
-  new_ci_test:
-    name:     New Rust CI testing
-    runs-on:  ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [1.46.0, 1.47.0, 1.48.0, 1.49.0, 1.50.0, 1.51.0]
-        os:   [ubuntu-18.04]
-    steps:
-
-    - name: NEW -- Checkout
-      uses: actions/checkout@v2
-
-    - name: NEW -- Install rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: ${{ matrix.rust }}
-        profile:   minimal
-        override:  true
-
-    - name: NEW -- Build
-      run: cargo build --verbose
-
-    - name: NEW -- Start simple RADIUS server
-      run: cargo run --example sync_radius_server &
-
-    - name: NEW -- Run tests
-      run: cargo test --verbose
-
-  modern_ci_test:
-    name:     Modern w/o cargo-make Rust CI testing
-    runs-on:  ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [1.52.0, 1.52.1, 1.53.0, 1.54.0, 1.55.0]
-        os:   [ubuntu-18.04]
-    steps:
-
-    - name: MODERN -- Checkout
-      uses: actions/checkout@v2
-
-    - name: MODERN -- Install rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: ${{ matrix.rust }}
-        profile:   minimal
-        override:  true
-
-    - name: MODERN -- Build
-      run: cargo build --verbose
-
-    - name: MODERN -- Start simple RADIUS server
-      run: cargo run --example sync_radius_server &
-
-    - name: MODERN -- Run tests
-      run: cargo test --verbose
-
   modern_ci_test_w_cargo_make:
     name:     Modern w cargo-make Rust CI testing
     runs-on:  ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        rust: [1.56.0, 1.56.1, 1.57.0, 1.58.0, 1.58.1, 1.59.0, 1.60.0, 1.61.0, 1.62.1]
-        os:   [ubuntu-18.04]
+        rust: [1.63.0, 1.64.0, 1.65.0, 1.66.1, 1.67.1, 1.68.2, 1.69.0, 1.70.0, 1.71.0, 1.71.1]
+        os:   [ubuntu-20.04]
     steps:
 
     - name: MODERN -- Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: MODERN -- Install rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
-        profile:   minimal
-        override:  true
 
     - name: MODERN -- Install cargo-make
       uses: actions-rs/cargo@v1
@@ -177,20 +66,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [nightly-2022-07-23]
-        os:   [ubuntu-18.04]
+        os:   [ubuntu-20.04]
     steps:
 
     - name: Nightly Rust -- Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Nightly Rust -- Install rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: ${{ matrix.rust }}
-        profile:   minimal
-        override:  true
-
+      uses: dtolnay/rust-toolchain@nightly
+    #  with:
+    #    components: cargo-make, cargo-tarpaulin
+        
     - name: Nightly Rust -- Install cargo-make
       uses: actions-rs/cargo@v1
       with:

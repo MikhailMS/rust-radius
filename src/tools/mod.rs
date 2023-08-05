@@ -5,9 +5,10 @@
 
 use md5::{Digest, Md5};
 
-use std::str::FromStr;
-use std::net::{ Ipv4Addr, Ipv6Addr };
 use std::convert::TryInto;
+use std::fmt::Write;
+use std::net::{ Ipv4Addr, Ipv6Addr };
+use std::str::FromStr;
 
 use crate::protocol::error::RadiusError;
 
@@ -16,23 +17,32 @@ use crate::protocol::error::RadiusError;
 ///
 /// Should be used for any Attribute of type **ipv6addr** or **ipv6prefix** to ensure value is encoded correctly
 pub fn ipv6_string_to_bytes(ipv6: &str) -> Result<Vec<u8>, RadiusError> {
-    let parsed_ipv6: Vec<&str> = ipv6.split("/").collect();
+    let parsed_ipv6: Vec<&str> = ipv6.split('/').collect();
     let mut bytes: Vec<u8>     = Vec::with_capacity(18);
     let ipv6_address           = Ipv6Addr::from_str(parsed_ipv6[0]).map_err(|error| RadiusError::MalformedIpAddrError { error: error.to_string() })?;
 
     if parsed_ipv6.len() == 2 {
-        bytes.append( &mut u16_to_be_bytes(parsed_ipv6[1].parse::<u16>().map_err(|error| RadiusError::MalformedIpAddrError { error: error.to_string() })?).to_vec() )
+        let subnet_number = parsed_ipv6[1].parse::<u16>().map_err(|error| RadiusError::MalformedIpAddrError { error: error.to_string() })?;
+        if subnet_number > 128 {
+            return Err(RadiusError::MalformedIpAddrError{ error: format!("IPv6 Subnet must be no greater than 128, you provided {}", subnet_number) })
+        }
+
+        bytes.append(&mut u16_to_be_bytes(subnet_number).to_vec())
     }
     bytes.append(&mut ipv6_address.octets().to_vec());
     Ok(bytes)
 }
 
-/// Converts IPv6 bytes into IPv6 string
+/// Converts **IPv6** bytes into IPv6 string
 pub fn bytes_to_ipv6_string(ipv6: &[u8]) -> Result<String, RadiusError> {
     match ipv6.len() {
         18 => {
             // Case with subnet
-            let subnet = u16_from_be_bytes(&ipv6[0..2]);
+            let subnet_number = u16_from_be_bytes(&ipv6[0..2]);
+            if subnet_number > 128 {
+                return Err(RadiusError::MalformedIpAddrError{ error: format!("IPv6 Subnet must be no greater than 128, but bytes provided {}", subnet_number) })
+            }
+
             let ipv6_string = Ipv6Addr::new(
                 u16_from_be_bytes(&ipv6[2..4]),
                 u16_from_be_bytes(&ipv6[4..6]),
@@ -43,7 +53,7 @@ pub fn bytes_to_ipv6_string(ipv6: &[u8]) -> Result<String, RadiusError> {
                 u16_from_be_bytes(&ipv6[14..16]),
                 u16_from_be_bytes(&ipv6[16..]),
                 ).to_string();
-            Ok(format!("{}/{}",ipv6_string, subnet))
+            Ok(format!("{}/{}",ipv6_string, subnet_number))
         },
         16 => {
             // Case without subnet
@@ -64,27 +74,101 @@ pub fn bytes_to_ipv6_string(ipv6: &[u8]) -> Result<String, RadiusError> {
 
 /// Converts IPv4 Address string into vector of bytes
 ///
-/// Should be used for any Attribute of type **ipaddr** to ensure value is encoded correctly
+/// Should be used for any Attribute of type **ipaddr**, **ipv4addr** or **ipv4prefix** to ensure value is encoded correctly
 pub fn ipv4_string_to_bytes(ipv4: &str) -> Result<Vec<u8>, RadiusError> {
-    if ipv4.contains("/") {
-        return Err( RadiusError::MalformedIpAddrError { error: format!("Subnets are not supported for IPv4: {}", ipv4) } )
+    let parsed_ipv4: Vec<&str> = ipv4.split('/').collect();
+    let mut bytes: Vec<u8>     = Vec::with_capacity(6);
+    let ipv4_address           = Ipv4Addr::from_str(parsed_ipv4[0]).map_err(|error| RadiusError::MalformedIpAddrError { error: error.to_string() })?;
+
+    if parsed_ipv4.len() == 2 {
+        let subnet_number = parsed_ipv4[1].parse::<u16>().map_err(|error| RadiusError::MalformedIpAddrError { error: error.to_string() })?;
+        if subnet_number > 32 {
+            return Err(RadiusError::MalformedIpAddrError{ error: format!("IPv4 Subnet must be no greater than 32, you provided {}", subnet_number) })
+        }
+
+        bytes.append(&mut u16_to_be_bytes(subnet_number).to_vec())
     }
-
-    let mut bytes: Vec<u8> = Vec::with_capacity(4);
-    let ipv4_address       = Ipv4Addr::from_str(ipv4).map_err(|error| RadiusError::MalformedIpAddrError { error: error.to_string() })?;
-
     bytes.append(&mut ipv4_address.octets().to_vec());
     Ok(bytes)
 }
 
-/// Converts IPv4 bytes into IPv4 string
+/// Converts **IPv4** bytes into IPv4 string
 pub fn bytes_to_ipv4_string(ipv4: &[u8]) -> Result<String, RadiusError> {
-    if ipv4.len() != 4 {
-        return Err( RadiusError::MalformedIpAddrError { error: format!("Malformed IPv4: {:?}", ipv4) } )
+    match ipv4.len() {
+        6 => {
+            let subnet_number = u16_from_be_bytes(&ipv4[0..2]);
+            if subnet_number > 32 {
+                return Err(RadiusError::MalformedIpAddrError{ error: format!("IPv4 Subnet must be no greater than 32, but bytes provided {}", subnet_number) })
+            }
+            let ipv4_string: Vec<String> = ipv4.iter().map(|group| group.to_string()).collect();
+            Ok(format!("{}/{}", ipv4_string.join("."), subnet_number))
+
+        },
+        4 => {
+            let ipv4_string: Vec<String> = ipv4.iter().map(|group| group.to_string()).collect();
+            Ok(ipv4_string.join("."))
+        },
+        _ => Err(RadiusError::MalformedIpAddrError { error: "Malformed IPv4 bytes".to_string() })
+    }
+}
+
+
+/// Converts Ifid (Interface Id) string into vector of bytes
+///
+/// Assumes that Interface Id string is in format 0000:0000:0000:0000
+///
+/// Should be used for any Attribute of type **ifid** to ensure value is encoded correctly
+pub fn interfaceid_string_to_bytes(ifid: &str) -> Result<Vec<u8>, RadiusError> {
+    let parsed_ifid: Vec<&str> = ifid.split(':').collect();
+
+    if parsed_ifid.len() % 2 != 0 {
+        return Err(RadiusError::MalformedIfIdError { error: "Length of Interface Id string is not multiple of 2".to_string()})
     }
 
-    let ipv4_string: Vec<String> = ipv4.iter().map(|group| group.to_string()).collect();
-    Ok(ipv4_string.join("."))
+    let mut bytes: Vec<u8> = Vec::with_capacity(8);
+    for octets in parsed_ifid {
+        let mut decoded_octets = decode_ifid_octets(&octets)?;
+        bytes.append(&mut decoded_octets);
+    }
+    Ok(bytes)
+}
+
+/// Converts **ifid** bytes into String
+pub fn bytes_to_interfaceid_string(ifid: &[u8]) -> Result<String, RadiusError> {
+    if ifid.len() % 2 != 0 {
+        return Err(RadiusError::MalformedIfIdError { error: "Length of Interface Id bytes is not multiple of 2".to_string()})
+    }
+
+    let mut interfaceid_string: Vec<String> = Vec::new();
+
+    for octets in ifid.chunks_exact(2) {
+        let octets_string = encode_ifid_octets(&octets)?;
+        interfaceid_string.push(octets_string);
+    }
+    Ok(interfaceid_string.join(":"))
+}
+
+fn decode_ifid_octets(octets: &str) -> Result<Vec<u8>, RadiusError> {
+    if octets.len() != 4 {
+        Err(RadiusError::MalformedIfIdError { error: "Interface Id should have octets of 4, ie 0000".to_string()})
+    } else {
+        (0..octets.len())
+            .step_by(2)
+            .map(|index| u8::from_str_radix(&octets[index..index + 2], 16).map_err(|error| RadiusError::MalformedIfIdError { error: error.to_string() }))
+            .collect()
+    }
+}
+
+fn encode_ifid_octets(octets: &[u8]) -> Result<String, RadiusError>  {
+    if octets.len() != 2 {
+        Err(RadiusError::MalformedIfIdError { error: "There should be 2 octets".to_string()})
+    } else {
+        let mut string_octet = String::with_capacity(4);
+        for b in octets {
+            write!(string_octet, "{:02x}", b).map_err(|error| RadiusError::MalformedIfIdError { error: error.to_string() })?;
+        }
+        Ok(string_octet)
+    }
 }
 
 /// Converts u32 into vector of bytes
@@ -94,23 +178,34 @@ pub fn integer_to_bytes(integer: u32) -> Vec<u8> {
     integer.to_be_bytes().to_vec()
 }
 
-/// Converts integer bytes into u32
+/// Converts **integer** bytes into u32
 pub fn bytes_to_integer(integer: &[u8; 4]) -> u32 {
     u32::from_be_bytes(*integer)
 }
 
-/// Converts timestamp (u64) into vector of bytes
+/// Converts u64 into vector of bytes
+///
+/// Should be used for any Attribute of type **integer64** to ensure value is encoded correctly
+pub fn integer64_to_bytes(integer: u64) -> Vec<u8> {
+    integer.to_be_bytes().to_vec()
+}
+
+/// Converts **integer64** bytes into u64
+pub fn bytes_to_integer64(integer: &[u8; 8]) -> u64 {
+    u64::from_be_bytes(*integer)
+}
+
+/// Converts timestamp (u32) into vector of bytes
 ///
 /// Should be used for any Attribute of type **date** to ensure value is encoded correctly
-pub fn timestamp_to_bytes(timestamp: u64) -> Vec<u8> {
+pub fn timestamp_to_bytes(timestamp: u32) -> Vec<u8> {
     timestamp.to_be_bytes().to_vec()
 }
 
-/// Converts timestamp bytes into u64
+/// Converts **date** bytes into u32 (timestamp)
 pub fn bytes_to_timestamp(timestamp: &[u8; 4]) -> u32 {
     u32::from_be_bytes(*timestamp)
 }
-
 
 /// Encrypts data since RADIUS packet is sent in plain text
 ///
@@ -187,11 +282,10 @@ pub fn decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8>
 ///
 /// Should be used for RADIUS Tunnel-Password Attribute
 pub fn salt_encrypt_data(data: &[u8], authenticator: &[u8], salt: &[u8], secret: &[u8]) -> Vec<u8> {
-    if data.len() == 0 {
+    if data.is_empty() {
         return Vec::new();
     }
 
-    // let salt       = &data[..2];
     let mut hash   = [0u8; 16];
     let padding    = 15 - data.len() % 16;
     let mut result = Vec::with_capacity(data.len() + 3 + padding); // make buffer big enough to fit the salt & encrypted data
@@ -209,7 +303,6 @@ pub fn salt_encrypt_data(data: &[u8], authenticator: &[u8], salt: &[u8], secret:
     let current     = &mut result[2..];
 
     encrypt_helper(current, prev_result, &mut hash, secret);
-
     result
 }
 
@@ -279,7 +372,7 @@ fn encrypt_helper<'a:'b, 'b>(mut out: &'a mut [u8], mut result: &'b [u8], hash: 
         result = _prev;
         out   = _current;
 
-        if out.len() == 0 { break }
+        if out.is_empty() { break }
     }
 }
 
@@ -365,6 +458,37 @@ mod tests {
         let ipv4_string = bytes_to_ipv4_string(&ipv4_bytes).unwrap();
 
         assert_eq!(ipv4_string, "192.1.10.1".to_string());
+    }
+
+    #[test]
+    fn test_interfaceid_string_to_bytes() {
+        let ifid_bytes = interfaceid_string_to_bytes("fc66:1111:2222:3333").unwrap();
+        assert_eq!(ifid_bytes, vec![252, 102, 17, 17, 34, 34, 51, 51]);
+    }
+    #[test]
+    fn test_interfaceid_string_to_bytes_invalid() {
+        match interfaceid_string_to_bytes("fc66:1111:3333") {
+            Ok(_)    => assert!(false),
+            Err(err) => assert_eq!(err.to_string(), String::from("Provided Interface Id is malformed: Length of Interface Id string is not multiple of 2"))
+        }
+    }
+
+    #[test]
+    fn test_bytes_to_interfaceid_string() {
+        let expected_ifid = "fc66:1111:2222:3333";
+        let ifid_bytes    = vec![252, 102, 17, 17, 34, 34, 51, 51];
+
+        let ifid_string = bytes_to_interfaceid_string(&ifid_bytes).unwrap();
+        assert_eq!(expected_ifid, ifid_string)
+    }
+    #[test]
+    fn test_bytes_to_interfaceid_string_invalid() {
+        let ifid_bytes    = vec![252, 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+        match bytes_to_interfaceid_string(&ifid_bytes) {
+            Ok(_)    => assert!(false),
+            Err(err) => assert_eq!(err.to_string(), String::from("Provided Interface Id is malformed: Length of Interface Id bytes is not multiple of 2"))
+        }
     }
 
     #[test]
@@ -557,9 +681,9 @@ mod tests {
 
     #[test]
     fn test_timestamp_to_bytes() {
-        let timestamp: u64 = 1598523933;
+        let timestamp: u32 = 1598523933;
 
-        assert_eq!(vec![0, 0, 0, 0, 95, 71, 138, 29], timestamp_to_bytes(timestamp));
+        assert_eq!(vec![95, 71, 138, 29], timestamp_to_bytes(timestamp));
     }
 
     #[test]

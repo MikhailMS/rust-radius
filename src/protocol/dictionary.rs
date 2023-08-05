@@ -28,7 +28,7 @@ pub enum SupportedAttributeTypes {
     IPv6Addr,
     /// Rust's \[u8;18\]
     IPv6Prefix,
-    /// Rust's \[u8;6\]; RFC 8044 calls this "ifid"
+    /// Rust's \[u8;8\]; RFC 8044 calls this "ifid"
     InterfaceId,
     /// Rust's u32
     Enum,
@@ -199,16 +199,13 @@ fn assign_attribute_type(code_type: &str) -> Option<SupportedAttributeTypes> {
 }
 
 fn parse_attribute(parsed_line: Vec<&str>, vendor_name: &str, attributes: &mut Vec<DictionaryAttribute>) {
-    match parsed_line[2].parse::<u8>() {
-        Ok(value) => {
-            attributes.push(DictionaryAttribute {
-                name:        parsed_line[1].to_string(),
-                vendor_name: vendor_name.to_string(),
-                code:        value,
-                code_type:   assign_attribute_type(parsed_line[3])
-            });
-        },
-        Err(_) => {}
+    if let Ok(code) = parsed_line[2].parse::<u8>() {
+        attributes.push(DictionaryAttribute {
+            name:        parsed_line[1].to_string(),
+            vendor_name: vendor_name.to_string(),
+            code,
+            code_type:   assign_attribute_type(parsed_line[3])
+        });
     }
 }
 
@@ -222,14 +219,11 @@ fn parse_value(parsed_line: Vec<&str>, vendor_name: &str, values: &mut Vec<Dicti
 }
 
 fn parse_vendor(parsed_line: Vec<&str>, vendors: &mut Vec<DictionaryVendor>) {
-    match parsed_line[2].parse::<u8>() {
-        Ok(value) => {
-            vendors.push(DictionaryVendor {
-                name: parsed_line[1].to_string(),
-                id:   value,
-            })
-        },
-        Err(_) => {}
+    if let Ok(id) = parsed_line[2].parse::<u8>() {
+        vendors.push(DictionaryVendor {
+            name: parsed_line[1].to_string(),
+            id,
+        })
     }
 }
 

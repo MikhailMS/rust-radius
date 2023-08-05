@@ -1,4 +1,30 @@
 =============
+# v0.4.2 (05 Aug 2023)
+
+This release fixes some outstanding items and, hopefully, makes it's easier to use the library
+
+## What's new
+* Add new Error Type to handle exceptions when working with `InterfaceId`
+* Add functions to encode to/decode from `InterfaceId` bytes
+* Add tests for `InterfaceId` related functions
+* Add function to encode to/decode from `Integer64` bytes
+* Add tests for `Integer64` related functions
+* Add `original_integer64_value` function to retrieve `Integer64` value from `RadiusAttribute`
+
+## What's removed or deprecated
+* `timestamp_to_bytes` function for `u64` is substituted with `u32` (see section below)
+* Remove validation in `verify_original_value` for `ByteString` & `Concat` because it is not really possible to validate those values once received
+
+## What's changed
+* Closes #17
+* Fix for `timestamp_to_bytes` function - it was incorrectly expecting `u64` while RADIUS expects timestamps to be `u32`
+* `verify_original_value` function now handles verify for `Integer64` & `InterfaceId` data types
+* `original_string_value` function now handles retrieval of string value for `IPv4Prefix` & `InterfaceId` data types
+* Functions to encode to/decode from `IPv4` bytes now also handle values with prefix/subnet
+* Functions to encode to/decode from `IPv6` bytes now also handle values with prefix/subnet
+* Not related to RADIUS implementation - Github Action CI/CD add support for newer Rust versions and drop support for older versions (because unfortunately Action fails on those)
+
+=============
 # v0.4.1 (10 Aug 2022)
 
 This is small release/patch fixing a few bits here & there
