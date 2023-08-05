@@ -2,7 +2,7 @@
 authors       = ["MikhailMS <1488maiklm@gmail.com>"]
 categories    = ["network-programming"]
 description   = "Pure Rust implementation of RADIUS Server/Client"
-documentation = "https://docs.rs/radius-rust/0.4.1"
+documentation = "https://docs.rs/radius-rust/0.4.2"
 edition       = "2018"
 include       = [
   "Cargo.toml",
@@ -20,7 +20,7 @@ license       = "MIT"
 name          = "radius-rust"
 readme        = "README.md"
 repository    = "https://github.com/MikhailMS/rust-radius"
-version       = "0.4.1"
+version       = "0.4.2"
 
 [features]
 # Default doesn\t include anythin - keep it simple
