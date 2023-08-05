@@ -74,7 +74,7 @@ pub fn bytes_to_ipv6_string(ipv6: &[u8]) -> Result<String, RadiusError> {
 
 /// Converts IPv4 Address string into vector of bytes
 ///
-/// Should be used for any Attribute of type **ipaddr** to ensure value is encoded correctly
+/// Should be used for any Attribute of type **ipaddr**, **ipv4addr** or **ipv4prefix** to ensure value is encoded correctly
 pub fn ipv4_string_to_bytes(ipv4: &str) -> Result<Vec<u8>, RadiusError> {
     let parsed_ipv4: Vec<&str> = ipv4.split('/').collect();
     let mut bytes: Vec<u8>     = Vec::with_capacity(6);
