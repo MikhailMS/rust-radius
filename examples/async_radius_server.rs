@@ -34,7 +34,7 @@ struct CustomServer {
 }
 
 impl CustomServer {
-    async fn initialise_server(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16, allowed_hosts: Vec<String>) -> Result<CustomServer, RadiusError> {
+    async fn initialize_server(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16, allowed_hosts: Vec<String>) -> Result<CustomServer, RadiusError> {
         // Initialise sockets
         let auth_socket = UdpSocket::bind(format!("{}:{}", &server, auth_port)).await?;
         let acct_socket = UdpSocket::bind(format!("{}:{}", &server, acct_port)).await?;
@@ -181,7 +181,7 @@ fn main() -> Result<(), RadiusError> {
     task::block_on(async {
         let dictionary    = Dictionary::from_file("./dict_examples/integration_dict").expect("Failed to load or parse file");
         let allowed_hosts = vec![String::from("127.0.0.1")];
-        let mut server    = CustomServer::initialise_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2, allowed_hosts).await.expect("Failed to create RADIUS Server");
+        let mut server    = CustomServer::initialize_server(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2, allowed_hosts).await.expect("Failed to create RADIUS Server");
 
         server.run().await
     })

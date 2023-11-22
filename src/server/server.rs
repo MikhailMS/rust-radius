@@ -130,7 +130,7 @@ impl Server {
     ///
     /// Similar to [Client's create_packet()](crate::client::client::Client::create_packet), however also sets correct packet ID and authenticator
     pub fn create_reply_packet(&self, reply_code: TypeCode, attributes: Vec<RadiusAttribute>, request: &mut [u8]) -> RadiusPacket {
-        let mut reply_packet = RadiusPacket::initialise_packet(reply_code);
+        let mut reply_packet = RadiusPacket::initialize_packet(reply_code);
         reply_packet.set_attributes(attributes);
 
         // We can only create new authenticator after we set reply packet ID to the request's ID
@@ -160,7 +160,7 @@ impl Server {
     /// Server would try to build RadiusPacket from raw bytes, and if it succeeds then packet is
     /// valid, otherwise would return RadiusError
     pub fn verify_request(&self, request: &[u8]) -> Result<(), RadiusError> {
-        match RadiusPacket::initialise_packet_from_bytes(&self.host.dictionary(), request) {
+        match RadiusPacket::initialize_packet_from_bytes(&self.host.dictionary(), request) {
             Err(err) => Err(err),
             _        => Ok(())
         }
@@ -178,8 +178,8 @@ impl Server {
     ///
     /// Unlike [verify_request](Server::verify_request), on success this function would return
     /// RadiusPacket
-    pub fn initialise_packet_from_bytes(&self, request: &[u8]) -> Result<RadiusPacket, RadiusError> {
-        self.host.initialise_packet_from_bytes(request)
+    pub fn initialize_packet_from_bytes(&self, request: &[u8]) -> Result<RadiusPacket, RadiusError> {
+        self.host.initialize_packet_from_bytes(request)
     }
 
     /// Checks if host from where Server received RADIUS request is allowed host, meaning RADIUS

@@ -24,7 +24,7 @@ struct ClientWrapper {
 }
 
 impl ClientWrapper {
-    fn initialise_client(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<ClientWrapper, RadiusError> {
+    fn initialize_client(auth_port: u16, acct_port: u16, coa_port: u16, dictionary: Dictionary, server: String, secret: String, retries: u16, timeout: u16) -> Result<ClientWrapper, RadiusError> {
         // Bind socket
         let socket = task::block_on(UdpSocket::bind("0.0.0.0:0")).map_err(|error| RadiusError::SocketConnectionError(error))?;
         // --------------------
@@ -101,7 +101,7 @@ impl AsyncClientTrait for ClientWrapper {
 #[bench]
 fn test_async_auth_client_wo_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-    let client     = ClientWrapper::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+    let client     = ClientWrapper::initialize_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
     let user_name            = String::from("testing").into_bytes();
     let user_pass            = b"very secure password, that noone is able to guess";
@@ -131,7 +131,7 @@ fn test_async_auth_client_wo_response_against_server(b: &mut Bencher) {
 #[bench]
 fn test_async_auth_client_w_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-    let client     = ClientWrapper::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+    let client     = ClientWrapper::initialize_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
     let user_name            = String::from("testing").into_bytes();
     let user_pass            = b"very secure password, that noone is able to guess";
@@ -164,7 +164,7 @@ fn test_async_auth_client_w_response_against_server(b: &mut Bencher) {
 #[bench]
 fn test_async_acct_client_wo_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-    let client     = ClientWrapper::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+    let client     = ClientWrapper::initialize_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
     let user_name            = String::from("testing").into_bytes();
     let user_pass            = b"very secure password, that noone is able to guess";
@@ -194,7 +194,7 @@ fn test_async_acct_client_wo_response_against_server(b: &mut Bencher) {
 #[bench]
 fn test_async_acct_client_w_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-    let client     = ClientWrapper::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+    let client     = ClientWrapper::initialize_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
     let user_name            = String::from("testing").into_bytes();
     let user_pass            = b"very secure password, that noone is able to guess";
@@ -227,7 +227,7 @@ fn test_async_acct_client_w_response_against_server(b: &mut Bencher) {
 #[bench]
 fn test_async_coa_client_wo_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-    let client     = ClientWrapper::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+    let client     = ClientWrapper::initialize_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
     let user_name            = String::from("testing").into_bytes();
     let user_pass            = b"very secure password, that noone is able to guess";
@@ -257,7 +257,7 @@ fn test_async_coa_client_wo_response_against_server(b: &mut Bencher) {
 #[bench]
 fn test_async_coa_client_w_response_against_server(b: &mut Bencher) {
     let dictionary = Dictionary::from_file("./dict_examples/integration_dict").unwrap();
-    let client     = ClientWrapper::initialise_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
+    let client     = ClientWrapper::initialize_client(1812, 1813, 3799, dictionary, String::from("127.0.0.1"), String::from("secret"), 1, 2).unwrap();
 
     let user_name            = String::from("testing").into_bytes();
     let user_pass            = b"very secure password, that noone is able to guess";
