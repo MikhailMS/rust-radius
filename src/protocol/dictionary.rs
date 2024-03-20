@@ -160,6 +160,9 @@ impl Dictionary {
     }
 
     /// Adds a dictionary file to existing Dictionary
+    ///
+    /// Processes attributes, values and vendors from supplied dictionary file
+    /// and adds them to existing attributes, values and vendors
     pub fn add_file(&mut self, file_path: &str) -> Result<(), RadiusError> {
         let mut vendor_name: String = String::new();
 
