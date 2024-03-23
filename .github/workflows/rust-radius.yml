@@ -43,7 +43,7 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: install
-        args:    --debug cargo-make
+        args:    --debug cargo-make --version 0.20.0
         
     - name: MODERN -- Build
       run: cargo build --verbose
@@ -81,7 +81,7 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: install
-        args:    --debug cargo-make --version 0.37.10
+        args:    --debug cargo-make
 
     - name: Nightly Rust -- Install tarpaulin
       uses: actions-rs/cargo@v1
