@@ -5,6 +5,7 @@ This release fixes issue reported in [#28](/../../issues/28) (thanks to CoderChr
 
 ## What's new
 * Added `1.72.0, 1.72.1,1.73.0, 1.74.0, 1.74.1, 1.75.0, 1.76.0, 1.77.0` Rust versions to Action pipeline
+* Incorporated [!29](/../../pull/29) to support addition of multiple dictionary files to a single `Dictionary` instance via new `add_file` function
 
 ## What's removed or deprecated
 * Removed `1.63.0 & 1.64.0` Rust versions from Action pipeline as they were failing to install `cargo-make` (those versions are still supported by library)
