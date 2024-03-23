@@ -65,7 +65,7 @@ This is small release/patch fixing a few bits here & there
     * `rand`, `0.7.3`       --> `0.8.5`
     * `thiserror`, `1.0.23` --> `1.0.32`
 * `log` library is moved into `dev-dependencies` and bumped to `0.4.17`
-* Added code from PR [#24](/../../pull/24) - ensure dictionary parser not failing when file has tabs as well as whitespaces
+* Added code from PR [!24](/../../pull/24) - ensure dictionary parser not failing when file has tabs as well as whitespaces
 
 
 =============

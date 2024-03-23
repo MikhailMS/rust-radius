@@ -828,5 +828,4 @@ mod tests {
 
         assert_eq!(expected_message_authenticator, packet.message_authenticator().unwrap());
     }
-
 }
