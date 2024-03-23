@@ -137,26 +137,11 @@ impl Dictionary {
         let mut attributes:  Vec<DictionaryAttribute> = Vec::new();
         let mut values:      Vec<DictionaryValue>     = Vec::new();
         let mut vendors:     Vec<DictionaryVendor>    = Vec::new();
-        let mut vendor_name: String                   = String::new();
 
-        let reader = io::BufReader::new(File::open(file_path).map_err(|error| RadiusError::MalformedDictionaryError { error })?);
-        let lines  = reader.lines()
-            .filter_map(Result::ok)
-            .filter(|line| !line.is_empty())
-            .filter(|line| !line.contains(&COMMENT_PREFIX));
-
-        for line in lines {
-            let parsed_line: Vec<&str> = line.split_whitespace().filter(|&item| !item.is_empty()).collect();
-            match parsed_line[0] {
-                "ATTRIBUTE"    => parse_attribute(parsed_line, &vendor_name, &mut attributes),
-                "VALUE"        => parse_value(parsed_line, &vendor_name, &mut values),
-                "VENDOR"       => parse_vendor(parsed_line, &mut vendors),
-                "BEGIN-VENDOR" => { vendor_name.insert_str(0, parsed_line[1]) },
-                "END-VENDOR"   => { vendor_name.clear() },
-                _              => continue
-            }
-        };
-        Ok(Dictionary { attributes, values, vendors })
+        match parse_file(file_path, &mut attributes, &mut values, &mut vendors) {
+            Ok(())     => Ok(Dictionary { attributes, values, vendors }),
+            Err(error) => Err(error)
+        }
     }
 
     /// Adds a dictionary file to existing Dictionary
@@ -164,27 +149,7 @@ impl Dictionary {
     /// Processes attributes, values and vendors from supplied dictionary file
     /// and adds them to existing attributes, values and vendors
     pub fn add_file(&mut self, file_path: &str) -> Result<(), RadiusError> {
-        let mut vendor_name: String = String::new();
-
-        let reader = io::BufReader::new(File::open(file_path).map_err(|error| RadiusError::MalformedDictionaryError { error })?);
-        let lines  = reader.lines()
-            .filter_map(Result::ok)
-            .filter(|line| !line.is_empty())
-            .filter(|line| !line.contains(&COMMENT_PREFIX));
-
-        for line in lines {
-            let parsed_line: Vec<&str> = line.split_whitespace().filter(|&item| !item.is_empty()).collect();
-            match parsed_line[0] {
-                "ATTRIBUTE"    => parse_attribute(parsed_line, &vendor_name, &mut self.attributes),
-                "VALUE"        => parse_value(parsed_line, &vendor_name, &mut self.values),
-                "VENDOR"       => parse_vendor(parsed_line, &mut self.vendors),
-                "BEGIN-VENDOR" => { vendor_name.insert_str(0, parsed_line[1]) },
-                "END-VENDOR"   => { vendor_name.clear() },
-                _              => continue
-            }
-        };
-
-        Ok(())
+        parse_file(file_path, &mut self.attributes, &mut self.values, &mut self.vendors)
     }
 
     /// Returns parsed DictionaryAttributes
@@ -224,6 +189,30 @@ fn assign_attribute_type(code_type: &str) -> Option<SupportedAttributeTypes> {
         "long-extended" => Some(SupportedAttributeTypes::LongExtended),
         _               => None
     }
+}
+
+fn parse_file(file_path: &str, attributes: &mut Vec<DictionaryAttribute>, values: &mut Vec<DictionaryValue>, vendors: &mut Vec<DictionaryVendor>) -> Result<(), RadiusError> {
+    let mut vendor_name: String = String::new();
+
+    let reader = io::BufReader::new(File::open(file_path).map_err(|error| RadiusError::MalformedDictionaryError { error })?);
+    let lines  = reader.lines()
+        .filter_map(Result::ok)
+        .filter(|line| !line.is_empty())
+        .filter(|line| !line.contains(&COMMENT_PREFIX));
+
+    for line in lines {
+        let parsed_line: Vec<&str> = line.split_whitespace().filter(|&item| !item.is_empty()).collect();
+        match parsed_line[0] {
+            "ATTRIBUTE"    => parse_attribute(parsed_line, &vendor_name, attributes),
+            "VALUE"        => parse_value(parsed_line, &vendor_name, values),
+            "VENDOR"       => parse_vendor(parsed_line, vendors),
+            "BEGIN-VENDOR" => { vendor_name.insert_str(0, parsed_line[1]) },
+            "END-VENDOR"   => { vendor_name.clear() },
+            _              => continue
+        }
+    };
+
+    Ok(())
 }
 
 fn parse_attribute(parsed_line: Vec<&str>, vendor_name: &str, attributes: &mut Vec<DictionaryAttribute>) {
