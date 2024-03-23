@@ -137,26 +137,19 @@ impl Dictionary {
         let mut attributes:  Vec<DictionaryAttribute> = Vec::new();
         let mut values:      Vec<DictionaryValue>     = Vec::new();
         let mut vendors:     Vec<DictionaryVendor>    = Vec::new();
-        let mut vendor_name: String                   = String::new();
 
-        let reader = io::BufReader::new(File::open(file_path).map_err(|error| RadiusError::MalformedDictionaryError { error })?);
-        let lines  = reader.lines()
-            .filter_map(Result::ok)
-            .filter(|line| !line.is_empty())
-            .filter(|line| !line.contains(&COMMENT_PREFIX));
+        match parse_file(file_path, &mut attributes, &mut values, &mut vendors) {
+            Ok(())     => Ok(Dictionary { attributes, values, vendors }),
+            Err(error) => Err(error)
+        }
+    }
 
-        for line in lines {
-            let parsed_line: Vec<&str> = line.split_whitespace().filter(|&item| !item.is_empty()).collect();
-            match parsed_line[0] {
-                "ATTRIBUTE"    => parse_attribute(parsed_line, &vendor_name, &mut attributes),
-                "VALUE"        => parse_value(parsed_line, &vendor_name, &mut values),
-                "VENDOR"       => parse_vendor(parsed_line, &mut vendors),
-                "BEGIN-VENDOR" => { vendor_name.insert_str(0, parsed_line[1]) },
-                "END-VENDOR"   => { vendor_name.clear() },
-                _              => continue
-            }
-        };
-        Ok(Dictionary { attributes, values, vendors })
+    /// Adds a dictionary file to existing Dictionary
+    ///
+    /// Processes attributes, values and vendors from supplied dictionary file
+    /// and adds them to existing attributes, values and vendors
+    pub fn add_file(&mut self, file_path: &str) -> Result<(), RadiusError> {
+        parse_file(file_path, &mut self.attributes, &mut self.values, &mut self.vendors)
     }
 
     /// Returns parsed DictionaryAttributes
@@ -198,6 +191,30 @@ fn assign_attribute_type(code_type: &str) -> Option<SupportedAttributeTypes> {
     }
 }
 
+fn parse_file(file_path: &str, attributes: &mut Vec<DictionaryAttribute>, values: &mut Vec<DictionaryValue>, vendors: &mut Vec<DictionaryVendor>) -> Result<(), RadiusError> {
+    let mut vendor_name: String = String::new();
+
+    let reader = io::BufReader::new(File::open(file_path).map_err(|error| RadiusError::MalformedDictionaryError { error })?);
+    let lines  = reader.lines()
+        .filter_map(Result::ok)
+        .filter(|line| !line.is_empty())
+        .filter(|line| !line.contains(&COMMENT_PREFIX));
+
+    for line in lines {
+        let parsed_line: Vec<&str> = line.split_whitespace().filter(|&item| !item.is_empty()).collect();
+        match parsed_line[0] {
+            "ATTRIBUTE"    => parse_attribute(parsed_line, &vendor_name, attributes),
+            "VALUE"        => parse_value(parsed_line, &vendor_name, values),
+            "VENDOR"       => parse_vendor(parsed_line, vendors),
+            "BEGIN-VENDOR" => { vendor_name.insert_str(0, parsed_line[1]) },
+            "END-VENDOR"   => { vendor_name.clear() },
+            _              => continue
+        }
+    };
+
+    Ok(())
+}
+
 fn parse_attribute(parsed_line: Vec<&str>, vendor_name: &str, attributes: &mut Vec<DictionaryAttribute>) {
     if let Ok(code) = parsed_line[2].parse::<u8>() {
         attributes.push(DictionaryAttribute {
@@ -237,6 +254,118 @@ mod tests {
         let dictionary_path = "./dict_examples/test_dictionary_dict";
 
         let dict = Dictionary::from_file(dictionary_path).unwrap();
+
+        let mut attributes: Vec<DictionaryAttribute> = Vec::new();
+        attributes.push(DictionaryAttribute {
+            name:        "User-Name".to_string(),
+            vendor_name: "".to_string(),
+            code:        1,
+            code_type:   Some(SupportedAttributeTypes::AsciiString)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "NAS-IP-Address".to_string(),
+            vendor_name: "".to_string(),
+            code:        4,
+            code_type:   Some(SupportedAttributeTypes::IPv4Addr)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "NAS-Port-Id".to_string(),
+            vendor_name: "".to_string(),
+            code:        5,
+            code_type:   Some(SupportedAttributeTypes::Integer)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "Framed-Protocol".to_string(),
+            vendor_name: "".to_string(),
+            code:        7,
+            code_type:   Some(SupportedAttributeTypes::Integer)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "Chargeable-User-Identity".to_string(),
+            vendor_name: "".to_string(),
+            code:        89,
+            code_type:   Some(SupportedAttributeTypes::ByteString)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "Delegated-IPv6-Prefix".to_string(),
+            vendor_name: "".to_string(),
+            code:        123,
+            code_type:   Some(SupportedAttributeTypes::IPv6Prefix)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "MIP6-Feature-Vector".to_string(),
+            vendor_name: "".to_string(),
+            code:        124,
+            code_type:   Some(SupportedAttributeTypes::Integer64)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "Mobile-Node-Identifier".to_string(),
+            vendor_name: "".to_string(),
+            code:        145,
+            code_type:   Some(SupportedAttributeTypes::ByteString)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "PMIP6-Home-Interface-ID".to_string(),
+            vendor_name: "".to_string(),
+            code:        153,
+            code_type:   Some(SupportedAttributeTypes::InterfaceId)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "PMIP6-Home-IPv4-HoA".to_string(),
+            vendor_name: "".to_string(),
+            code:        155,
+            code_type:   Some(SupportedAttributeTypes::IPv4Prefix)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "Somevendor-Name".to_string(),
+            vendor_name: "Somevendor".to_string(),
+            code:        1,
+            code_type:   Some(SupportedAttributeTypes::AsciiString)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "Somevendor-Number".to_string(),
+            vendor_name: "Somevendor".to_string(),
+            code:        2,
+            code_type:   Some(SupportedAttributeTypes::Integer)
+        });
+        attributes.push(DictionaryAttribute {
+            name:        "Class".to_string(),
+            vendor_name: "".to_string(),
+            code:        25,
+            code_type:   Some(SupportedAttributeTypes::ByteString)
+        });
+
+        let mut values: Vec<DictionaryValue> = Vec::new();
+        values.push(DictionaryValue {
+            attribute_name: "Framed-Protocol".to_string(),
+            value_name:     "PPP".to_string(),
+            vendor_name:    "".to_string(),
+            value:          "1".to_string()
+        });
+        values.push(DictionaryValue {
+            attribute_name: "Somevendor-Number".to_string(),
+            value_name:     "Two".to_string(),
+            vendor_name:    "Somevendor".to_string(),
+            value:          "2".to_string()
+        });
+
+        let mut vendors: Vec<DictionaryVendor> = Vec::new();
+        vendors.push(DictionaryVendor {
+            name: "Somevendor".to_string(),
+            id:   10,
+        });
+
+        let expected_dict = Dictionary { attributes, values, vendors };
+        assert_eq!(dict, expected_dict)
+    }
+
+    #[test]
+    fn test_add_file() {
+        let empty_dictionary_path = "./dict_examples/empty_test_dictionary_dict";
+        let dictionary_path       = "./dict_examples/test_dictionary_dict";
+
+        let mut dict = Dictionary::from_file(empty_dictionary_path).unwrap();
+        dict.add_file(dictionary_path).unwrap();
 
         let mut attributes: Vec<DictionaryAttribute> = Vec::new();
         attributes.push(DictionaryAttribute {
