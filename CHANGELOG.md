@@ -4,8 +4,10 @@
 This release fixes issue reported in [#28](/../../issues/28) (thanks to CoderChristopher for reporting and suggesting the solution)
 
 ## What's new
+* Added `1.72.0, 1.72.1,1.73.0, 1.74.0, 1.74.1, 1.75.0, 1.76.0, 1.77.0` Rust versions to Action pipeline
 
 ## What's removed or deprecated
+* Removed `1.63.0 & 1.64.0` Rust versions from Action pipeline as they were failing to install `cargo-make` (those versions are still supported by library)
 
 ## What's changed
 * Changed `initialise_packet_from_bytes` function of `radius_packet` to:
