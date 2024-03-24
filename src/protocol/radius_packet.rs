@@ -10,6 +10,7 @@ use crate::tools::{
     bytes_to_ipv4_string,
     bytes_to_ipv6_string,
     bytes_to_timestamp,
+    u16_from_be_bytes
 };
 
 use hmac::{ Hmac, Mac };
@@ -197,7 +198,7 @@ impl RadiusAttribute {
             },
             Some(SupportedAttributeTypes::Concat) => {
                 // Behaves similar to ByteString but allowed to be longer than 253 octets
-               Ok(())
+                Ok(())
             },
             Some(SupportedAttributeTypes::Integer)     => {
                 match self.value().try_into() {
@@ -342,12 +343,12 @@ impl RadiusAttribute {
         /*
          *
          *         0               1              2
-            0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0
-           +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-           |     Type      |    Length     |  Value ...
-           +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-        *  Taken from https://tools.ietf.org/html/rfc2865#page-23
-        */
+         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+         |     Type      |    Length     |  Value ...
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+         *  Taken from https://tools.ietf.org/html/rfc2865#page-23
+         */
         [ &[self.id], &[(2 + self.value.len()) as u8], self.value.as_slice() ].concat()
     }
 }
@@ -375,16 +376,30 @@ impl RadiusPacket {
 
     /// Initialises RADIUS packet from raw bytes
     pub fn initialise_packet_from_bytes(dictionary: &Dictionary, bytes: &[u8]) -> Result<RadiusPacket, RadiusError> {
+        if bytes.len() < 20 || bytes.len() > 4096 {
+            return Err( RadiusError::MalformedPacketError {error: String::from("packet length should be of size between 20 and 4096 octets")} )
+        }
+
         let code           = TypeCode::from_u8(bytes[0])?;
         let id             = bytes[1];
+        let packet_len     = u16_from_be_bytes(&bytes[2..4]) as usize;
         let authenticator  = bytes[4..20].to_vec();
         let mut attributes = Vec::new();
 
+        if packet_len > bytes.len() {
+            return Err( RadiusError::MalformedPacketError {error:format!("defined packet length: [{}] is greater than actual packet length received: [{}]", packet_len, bytes.len())} )
+        }
+
         let mut last_index = 20;
 
-        while last_index != bytes.len() {
+        while last_index != packet_len {
             let attr_id     = bytes[last_index];
             let attr_length = bytes[last_index + 1] as usize;
+
+            if attr_length == 0 {
+                return Err( RadiusError::MalformedPacketError {error:format!("attribute with ID: {} has invalid length 0", attr_id)} )
+            }
+
             let attr_value  = &bytes[(last_index + 2)..=(last_index + attr_length - 1)];
 
             match RadiusAttribute::create_by_id(dictionary, attr_id, attr_value.to_vec()) {
@@ -499,17 +514,17 @@ impl RadiusPacket {
         /* Prepare packet for a transmission to server/client
          *
          *          0               1               2         3
-            0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-           +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-           |     Code      |  Identifier   |            Length             |
-           +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-           |                                                               |
-           |                         Authenticator                         |
-           |                                                               |
-           |                                                               |
-           +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-           |  Attributes ...
-           +-+-+-+-+-+-+-+-+-+-+-+-+-
+         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         |     Code      |  Identifier   |            Length             |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         |                                                               |
+         |                         Authenticator                         |
+         |                                                               |
+         |                                                               |
+         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         |  Attributes ...
+         +-+-+-+-+-+-+-+-+-+-+-+-+-
          * Taken from https://tools.ietf.org/html/rfc2865#page-14
          *
          */
@@ -627,10 +642,76 @@ mod tests {
         expected_packet.override_id(43);
         expected_packet.override_authenticator(authenticator);
 
-        let bytes             = [4, 43, 0, 83, 215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73, 4, 6, 192, 168, 1, 10, 5, 6, 0, 0, 0, 0, 32, 10, 116, 114, 105, 108, 108, 105, 97, 110, 30, 19, 48, 48, 45, 48, 52, 45, 53, 70, 45, 48, 48, 45, 48, 70, 45, 68, 49, 31, 19, 48, 48, 45, 48, 49, 45, 50, 52, 45, 56, 48, 45, 66, 51, 45, 57, 67, 8, 6, 10, 0, 0, 100];
+        let bytes             = [4, 43, 0, 86, 215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73, 4, 6, 192, 168, 1, 10, 5, 6, 0, 0, 0, 0, 32, 10, 116, 114, 105, 108, 108, 105, 97, 110, 30, 19, 48, 48, 45, 48, 52, 45, 53, 70, 45, 48, 48, 45, 48, 70, 45, 68, 49, 31, 19, 48, 48, 45, 48, 49, 45, 50, 52, 45, 56, 48, 45, 66, 51, 45, 57, 67, 8, 6, 10, 0, 0, 100];
         let packet_from_bytes = RadiusPacket::initialise_packet_from_bytes(&dict, &bytes).unwrap();
 
         assert_eq!(expected_packet, packet_from_bytes);
+    }
+
+    #[test]
+    fn test_initialise_packet_from_bytes_invalid_length() {
+        let dictionary_path = "./dict_examples/integration_dict";
+        let dict            = Dictionary::from_file(dictionary_path).unwrap();
+
+        let bytes             = [4, 43, 0, 26, 215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73];
+
+
+        match RadiusPacket::initialise_packet_from_bytes(&dict, &bytes) {
+            Err(err) => assert_eq!(String::from("Radius packet is malformed: defined packet length: [26] is greater than actual packet length received: [20]"), err.to_string()),
+            _        => assert!(false)
+        }
+    }
+
+    #[test]
+    fn test_initialise_packet_from_bytes_invalid_length_less_than_20() {
+        let dictionary_path = "./dict_examples/integration_dict";
+        let dict            = Dictionary::from_file(dictionary_path).unwrap();
+
+        let bytes             = [4, 43, 0, 19, 215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227];
+
+        match RadiusPacket::initialise_packet_from_bytes(&dict, &bytes) {
+            Err(err) => assert_eq!(String::from("Radius packet is malformed: packet length should be of size between 20 and 4096 octets"), err.to_string()),
+            _        => assert!(false)
+        }
+    }
+
+    #[test]
+    fn test_initialise_packet_from_bytes_invalid_length_greater_than_4096() {
+        let dictionary_path = "./dict_examples/integration_dict";
+        let dict            = Dictionary::from_file(dictionary_path).unwrap();
+
+        let bytes             = [0; 4097];
+
+        match RadiusPacket::initialise_packet_from_bytes(&dict, &bytes) {
+            Err(err) => assert_eq!(String::from("Radius packet is malformed: packet length should be of size between 20 and 4096 octets"), err.to_string()),
+            _        => assert!(false)
+        }
+    }
+
+    #[test]
+    fn test_initialise_packet_from_bytes_invalid_attr_length() {
+        let dictionary_path = "./dict_examples/integration_dict";
+        let dict            = Dictionary::from_file(dictionary_path).unwrap();
+
+        let bytes             = [4, 43, 0, 26, 215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73, 4, 0, 192, 168, 1, 10];
+
+        match RadiusPacket::initialise_packet_from_bytes(&dict, &bytes) {
+            Err(err) => assert_eq!(String::from("Radius packet is malformed: attribute with ID: 4 has invalid length 0"), err.to_string()),
+            _        => assert!(false)
+        }
+    }
+
+    #[test]
+    fn test_initialise_packet_from_bytes_missing_attr() {
+        let dictionary_path = "./dict_examples/integration_dict";
+        let dict            = Dictionary::from_file(dictionary_path).unwrap();
+
+        let bytes             = [4, 43, 0, 26, 215, 189, 213, 172, 57, 94, 141, 70, 134, 121, 101, 57, 187, 220, 227, 73, 234, 6, 192, 168, 1, 10];
+
+        match RadiusPacket::initialise_packet_from_bytes(&dict, &bytes) {
+            Err(err) => assert_eq!(String::from("Radius packet is malformed: attribute with ID: 234 is not found in dictionary"), err.to_string()),
+            _        => assert!(false)
+        }
     }
 
     #[test]
@@ -747,5 +828,4 @@ mod tests {
 
         assert_eq!(expected_message_authenticator, packet.message_authenticator().unwrap());
     }
-    
 }

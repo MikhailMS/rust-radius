@@ -1,4 +1,26 @@
 =============
+# v0.4.3 (24 Mar 2024)
+
+This release fixes issues reported in:
+* [#28](/../../issues/28) (thanks to CoderChristopher for reporting and suggesting the solution)
+* [#27](/../../issues/27)
+
+## What's new
+* Added `1.72.0, 1.72.1,1.73.0, 1.74.0, 1.74.1, 1.75.0, 1.76.0, 1.77.0` Rust versions to Action pipeline
+* Incorporated [!29](/../../pull/29) to support addition of multiple dictionary files to a single `Dictionary` instance via new `add_file` function (Fixes [#27](/../../issues/27))
+
+## What's removed or deprecated
+* Removed `1.63.0 & 1.64.0` Rust versions from Action pipeline as they were failing to install `cargo-make` (those versions are still supported by library)
+
+## What's changed
+* Changed `initialise_packet_from_bytes` function of `radius_packet` to: (Fixes [#28](/../../issues/28))
+    * Handle packets of the length less than 20 or more than 4096 octets - returns `RadiusError` (to comply with [RFC2865](https://datatracker.ietf.org/doc/html/rfc2865))
+    * Derive packet length from `RadiusPacket` (Length field) instead of relying on `bytes.len()`
+    * If derived packet length is greater than `bytes.len()` - returns `RadiusError` (to comply with [RFC2865](https://datatracker.ietf.org/doc/html/rfc2865))
+* Fixed incorrect tests in `protocol/host.rs` (flagged by the changed above)
+
+
+=============
 # v0.4.2 (05 Aug 2023)
 
 This release fixes some outstanding items and, hopefully, makes it's easier to use the library
@@ -16,13 +38,14 @@ This release fixes some outstanding items and, hopefully, makes it's easier to u
 * Remove validation in `verify_original_value` for `ByteString` & `Concat` because it is not really possible to validate those values once received
 
 ## What's changed
-* Closes #17
+* Closes [#17](/../../issues/17)
 * Fix for `timestamp_to_bytes` function - it was incorrectly expecting `u64` while RADIUS expects timestamps to be `u32`
 * `verify_original_value` function now handles verify for `Integer64` & `InterfaceId` data types
 * `original_string_value` function now handles retrieval of string value for `IPv4Prefix` & `InterfaceId` data types
 * Functions to encode to/decode from `IPv4` bytes now also handle values with prefix/subnet
 * Functions to encode to/decode from `IPv6` bytes now also handle values with prefix/subnet
 * Not related to RADIUS implementation - Github Action CI/CD add support for newer Rust versions and drop support for older versions (because unfortunately Action fails on those)
+
 
 =============
 # v0.4.1 (10 Aug 2022)
@@ -45,7 +68,7 @@ This is small release/patch fixing a few bits here & there
     * `rand`, `0.7.3`       --> `0.8.5`
     * `thiserror`, `1.0.23` --> `1.0.32`
 * `log` library is moved into `dev-dependencies` and bumped to `0.4.17`
-* Added code from PR #24 - ensure dictionary parser not failing when file has tabs as well as whitespaces
+* Added code from PR [!24](/../../pull/24) - ensure dictionary parser not failing when file has tabs as well as whitespaces
 
 
 =============
@@ -61,7 +84,7 @@ Got a couple of PRs & issues raised with some of them introducing breaking chang
 
 ## What's changed
 * Breaking change - Changed **encrypt_data()** function signature, so **data** parameter is now of type **&[u8]** instead of **&str**. Was reported in [#4](/../../issues/4) by Istvan91
-* Breaking change - RADIUS packet creation now doesn't require **Vec<RadiusAttribute>**. To set attributes for packet, call **set_attributes()** function. For examples have a look at **examples/*_client.rs** (Fixes #11)
+* Breaking change - RADIUS packet creation now doesn't require **Vec<RadiusAttribute>**. To set attributes for packet, call **set_attributes()** function. For examples have a look at **examples/*_client.rs** (Fixes [#11](/../../issues/11))
 * Rewrote **encrypt_data()** a bit to remove unneeded allocations (thanks to Istvan91 [!2](/../../pull/2))
 * Rewrote **decrypt_data()** a bit to remove unneeded allocations (thanks to Istvan91 [!2](/../../pull/2))
 

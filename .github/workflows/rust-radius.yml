@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [1.63.0, 1.64.0, 1.65.0, 1.66.1, 1.67.1, 1.68.2, 1.69.0, 1.70.0, 1.71.0, 1.71.1]
+        rust: [1.65.0, 1.66.1, 1.67.1, 1.68.2, 1.69.0, 1.70.0, 1.71.0, 1.71.1, 1.72.0, 1.72.1, 1.73.0, 1.74.0, 1.74.1, 1.75.0, 1.76.0, 1.77.0]
         os:   [ubuntu-20.04]
     steps:
 
@@ -43,7 +43,7 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: install
-        args:    --debug cargo-make --version 0.30.0
+        args:    --debug cargo-make --version 0.22.2
         
     - name: MODERN -- Build
       run: cargo build --verbose
@@ -81,7 +81,7 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: install
-        args:    --debug cargo-make --version 0.35.0
+        args:    --debug cargo-make
 
     - name: Nightly Rust -- Install tarpaulin
       uses: actions-rs/cargo@v1

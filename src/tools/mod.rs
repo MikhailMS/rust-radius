@@ -397,7 +397,7 @@ fn u16_to_be_bytes(u16_data: u16) -> [u8;2] {
     u16_data.to_be_bytes()
 }
 
-fn u16_from_be_bytes(bytes: &[u8]) -> u16 {
+pub(crate) fn u16_from_be_bytes(bytes: &[u8]) -> u16 {
     u16::from_be_bytes(bytes.try_into().expect("slice with incorrect length"))
 }
 // -----------------------------------------
