@@ -1,17 +1,19 @@
 =============
-# v0.4.3 (XX Mar 2024)
+# v0.4.3 (24 Mar 2024)
 
-This release fixes issue reported in [#28](/../../issues/28) (thanks to CoderChristopher for reporting and suggesting the solution)
+This release fixes issues reported in:
+* [#28](/../../issues/28) (thanks to CoderChristopher for reporting and suggesting the solution)
+* [#27](/../../issues/27)
 
 ## What's new
 * Added `1.72.0, 1.72.1,1.73.0, 1.74.0, 1.74.1, 1.75.0, 1.76.0, 1.77.0` Rust versions to Action pipeline
-* Incorporated [!29](/../../pull/29) to support addition of multiple dictionary files to a single `Dictionary` instance via new `add_file` function
+* Incorporated [!29](/../../pull/29) to support addition of multiple dictionary files to a single `Dictionary` instance via new `add_file` function (Fixes [#27](/../../issues/27))
 
 ## What's removed or deprecated
 * Removed `1.63.0 & 1.64.0` Rust versions from Action pipeline as they were failing to install `cargo-make` (those versions are still supported by library)
 
 ## What's changed
-* Changed `initialise_packet_from_bytes` function of `radius_packet` to:
+* Changed `initialise_packet_from_bytes` function of `radius_packet` to: (Fixes [#28](/../../issues/28))
     * Handle packets of the length less than 20 or more than 4096 octets - returns `RadiusError` (to comply with [RFC2865](https://datatracker.ietf.org/doc/html/rfc2865))
     * Derive packet length from `RadiusPacket` (Length field) instead of relying on `bytes.len()`
     * If derived packet length is greater than `bytes.len()` - returns `RadiusError` (to comply with [RFC2865](https://datatracker.ietf.org/doc/html/rfc2865))
