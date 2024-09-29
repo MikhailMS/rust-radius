@@ -127,18 +127,7 @@ pub struct Dictionary {
 
 #[allow(unused)]
 impl Dictionary {
-    fn from_lines(lines: StringIterator) -> Result<Dictionary, RadiusError> {
-        let mut attributes:  Vec<DictionaryAttribute> = Vec::new();
-        let mut values:      Vec<DictionaryValue>     = Vec::new();
-        let mut vendors:     Vec<DictionaryVendor>    = Vec::new();
-
-        match parse_lines(lines, &mut attributes, &mut values, &mut vendors) {
-            Ok(()) => Ok(Dictionary { attributes, values, vendors }),
-            Err(error) => Err(error),
-        }
-    }
-
-    /// Creates Dictionary from a string
+    /// Creates Dictionary from a RADIUS dictionary string
     pub fn from_str(dictionary_str: &str) -> Result<Dictionary, RadiusError> {
         let lines = read_str(dictionary_str);
         Dictionary::from_lines(lines)
@@ -152,16 +141,15 @@ impl Dictionary {
         }
     }
 
-    /// The add functions process attributes, values and vendors from a supplied dictionary file
-    /// and merge them into an existing set of attributes, values and vendors
-
-    /// Adds a dictionary string to existing Dictionary
+    /// Processes attributes, values and vendors from a supplied dictionary string and
+    /// adds those to attributes, values and vendors of an existing Dictionary
     pub fn add_str(&mut self, dictionary_str: &str) -> Result<(), RadiusError> {
         let lines = read_str(dictionary_str);
         parse_lines(lines, &mut self.attributes, &mut self.values, &mut self.vendors)
     }
   
-    /// Adds a dictionary file to existing Dictionary
+    /// Processes attributes, values and vendors from a supplied dictionary file and
+    /// adds those to attributes, values and vendors of an existing Dictionary
     pub fn add_file(&mut self, file_path: &str) -> Result<(), RadiusError> {
         match read_file(file_path) {
             Ok(lines) => parse_lines(
@@ -184,6 +172,17 @@ impl Dictionary {
     /// Returns parsed DictionaryVendors
     pub fn vendors(&self) -> &[DictionaryVendor] {
         &self.vendors
+    }
+
+    fn from_lines(lines: StringIterator) -> Result<Dictionary, RadiusError> {
+        let mut attributes:  Vec<DictionaryAttribute> = Vec::new();
+        let mut values:      Vec<DictionaryValue>     = Vec::new();
+        let mut vendors:     Vec<DictionaryVendor>    = Vec::new();
+
+        match parse_lines(lines, &mut attributes, &mut values, &mut vendors) {
+            Ok(()) => Ok(Dictionary { attributes, values, vendors }),
+            Err(error) => Err(error),
+        }
     }
 }
 

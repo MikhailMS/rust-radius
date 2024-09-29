@@ -1,8 +1,29 @@
 =============
+# v0.4.4 (29 Sep 2024)
+
+This release:
+* fixes issue reported in [#8](/../../issues/8)
+* includes a [PR](/../../pull/31) (thanks to @jacobneiltaylor for proposing the PR)
+
+## What's new
+* [PR](/../../pull/31) added new functions to work with `Dictionary`:
+    * `from_str` - creates an intsance of `Dictionary` from dictionary string
+    * `add_str`  - reads dictionary string and adds it to an existing instance of `Dictionary`
+* Added `1.77.1, 1.77.2, 1.78.0, 1.79.0, 1.80.0, 1.80.1, 1.81.0` Rust versions to Action pipeline
+
+## What's removed or deprecated
+* Removed `1.65.0` Rust version from Github Actions (this version is still supported by library)
+
+## What's changed
+* [PR](/../../pull/31) also improves line parsing logic of `Dictionary` to be more generic
+* [Reworked](/../../issues/8) `decrypt_data` & `salt_decrypt_data` functions - extracted shared code into `decrypt_helper`
+
+
+=============
 # v0.4.3 (24 Mar 2024)
 
 This release fixes issues reported in:
-* [#28](/../../issues/28) (thanks to CoderChristopher for reporting and suggesting the solution)
+* [#28](/../../issues/28) (thanks to @CoderChristopher for reporting and suggesting the solution)
 * [#27](/../../issues/27)
 
 ## What's new
@@ -110,7 +131,7 @@ users to decide on the crates they want to use to get UdpSockets, async and runt
 ## What's changed
 * Breaking change - **client** module now only has Generic RADIUS Client implementation
 * Breaking change - **server** module now only has Generic RADIUS Server implementation
-* Breaking change - **RadiusMsgType** code as been moved from **servers** module into **radius_packet** module
+* Breaking change - **RadiusMsgType** code has been moved from **servers** module into **radius_packet** module
 * Breaking change - **get** prefix was removed for all functions where it was used before ([C-GETTER Rust convention](https://rust-lang.github.io/api-guidelines/naming.html#c-getter))
 * Breaking change - **client** & **server** implementations now require related traits to be implemented. For more information have a look into `examples/`
 * All RADIUS defined errors now have *Error* suffix, ie **MalformedPacketError**
