@@ -29,12 +29,12 @@ Rationale behind this project:
 ## Installation
 ```
 [dependencies]
-radius-rust = "0.4.3"
+radius-rust = "0.4.4"
 
 OR if you are planning to build Async RADIUS Client/Server
 
 [dependencies]
-radius-rust = { version = "0.4.3", features = ["async-radius"] }
+radius-rust = { version = "0.4.4", features = ["async-radius"] }
 ```
 
 

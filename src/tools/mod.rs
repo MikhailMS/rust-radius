@@ -253,23 +253,10 @@ pub fn decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Vec<u8>
         return Vec::new()
     }
 
-    let mut result      = Vec::with_capacity(data.len());
-    let mut prev_result = authenticator;
-    let mut hash        = [0u8; 16];
+    let mut result  = Vec::with_capacity(data.len());
+    let prev_result = authenticator;
 
-    for data_chunk in data.chunks_exact(16) {
-        let mut md5  = Md5::new();
-        md5.update(secret);
-        md5.update(prev_result);
-        hash.copy_from_slice(&md5.finalize());
-
-        for (_data, _hash) in data_chunk.iter().zip(hash.iter_mut()) {
-            *_hash ^= _data
-        }
-
-        result.extend_from_slice(&hash);
-        prev_result = data_chunk;
-    }
+    decrypt_helper(data, prev_result, &mut result, secret);
 
     while result[result.len()-1] == 0 {
         result.pop();
@@ -328,23 +315,10 @@ pub fn salt_decrypt_data(data: &[u8], authenticator: &[u8], secret: &[u8]) -> Re
     salted_authenticator[..16].copy_from_slice(authenticator);
     salted_authenticator[16..].copy_from_slice(&data[..2]);
 
-    let mut hash        = [0u8; 16];
     let mut result      = Vec::with_capacity(data.len()-2);
-    let mut prev_result = &salted_authenticator[..];
+    let prev_result = &salted_authenticator[..];
 
-    for data_chunk in (&data[2..]).chunks_exact(16) {
-        let mut md5 = Md5::new();
-        md5.update(secret);
-        md5.update(prev_result);
-        hash.copy_from_slice(&md5.finalize());
-
-        for (_data, _hash) in data_chunk.iter().zip(hash.iter_mut()) {
-            *_hash ^= _data
-        }
-        result.extend_from_slice(&hash);
-
-        prev_result = data_chunk;
-    }
+    decrypt_helper(&data[2..], prev_result, &mut result, secret);
 
     let target_len = usize::from(result.remove(0));
 
@@ -376,22 +350,23 @@ fn encrypt_helper<'a:'b, 'b>(mut out: &'a mut [u8], mut result: &'b [u8], hash: 
     }
 }
 
-// WIP
-// fn decrypt_helper<'a:'b, 'b>(data: &'a mut [u8], mut prev_result: &'b [u8], result: &mut Vec<u8>, mut hash: &mut[u8], secret: &[u8]) {
-//     for data_chunk in data.chunks_exact(16) {
-//         let mut md5  = Md5::new();
-//         md5.input(secret);
-//         md5.input(prev_result);
-//         md5.result(&mut hash);
+fn decrypt_helper<'a:'b, 'b>(data: &'a [u8], mut prev_result: &'b [u8], result: &mut Vec<u8>, secret: &[u8]) {
+    let mut hash = [0u8; 16];
 
-//         for (_data, _hash) in data_chunk.iter().zip(hash.iter_mut()) {
-//             *_hash ^= _data
-//         }
+    for data_chunk in data.chunks_exact(16) {
+        let mut md5 = Md5::new();
+        md5.update(secret);
+        md5.update(prev_result);
+        hash.copy_from_slice(&md5.finalize());
 
-//         result.extend_from_slice(&hash);
-//         prev_result = data_chunk;
-//     }
-// }
+        for (_data, _hash) in data_chunk.iter().zip(hash.iter_mut()) {
+            *_hash ^= _data;
+        }
+
+        result.extend_from_slice(&hash);
+        prev_result = data_chunk;
+    }
+}
 
 fn u16_to_be_bytes(u16_data: u16) -> [u8;2] {
     u16_data.to_be_bytes()
